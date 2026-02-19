@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        input, button { padding: 10px; margin: 5px; width: 200px; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h2>Test Login to Backend</h2>
+    
+    <div>
+        <input type="text" id="username" placeholder="Username" value="encoder1">
+        <input type="password" id="password" placeholder="Password" value="encoder123">
+        <button onclick="login()">Test Login</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Sending request...';
+            resultDiv.style.color = 'blue';
+            
+            try {
+                console.log('Sending login request...');
+                
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                resultDiv.innerHTML = `
+                    <strong>✅ Success!</strong><br>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                resultDiv.style.color = 'green';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <strong>❌ Error:</strong> ${error.message}<br>
+                    <small>Check console for details</small>
+                `;
+                resultDiv.style.color = 'red';
+            }
+        }
+        
+        // Test if backend is reachable
+        async function testConnection() {
+            try {
+                const response = await fetch('http://localhost:3000/api/health');
+                console.log('Health check:', response.status);
+                
+                if (response.ok) {
+                    console.log('✅ Backend is reachable');
+                }
+            } catch (error) {
+                console.error('❌ Cannot reach backend:', error.message);
+            }
+        }
+        
+        // Run connection test on page load
+        window.onload = testConnection;
+    </script>
+</body>
+</html>

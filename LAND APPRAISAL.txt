@@ -1,0 +1,20 @@
+LAND APPRAISAL
+Classification - A22, A23, A24, A25
+Sub-Class - C22, C23, C24, C25
+Area - D22, D23, D24, D25
+Unit Value - E22- E23, E24, E25
+
+OTHER IMPROVEMENTS
+Product Class - A29, A30, A31, A32
+Number - C29, C30. C31, C32
+Unit Value - E29, E30, E31, E32
+
+MARKET VALUE 
+Adj. Factor - C36, C37, C38, C39
+% Adjustment - D36, D37, D38, D39
+Value Adjustment - E36, E37, E38, E39
+
+PROPERTY ASSESSMENT
+Kind - A43, A44, A45, A46
+Actual Use - B43, B44, B45, B46
+Assessment Level - E43, E44, E45, E46

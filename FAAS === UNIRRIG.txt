@@ -1,0 +1,12 @@
+FAAS ===> UNIRRIG
+
+'F6': record.get('pin', ''), ==> J3 
+'B8': record.get('owner_name', ''), ==> B11
+'F8': record.get('owner_address', ''), ==> H11
+'B14': record.get('owner_barangay', ''), ==> C17
+'F13': record.get('owner_municipality', ''), ==> G7
+'F14': record.get('owner_province', ''), ==> I17
+'B16': record.get('north_boundary', ''), ==> B21
+'B19': record.get('south_boundary', ''), ==> I21
+'B17': record.get('east_boundary', ''), ==> B22
+'B18': record.get('west_boundary', ''), ==> I22
