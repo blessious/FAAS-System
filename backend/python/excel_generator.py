@@ -203,9 +203,9 @@ class FAASExcelGenerator:
                 'E66': str(record.get('taxability', '')).upper() if record.get('taxability') else '',
                 'H65': self.safe_float(record.get('previous_av_land'), default=None),
                 'H66': self.safe_float(record.get('previous_av_improvements'), default=None),
-                'A51': record.get('owner_administrator', ''),
+                'A51': record.get('owner_administrator') or record.get('owner_name', ''),
                 'B59': str(record.get('memoranda_code', '')).upper() if record.get('memoranda_code') else '',
-                'A60': record.get('memoranda_paragraph', ''),
+                'A60': record.get('memoranda_paragraph') or '',
             }
 
             for i in range(min(4, len(land_appraisals))):
@@ -360,23 +360,23 @@ class FAASExcelGenerator:
                 'H62': record.get('memoranda_paragraph', ''),
             }
 
-            # % Adjustment → G50
+            # % Adjustment → G52 (moved from G53)
             if market_values:
                 percent_adj = market_values[0].get('percent_adjustment')
                 if percent_adj:
-                    unirrig_mapping['G50'] = self.safe_float(percent_adj) / 100.0
-
-            # Adj. Factor parts → G42, G45, G48
+                    unirrig_mapping['G52'] = self.safe_float(percent_adj) / 100.0
+ 
+            # Adj. Factor parts → G44, G47, G50
             if market_values:
                 adj_factor_raw = market_values[0].get('adj_factor', '')
                 if adj_factor_raw:
                     adj_parts = [p.strip() for p in str(adj_factor_raw).split(',')]
                     if len(adj_parts) > 0:
-                        unirrig_mapping['G42'] = self.safe_float(adj_parts[0]) / 100.0
+                        unirrig_mapping['G44'] = self.safe_float(adj_parts[0]) / 100.0
                     if len(adj_parts) > 1:
-                        unirrig_mapping['G45'] = self.safe_float(adj_parts[1]) / 100.0
+                        unirrig_mapping['G47'] = self.safe_float(adj_parts[1]) / 100.0
                     if len(adj_parts) > 2:
-                        unirrig_mapping['G48'] = self.safe_float(adj_parts[2]) / 100.0
+                        unirrig_mapping['G50'] = self.safe_float(adj_parts[2]) / 100.0
 
             # Write Sheet1 mapping
             for cell, value in unirrig_mapping.items():
@@ -391,20 +391,42 @@ class FAASExcelGenerator:
                 self.safe_write_cell(sheet, 'K19', pin_parts[4])
 
             # Land Appraisals → rows 28-31
-            for i in range(min(4, len(land_appraisals))):
-                item = land_appraisals[i]
+            for i in range(4):
                 unirrig_row = 28 + i
-                classification = item.get('classification')
-                sub_class = item.get('sub_class')
-                if classification:
-                    self.safe_write_cell(sheet, f'E{unirrig_row}', classification)
-                if sub_class:
-                    self.safe_write_cell(sheet, f'H{unirrig_row}', sub_class)
-                if item.get('area'):
-                    self.safe_write_cell(sheet, f'G{unirrig_row}', f"{self.safe_float(item.get('area')):,.4f}")
-                unit_value = self.calculate_land_unit_value(classification, sub_class)
-                if unit_value:
-                    self.safe_write_cell(sheet, f'I{unirrig_row}', unit_value)
+                if i < len(land_appraisals):
+                    item = land_appraisals[i]
+                    classification = item.get('classification', '')
+                    sub_class = item.get('sub_class', '')
+                    area_raw = item.get('area', '')
+                    
+                    if classification:
+                        self.safe_write_cell(sheet, f'E{unirrig_row}', str(classification).upper())
+                    else:
+                        self.safe_write_cell(sheet, f'E{unirrig_row}', '')
+                        
+                    if sub_class:
+                        self.safe_write_cell(sheet, f'H{unirrig_row}', str(sub_class).upper())
+                    else:
+                        self.safe_write_cell(sheet, f'H{unirrig_row}', '')
+                    
+                    # Only write area if it's not empty and > 0, to avoid 0.0000 in empty rows
+                    area_val = self.safe_float(area_raw)
+                    if area_val > 0:
+                        self.safe_write_cell(sheet, f'G{unirrig_row}', f"{area_val:,.4f}")
+                    else:
+                        self.safe_write_cell(sheet, f'G{unirrig_row}', '')
+                    
+                    unit_value = self.calculate_land_unit_value(classification, sub_class)
+                    if unit_value:
+                        self.safe_write_cell(sheet, f'I{unirrig_row}', unit_value)
+                    else:
+                        self.safe_write_cell(sheet, f'I{unirrig_row}', '')
+                else:
+                    # Clear extra rows in template
+                    self.safe_write_cell(sheet, f'E{unirrig_row}', '')
+                    self.safe_write_cell(sheet, f'H{unirrig_row}', '')
+                    self.safe_write_cell(sheet, f'G{unirrig_row}', '')
+                    self.safe_write_cell(sheet, f'I{unirrig_row}', '')
 
             # ── COMPUTE ADJUSTED MARKET VALUES (MATCHES FAAS G36-G39) ──
             base_mvs: list[float] = []
