@@ -74,6 +74,7 @@ interface FAASFormData {
   owner_province: string;
   administrator_name: string;
   administrator_address: string;
+  owner_administrator: string;
 
   // Property Details
   property_location: string;
@@ -135,10 +136,10 @@ interface FAASFormData {
 const landClassificationOptions = [
   "COMMERCIAL",
   "RESIDENTIAL",
-  "COCONUT LAND",
-  "RICE LAND W/ IRRIGATION",
-  "RICE LAND W/O IRRIGATION",
-  "UPLAND RICE",
+  "COCAL",
+  "IRRIGATED",
+  "UNIRRIGATED",
+  "UPLAND",
   "ORCHARD",
   "COGON LAND",
   "NIPA LAND",
@@ -153,10 +154,10 @@ const getSubClassOptions = (classification: string) => {
       return ["C-1", "C-2", "C-3", "C-4"];
     case "RESIDENTIAL":
       return ["R-1", "R-2", "R-3", "R-4", "R-5", "R-6", "R-7"];
-    case "COCONUT LAND":
+    case "COCAL":
       return ["1", "2", "3"];
-    case "RICE LAND W/ IRRIGATION":
-    case "RICE LAND W/O IRRIGATION":
+    case "IRRIGATED":
+    case "UNIRRIGATED":
       return ["1", "2", "3"];
     default:
       return [];
@@ -194,7 +195,7 @@ const productClassOptions = [
 const kindOptions = ["LAND", "IMPROVEMENTS"];
 
 // Actual Use options for Property Assessment
-const actualUseOptions = ["AGRICULTURAL", "RESIDENTIAL"];
+const actualUseOptions = ["AGRICULTURAL", "RESIDENTIAL", "COMMERCIAL"];
 
 const initialRowData = {
   landAppraisals: Array(4).fill({
@@ -238,6 +239,7 @@ const initialFormData: FAASFormData = {
   owner_province: "",
   administrator_name: "",
   administrator_address: "",
+  owner_administrator: "",
   property_location: "",
   property_barangay: "",
   property_municipality: "BOAC",
@@ -314,6 +316,40 @@ export default function FAASForm() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const showErrorToast = (error: any, defaultTitle: string = "Action Failed") => {
+    console.error(`Error during ${defaultTitle}:`, error);
+
+    // Extract the error message
+    let message = "An unexpected error occurred. Please try again.";
+
+    if (typeof error === 'string') {
+      message = error;
+    } else if (error?.error) {
+      message = error.error;
+    } else if (error?.message) {
+      message = error.message;
+    }
+
+    // Append technical details if available (for "cmd error" visibility in frontend)
+    const technicalDetails = error?.details?.sqlMessage || error?.sqlMessage;
+
+    toast({
+      title: defaultTitle,
+      description: (
+        <div className="space-y-1">
+          <p>{message}</p>
+          {technicalDetails && (
+            <p className="text-[10px] font-mono opacity-70 border-t border-rose-300/30 pt-1 mt-1">
+              Technical Log: {technicalDetails}
+            </p>
+          )}
+        </div>
+      ),
+      variant: "destructive",
+      className: "border-2 border-rose-200 shadow-lg",
+    });
+  };
+
   const handleDeleteRecord = async () => {
     if (!id) return;
 
@@ -326,12 +362,7 @@ export default function FAASForm() {
       });
       navigate("/dashboard");
     } catch (error: any) {
-      console.error('Error deleting record:', error);
-      toast({
-        title: "Error",
-        description: error.error || "Failed to delete record",
-        variant: "destructive",
-      });
+      showErrorToast(error, "Delete Failed");
     } finally {
       setDeleting(false);
       setShowDeleteDialog(false);
@@ -519,6 +550,7 @@ export default function FAASForm() {
           owner_province: response.data.owner_province?.toString() || "",
           administrator_name: response.data.administrator_name?.toString() || "",
           administrator_address: response.data.administrator_address?.toString() || "",
+          owner_administrator: response.data.owner_administrator?.toString() || "",
           property_location: response.data.property_location?.toString() || "",
           property_barangay: response.data.property_barangay?.toString() || "",
           property_municipality: "BOAC",
@@ -554,12 +586,7 @@ export default function FAASForm() {
         setRecordStatus(response.data.status || 'draft');
       }
     } catch (error: any) {
-      console.error('Error fetching record:', error);
-      toast({
-        title: "Error",
-        description: error.error || "Failed to load FAAS record",
-        variant: "destructive",
-      });
+      showErrorToast(error, "Load Failed");
       navigate("/dashboard");
     } finally {
       setLoading(false);
@@ -597,12 +624,23 @@ export default function FAASForm() {
     try {
       setSaving(true);
 
-      if (!formData.pin.trim() || !formData.oct_tct_no.trim() || !formData.owner_name.trim() || !formData.owner_address.trim()) {
+      const requiredFields = [
+        { field: 'pin', label: 'PIN' },
+        { field: 'oct_tct_no', label: 'OCT/TCT No.' },
+        { field: 'owner_name', label: 'Owner Name' },
+        { field: 'owner_address', label: 'Owner Address' },
+        { field: 'property_barangay', label: 'Property Barangay' }
+      ];
+
+      const missingFields = requiredFields.filter(f => !formData[f.field as keyof FAASFormData]?.toString().trim());
+
+      if (missingFields.length > 0) {
         toast({
           title: "Required Fields Missing",
-          description: "PIN, OCT/TCT No., Owner Name, and Owner Address are required",
+          description: `Please fill in: ${missingFields.map(f => f.label).join(', ')}`,
           variant: "destructive",
         });
+        setSaving(false);
         return;
       }
 
@@ -618,6 +656,7 @@ export default function FAASForm() {
         owner_province: formData.owner_province || null,
         administrator_name: formData.administrator_name || null,
         administrator_address: formData.administrator_address || null,
+        owner_administrator: formData.owner_administrator || null,
         property_location: formData.property_location || null,
         property_barangay: formData.property_barangay || null,
         property_municipality: formData.property_municipality || null,
@@ -736,12 +775,7 @@ export default function FAASForm() {
       }
 
     } catch (error: any) {
-      console.error('Error saving draft:', error);
-      toast({
-        title: "Error",
-        description: error.error || "Failed to save draft",
-        variant: "destructive",
-      });
+      showErrorToast(error, "Save Failed");
     } finally {
       setSaving(false);
     }
@@ -753,10 +787,20 @@ export default function FAASForm() {
     try {
       setSubmitting(true);
 
-      if (!formData.pin.trim() || !formData.oct_tct_no.trim() || !formData.owner_name.trim() || !formData.owner_address.trim()) {
+      const requiredFields = [
+        { field: 'pin', label: 'PIN' },
+        { field: 'oct_tct_no', label: 'OCT/TCT No.' },
+        { field: 'owner_name', label: 'Owner Name' },
+        { field: 'owner_address', label: 'Owner Address' },
+        { field: 'property_barangay', label: 'Property Barangay' }
+      ];
+
+      const missingFields = requiredFields.filter(f => !formData[f.field as keyof FAASFormData]?.toString().trim());
+
+      if (missingFields.length > 0) {
         toast({
-          title: "Required Fields Missing",
-          description: "PIN, OCT/TCT No., Owner Name, and Owner Address are required",
+          title: "Submission Blocked",
+          description: `The following required fields are missing: ${missingFields.map(f => f.label).join(', ')}`,
           variant: "destructive",
         });
         setSubmitting(false);
@@ -775,6 +819,7 @@ export default function FAASForm() {
         owner_province: formData.owner_province || null,
         administrator_name: formData.administrator_name || null,
         administrator_address: formData.administrator_address || null,
+        owner_administrator: formData.owner_administrator || null,
         property_location: formData.property_location || null,
         property_barangay: formData.property_barangay || null,
         property_municipality: formData.property_municipality || null,
@@ -920,12 +965,7 @@ export default function FAASForm() {
       }
 
     } catch (error: any) {
-      console.error('Error submitting record:', error);
-      toast({
-        title: "Error",
-        description: error.error || "Failed to submit record for approval",
-        variant: "destructive",
-      });
+      showErrorToast(error, "Submission Failed");
       setSubmitting(false);
     }
   };
@@ -1322,6 +1362,20 @@ export default function FAASForm() {
                         disabled={!isEditable}
                       />
                     </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="owner_administrator" className="text-sm font-semibold text-slate-700">
+                        Owner/Administrator <span className="text-red-500 text-[10px] italic font-normal ml-1">(Appears in A51 Signature Line)</span>
+                      </Label>
+                      <Input
+                        id="owner_administrator"
+                        value={formData.owner_administrator}
+                        onChange={(e) => handleInputChange("owner_administrator", e.target.value)}
+                        placeholder="Name of Owner or Administrator for signature"
+                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                        disabled={!isEditable}
+                      />
+                    </div>
                   </div>
                 </div>
                 {/* Administrator Information Section */}
@@ -1385,7 +1439,9 @@ export default function FAASForm() {
                       <div className="grid gap-3">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1.5">
-                            <Label htmlFor="property_location" className="text-sm font-semibold text-slate-700">No. Street / Location</Label>
+                            <Label htmlFor="property_location" className="text-sm font-semibold text-slate-700">
+                              No. Street / Location
+                            </Label>
                             <Input
                               id="property_location"
                               value={formData.property_location}
@@ -1396,7 +1452,9 @@ export default function FAASForm() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label htmlFor="property_barangay" className="text-sm font-semibold text-slate-700">Barangay</Label>
+                            <Label htmlFor="property_barangay" className="text-sm font-semibold text-slate-700 flex items-center gap-0.5">
+                              Barangay <span className="text-red-500">*</span>
+                            </Label>
                             <Input
                               id="property_barangay"
                               value={formData.property_barangay}

@@ -106,6 +106,52 @@ async function generatePDF(recordId, excelFilePath) {
 }
 
 class FAASController {
+  // Centralized database error handler
+  handleDatabaseError(error, defaultMessage) {
+    console.error(`❌ ${defaultMessage}:`, error);
+
+    if (error.code === 'ER_DUP_ENTRY') {
+      const match = error.sqlMessage?.match(/Duplicate entry '(.+)' for key '(.+)'/);
+      if (match) {
+        const entryValue = match[1];
+        const keyName = match[2];
+        if (keyName.includes('oct_tct_no')) {
+          return `Duplicate error: The OCT/TCT No. '${entryValue}' is already registered in the system.`;
+        } else if (keyName.includes('pin')) {
+          return `Duplicate error: The PIN '${entryValue}' is already assigned to another record.`;
+        } else if (keyName.includes('arf_no')) {
+          return `Duplicate error: The ARF No. '${entryValue}' already exists.`;
+        } else {
+          return `Duplicate entry error: ${entryValue} already exists for ${keyName}.`;
+        }
+      }
+      return `Duplicate entry error: ${error.sqlMessage || error.message}`;
+    }
+
+    if (error.code === 'ER_BAD_NULL_ERROR') {
+      const match = error.sqlMessage?.match(/Column '(.+)' cannot be null/);
+      if (match) {
+        return `Required field missing: The column '${match[1]}' is mandatory.`;
+      }
+      return `Database Error: A required field is missing.`;
+    }
+
+    if (error.code === 'ER_DATA_TOO_LONG') {
+      const match = error.sqlMessage?.match(/Data too long for column '(.+)'/);
+      if (match) {
+        return `Input too long: The value for '${match[1]}' exceeds the maximum allowed length.`;
+      }
+      return `Input too long: One of your inputs exceeds the database limit.`;
+    }
+
+    // Always include the technical error if available
+    if (error.sqlMessage) {
+      return `Database Error: ${error.sqlMessage}`;
+    }
+
+    return error.message || defaultMessage;
+  }
+
   async createRecord(req, res) {
     try {
       const {
@@ -120,6 +166,7 @@ class FAASController {
         owner_province,
         administrator_name,
         administrator_address,
+        owner_administrator,
         property_location,
         property_barangay,
         property_municipality,
@@ -213,7 +260,7 @@ class FAASController {
   INSERT INTO faas_records (
     arf_no, pin, oct_tct_no, cln, owner_name, owner_address,
     owner_barangay, owner_municipality, owner_province,
-    administrator_name, administrator_address,
+    administrator_name, administrator_address, owner_administrator,
     property_location, property_barangay, property_municipality, property_province,
     north_boundary, south_boundary, east_boundary, west_boundary,
     classification, sub_class, area, unit_value_land, market_value,
@@ -232,7 +279,7 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?
   )
 `, [
         arf_no,
@@ -246,6 +293,7 @@ class FAASController {
         owner_province || null,
         administrator_name || null,                    // 10
         administrator_address || null,
+        owner_administrator || null,
         property_location || null,
         property_barangay || null,
         property_municipality || null,
@@ -325,10 +373,15 @@ class FAASController {
       });
 
     } catch (error) {
-      console.error('Create FAAS record error:', error);
+      const errorMessage = this.handleDatabaseError(error, 'Failed to create FAAS record');
       res.status(500).json({
         success: false,
-        error: 'Failed to create FAAS record'
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? {
+          message: error.message,
+          code: error.code,
+          sqlMessage: error.sqlMessage
+        } : undefined
       });
     }
   }
@@ -351,6 +404,7 @@ class FAASController {
         owner_province,
         administrator_name,
         administrator_address,
+        owner_administrator,
         property_location,
         property_barangay,
         property_municipality,
@@ -455,7 +509,7 @@ class FAASController {
         UPDATE faas_records SET
           arf_no = ?, pin = ?, oct_tct_no = ?, cln = ?, owner_name = ?, owner_address = ?,
           owner_barangay = ?, owner_municipality = ?, owner_province = ?,
-          administrator_name = ?, administrator_address = ?,
+          administrator_name = ?, administrator_address = ?, owner_administrator = ?,
           property_location = ?, property_barangay = ?, property_municipality = ?, property_province = ?,
           north_boundary = ?, south_boundary = ?, east_boundary = ?, west_boundary = ?,
           classification = ?, sub_class = ?, area = ?, unit_value_land = ?, market_value = ?,
@@ -481,6 +535,7 @@ class FAASController {
         owner_province || null,
         administrator_name || null,
         administrator_address || null,
+        owner_administrator || null,
         property_location || null,
         property_barangay || null,
         property_municipality || null,
@@ -563,10 +618,15 @@ class FAASController {
       });
 
     } catch (error) {
-      console.error('Update FAAS record error:', error);
+      const errorMessage = this.handleDatabaseError(error, 'Failed to update FAAS record');
       res.status(500).json({
         success: false,
-        error: 'Failed to update FAAS record'
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? {
+          message: error.message,
+          code: error.code,
+          sqlMessage: error.sqlMessage
+        } : undefined
       });
     }
   }
@@ -1190,19 +1250,10 @@ class FAASController {
       }
 
     } catch (error) {
-      console.error('========================================');
-      console.error('❌ Save as draft error:', error);
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error code:', error.code);
-      console.error('Error errno:', error.errno);
-      console.error('Error sqlMessage:', error.sqlMessage);
-      console.error('Error sql:', error.sql);
-      console.error('Error stack:', error.stack);
-      console.error('========================================');
+      const errorMessage = this.handleDatabaseError(error, 'Failed to save FAAS record as draft');
       res.status(500).json({
         success: false,
-        error: 'Failed to save FAAS record as draft',
+        error: errorMessage,
         details: process.env.NODE_ENV === 'development' ? {
           message: error.message,
           code: error.code,
