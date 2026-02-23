@@ -143,7 +143,16 @@ export const faasAPI = {
     api.put(`/faas/draft/${id}`, data),
 
   deleteDraft: (id: string): Promise<any> =>
-    api.delete(`/faas/draft/${id}`)
+    api.delete(`/faas/draft/${id}`),
+
+  getRecordHistory: (id: string | number): Promise<any> =>
+    api.get(`/faas/${id}/history`),
+
+  deleteHistoryEntry: (logId: number | string): Promise<any> =>
+    api.delete(`/faas/history/${logId}`),
+
+  clearRecordHistory: (id: string | number): Promise<any> =>
+    api.delete(`/faas/${id}/history`)
 };
 
 // Approvals API

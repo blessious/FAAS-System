@@ -140,6 +140,7 @@ const approvalRoutes = require('./routes/approvals');
 const printRoutes = require('./routes/print');
 const dashboardRoutes = require('./routes/dashboard');
 const pdfViewerRoutes = require('./routes/pdfViewer');
+const usersRoutes = require('./routes/users');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -147,7 +148,8 @@ app.use('/api/faas', faasRoutes);
 app.use('/api/approvals', approvalRoutes);
 app.use('/api/print', printRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/pdf', pdfViewerRoutes); // ✅ This line should be here
+app.use('/api/pdf', pdfViewerRoutes);
+app.use('/api/users', usersRoutes);
 
 // File serving routes (add these BEFORE the health check)
 const path = require('path');

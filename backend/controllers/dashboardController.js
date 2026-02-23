@@ -47,6 +47,7 @@ class DashboardController {
           f.owner_name,
           f.property_location,
           f.status,
+          f.rejection_reason,
           f.created_at,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture

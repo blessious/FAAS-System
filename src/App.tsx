@@ -13,7 +13,9 @@ import Approvals from "./pages/Approvals";
 import Drafts from "./pages/Drafts";
 import PrintPreview from "./pages/PrintPreview";
 import Settings from "./pages/Settings";
+import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
+
 
 const queryClient = new QueryClient();
 
@@ -27,7 +29,7 @@ const App = () => (
           <Routes>
             {/* ⚠️ ADD THIS LINE - It tells React to NOT handle /api/* routes */}
             <Route path="/api/*" element={null} />
-            
+
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Login />} />
             <Route element={<MainLayout />}>
@@ -40,6 +42,9 @@ const App = () => (
               </Route>
               <Route element={<RoleGuard allowedRoles={["approver", "administrator"]} />}>
                 <Route path="/approvals" element={<Approvals />} />
+              </Route>
+              <Route element={<RoleGuard allowedRoles={["administrator"]} />}>
+                <Route path="/users" element={<Users />} />
               </Route>
               <Route path="/print" element={<PrintPreview />} />
               <Route path="/settings" element={<Settings />} />

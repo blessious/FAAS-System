@@ -32,4 +32,13 @@ router.put('/draft/:id', authorize('encoder', 'administrator'), faasController.s
 router.delete('/draft/:id', authorize('encoder', 'administrator'), faasController.deleteDraft);
 
 
+// Get FAAS record history
+router.get('/:id/history', faasController.getRecordHistory);
+
+// Delete specific history entry
+router.delete('/history/:logId', authorize('administrator'), faasController.deleteHistoryEntry);
+
+// Clear all history for a record
+router.delete('/:id/history', authorize('administrator'), faasController.clearRecordHistory);
+
 module.exports = router;

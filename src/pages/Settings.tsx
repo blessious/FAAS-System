@@ -369,7 +369,7 @@ export default function Settings() {
             </div>
             <div className="absolute inset-0 rounded-full bg-blue-400/20 animate-ping"></div>
           </div>
-          <h3 className="text-xl font-semibold text-slate-800 mb-2">Loading settings</h3>
+          <h3 className="text-xl font-semibold text-slate-800 mb-2">Loading profile</h3>
           <p className="text-sm text-slate-500">Please wait while we fetch your account information</p>
         </div>
       </div>
@@ -387,9 +387,9 @@ export default function Settings() {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+            <h1 className="text-3xl font-bold text-slate-900">Edit Profile</h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              Manage your account settings and preferences
+              Manage your account and profile preferences
             </p>
           </div>
         </div>

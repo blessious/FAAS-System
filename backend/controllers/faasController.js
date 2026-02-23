@@ -106,6 +106,20 @@ async function generatePDF(recordId, excelFilePath) {
 }
 
 class FAASController {
+  constructor() {
+    this.createRecord = this.createRecord.bind(this);
+    this.updateRecord = this.updateRecord.bind(this);
+    this.saveAsDraft = this.saveAsDraft.bind(this);
+    this.getRecord = this.getRecord.bind(this);
+    this.getMyRecords = this.getMyRecords.bind(this);
+    this.getDrafts = this.getDrafts.bind(this);
+    this.deleteDraft = this.deleteDraft.bind(this);
+    this.getRecordHistory = this.getRecordHistory.bind(this);
+    this.deleteHistoryEntry = this.deleteHistoryEntry.bind(this);
+    this.clearRecordHistory = this.clearRecordHistory.bind(this);
+    this.submitForApproval = this.submitForApproval.bind(this);
+  }
+
   // Centralized database error handler
   handleDatabaseError(error, defaultMessage) {
     console.error(`❌ ${defaultMessage}:`, error);
@@ -206,8 +220,13 @@ class FAASController {
         previous_av_land,
         previous_av_improvements,
         previous_total_av,
+        previous_td_no2,
+        previous_owner2,
+        previous_av_land2,
+        previous_av_improvements2,
         memoranda_code,
         memoranda_paragraph,
+
         land_appraisals_json,
         improvements_json,
         market_values_json,
@@ -270,7 +289,9 @@ class FAASController {
     land_appraisal_total, improvements_total, adjustment_total, assessment_total,
     effectivity_year, taxability, tax_rate,
     previous_td_no, previous_owner, previous_av_land, previous_av_improvements, previous_total_av,
+    previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
     memoranda_code, memoranda_paragraph,
+
     land_appraisals_json, improvements_json, market_values_json, assessments_json,
     encoder_id, status
   ) VALUES (
@@ -279,8 +300,11 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+    ?, ?, ?
   )
+
+
 `, [
         arf_no,
         pin || null,
@@ -333,12 +357,17 @@ class FAASController {
         previous_av_land !== undefined && previous_av_land !== null && previous_av_land !== '' ? parseFloat(previous_av_land) : null,
         previous_av_improvements !== undefined && previous_av_improvements !== null && previous_av_improvements !== '' ? parseFloat(previous_av_improvements) : null,
         previous_total_av !== undefined && previous_total_av !== null && previous_total_av !== '' ? parseFloat(previous_total_av) : null, // 50
+        previous_td_no2 || null,
+        previous_owner2 || null,
+        previous_av_land2 !== undefined && previous_av_land2 !== null && previous_av_land2 !== '' ? parseFloat(previous_av_land2) : null,
+        previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
         memoranda_code || null,
         memoranda_paragraph || null,
         land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
         improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
         market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
         assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
+
         userId,
         'draft'                                        // 58
       ]);
@@ -444,9 +473,13 @@ class FAASController {
         previous_av_land,
         previous_av_improvements,
         previous_total_av,
-        memoranda_label,
+        previous_td_no2,
+        previous_owner2,
+        previous_av_land2,
+        previous_av_improvements2,
         memoranda_code,
         memoranda_paragraph,
+
         land_appraisals_json,
         improvements_json,
         market_values_json,
@@ -480,7 +513,8 @@ class FAASController {
       }
 
       // Allow draft, pending, or rejected records to be edited
-      if (record.status !== 'draft' && record.status !== 'for_approval' && record.status !== 'rejected') {
+      // Administrators can edit any record
+      if (req.user.role !== 'administrator' && record.status !== 'draft' && record.status !== 'for_approval' && record.status !== 'rejected') {
         return res.status(400).json({
           success: false,
           error: 'Only draft, pending, or rejected records can be edited'
@@ -519,7 +553,9 @@ class FAASController {
           land_appraisal_total = ?, improvements_total = ?, adjustment_total = ?, assessment_total = ?,
           effectivity_year = ?, taxability = ?, tax_rate = ?,
           previous_td_no = ?, previous_owner = ?, previous_av_land = ?, previous_av_improvements = ?, previous_total_av = ?,
-          memoranda_label = ?, memoranda_code = ?, memoranda_paragraph = ?, 
+          previous_td_no2 = ?, previous_owner2 = ?, previous_av_land2 = ?, previous_av_improvements2 = ?,
+          memoranda_code = ?, memoranda_paragraph = ?, 
+
           land_appraisals_json = ?, improvements_json = ?, market_values_json = ?, assessments_json = ?,
           status = ?, updated_at = NOW()
         WHERE id = ? AND hidden = 0
@@ -575,9 +611,13 @@ class FAASController {
         previous_av_land !== undefined && previous_av_land !== null && previous_av_land !== '' ? parseFloat(previous_av_land) : null,
         previous_av_improvements !== undefined && previous_av_improvements !== null && previous_av_improvements !== '' ? parseFloat(previous_av_improvements) : null,
         previous_total_av !== undefined && previous_total_av !== null && previous_total_av !== '' ? parseFloat(previous_total_av) : null,
-        memoranda_label || null,
+        previous_td_no2 || null,
+        previous_owner2 || null,
+        previous_av_land2 !== undefined && previous_av_land2 !== null && previous_av_land2 !== '' ? parseFloat(previous_av_land2) : null,
+        previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
         memoranda_code || null,
         memoranda_paragraph || null,
+
         land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
         improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
         market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
@@ -660,7 +700,8 @@ class FAASController {
         });
       }
 
-      if (record.status !== 'draft' && record.status !== 'for_approval' && record.status !== 'rejected') {
+      // Administrators can submit any record regardless of status
+      if (req.user.role !== 'administrator' && record.status !== 'draft' && record.status !== 'for_approval' && record.status !== 'rejected') {
         return res.status(400).json({
           success: false,
           error: 'Only draft, pending, or rejected records can be submitted for approval'
@@ -961,6 +1002,8 @@ class FAASController {
         owner_province,
         administrator_name,
         administrator_address,
+        owner_administrator,
+
         property_location,
         property_barangay,
         property_municipality,
@@ -1000,8 +1043,13 @@ class FAASController {
         previous_av_land,
         previous_av_improvements,
         previous_total_av,
+        previous_td_no2,
+        previous_owner2,
+        previous_av_land2,
+        previous_av_improvements2,
         memoranda_code,
         memoranda_paragraph,
+
         land_appraisals_json,
         improvements_json,
         market_values_json,
@@ -1054,18 +1102,21 @@ class FAASController {
           });
         }
 
-        if (record.status !== 'draft') {
+        if (record.status !== 'draft' && record.status !== 'rejected') {
           return res.status(400).json({
             success: false,
-            error: 'Only draft records can be saved as draft'
+            error: 'Only draft or rejected records can be saved as draft'
           });
         }
+
+        const newStatus = record.status === 'rejected' ? 'draft' : record.status;
 
         await pool.execute(`
           UPDATE faas_records SET
             arf_no = ?, pin = ?, oct_tct_no = ?, cln = ?, owner_name = ?, owner_address = ?,
             owner_barangay = ?, owner_municipality = ?, owner_province = ?,
-            administrator_name = ?, administrator_address = ?,
+            administrator_name = ?, administrator_address = ?, owner_administrator = ?,
+
             property_location = ?, property_barangay = ?, property_municipality = ?, property_province = ?,
             north_boundary = ?, south_boundary = ?, east_boundary = ?, west_boundary = ?,
             classification = ?, sub_class = ?, area = ?, unit_value_land = ?, market_value = ?,
@@ -1075,9 +1126,11 @@ class FAASController {
             land_appraisal_total = ?, improvements_total = ?, adjustment_total = ?, assessment_total = ?,
             effectivity_year = ?, taxability = ?, tax_rate = ?,
             previous_td_no = ?, previous_owner = ?, previous_av_land = ?, previous_av_improvements = ?, previous_total_av = ?,
+            previous_td_no2 = ?, previous_owner2 = ?, previous_av_land2 = ?, previous_av_improvements2 = ?,
             memoranda_code = ?, memoranda_paragraph = ?,
+
             land_appraisals_json = ?, improvements_json = ?, market_values_json = ?, assessments_json = ?,
-            updated_at = NOW()
+            status = ?, updated_at = NOW()
           WHERE id = ? AND hidden = 0
         `, [
           arf_no,
@@ -1091,6 +1144,8 @@ class FAASController {
           owner_province || null,
           administrator_name || null,
           administrator_address || null,
+          owner_administrator || null,
+
           property_location || null,
           property_barangay || null,
           property_municipality || null,
@@ -1130,12 +1185,18 @@ class FAASController {
           previous_av_land !== undefined && previous_av_land !== null && previous_av_land !== '' ? parseFloat(previous_av_land) : null,
           previous_av_improvements !== undefined && previous_av_improvements !== null && previous_av_improvements !== '' ? parseFloat(previous_av_improvements) : null,
           previous_total_av !== undefined && previous_total_av !== null && previous_total_av !== '' ? parseFloat(previous_total_av) : null,
+          previous_td_no2 || null,
+          previous_owner2 || null,
+          previous_av_land2 !== undefined && previous_av_land2 !== null && previous_av_land2 !== '' ? parseFloat(previous_av_land2) : null,
+          previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
           memoranda_code || null,
           memoranda_paragraph || null,
+
           land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
           improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
           market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
           assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
+          newStatus,
           id
         ]);
 
@@ -1155,7 +1216,7 @@ class FAASController {
   INSERT INTO faas_records (
     arf_no, pin, oct_tct_no, cln, owner_name, owner_address,
     owner_barangay, owner_municipality, owner_province,
-    administrator_name, administrator_address,
+    administrator_name, administrator_address, owner_administrator,
     property_location, property_barangay, property_municipality, property_province,
     north_boundary, south_boundary, east_boundary, west_boundary,
     classification, sub_class, area, unit_value_land, market_value,
@@ -1165,7 +1226,9 @@ class FAASController {
     land_appraisal_total, improvements_total, adjustment_total, assessment_total,
     effectivity_year, taxability, tax_rate,
     previous_td_no, previous_owner, previous_av_land, previous_av_improvements, previous_total_av,
+    previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
     memoranda_code, memoranda_paragraph,
+
     land_appraisals_json, improvements_json, market_values_json, assessments_json,
     encoder_id, status
 ) VALUES (
@@ -1174,8 +1237,11 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+    ?, ?, ?
   )
+
+
 `, [
           arf_no,
           pin || null,
@@ -1188,6 +1254,8 @@ class FAASController {
           owner_province || null,
           administrator_name || null,                    // 10
           administrator_address || null,
+          owner_administrator || null,
+
           property_location || null,
           property_barangay || null,
           property_municipality || null,
@@ -1227,8 +1295,13 @@ class FAASController {
           previous_av_land !== undefined && previous_av_land !== null && previous_av_land !== '' ? parseFloat(previous_av_land) : null,
           previous_av_improvements !== undefined && previous_av_improvements !== null && previous_av_improvements !== '' ? parseFloat(previous_av_improvements) : null,
           previous_total_av !== undefined && previous_total_av !== null && previous_total_av !== '' ? parseFloat(previous_total_av) : null, // 50
+          previous_td_no2 || null,
+          previous_owner2 || null,
+          previous_av_land2 !== undefined && previous_av_land2 !== null && previous_av_land2 !== '' ? parseFloat(previous_av_land2) : null,
+          previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
           memoranda_code || null,
           memoranda_paragraph || null,
+
           land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
           improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
           market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
@@ -1335,6 +1408,78 @@ class FAASController {
       res.status(500).json({
         success: false,
         error: 'Failed to delete FAAS record'
+      });
+    }
+  }
+  async getRecordHistory(req, res) {
+    try {
+      const { id } = req.params;
+      const pool = getConnection();
+
+      const [activities] = await pool.query(`
+        SELECT 
+          al.*,
+          u.username,
+          u.full_name,
+          u.profile_picture
+        FROM activity_log al
+        LEFT JOIN users u ON al.user_id = u.id
+        WHERE al.table_name = 'faas_records' AND al.record_id = ?
+        ORDER BY al.created_at DESC
+      `, [id]);
+
+      res.json({
+        success: true,
+        data: activities
+      });
+    } catch (error) {
+      console.error('Get record history error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch record history'
+      });
+    }
+  }
+
+  async deleteHistoryEntry(req, res) {
+    try {
+      const { logId } = req.params;
+      const pool = getConnection();
+
+      await pool.execute('DELETE FROM activity_log WHERE id = ?', [logId]);
+
+      res.json({
+        success: true,
+        message: 'History entry deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete history entry error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete history entry'
+      });
+    }
+  }
+
+  async clearRecordHistory(req, res) {
+    try {
+      const { id } = req.params;
+      const pool = getConnection();
+
+      await pool.execute(
+        "DELETE FROM activity_log WHERE table_name = 'faas_records' AND record_id = ?",
+        [id]
+      );
+
+      res.json({
+        success: true,
+        message: 'Record history cleared successfully'
+      });
+    } catch (error) {
+      console.error('Clear record history error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to clear record history'
       });
     }
   }

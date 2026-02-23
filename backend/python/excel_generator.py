@@ -115,10 +115,7 @@ class FAASExcelGenerator:
             conn = self.get_db_connection()
             cursor = conn.cursor(dictionary=True)
             query = """
-            SELECT f.*, ue.full_name as encoder_name, ua.full_name as approver_name,
-                f.previous_td_no, f.previous_owner, f.effectivity_year, f.taxability,
-                f.previous_av_land, f.previous_av_improvements,
-                f.memoranda_code, f.memoranda_paragraph, f.owner_administrator
+            SELECT f.*, ue.full_name as encoder_name, ua.full_name as approver_name
             FROM faas_records f
             LEFT JOIN users ue ON f.encoder_id = ue.id
             LEFT JOIN users ua ON f.approver_id = ua.id
@@ -197,16 +194,21 @@ class FAASExcelGenerator:
                 'B17': record.get('east_boundary', ''),
                 'B18': record.get('west_boundary', ''),
                 'B19': record.get('south_boundary', ''),
-                'B65': record.get('previous_td_no', ''),
-                'B66': record.get('previous_owner', ''),
-                'E65': record.get('effectivity_year', ''),
-                'E66': str(record.get('taxability', '')).upper() if record.get('taxability') else '',
-                'H65': self.safe_float(record.get('previous_av_land'), default=None),
-                'H66': self.safe_float(record.get('previous_av_improvements'), default=None),
+                'B64': record.get('previous_td_no', ''),
+                'B65': record.get('previous_owner', ''),
+                'B68': record.get('previous_td_no2', ''),
+                'B69': record.get('previous_owner2', ''),
+                'E64': record.get('effectivity_year', ''),
+                'E65': str(record.get('taxability', '')).upper() if record.get('taxability') else '',
+                'H64': self.safe_float(record.get('previous_av_land'), default=None),
+                'H65': self.safe_float(record.get('previous_av_improvements'), default=None),
+                'H68': self.safe_float(record.get('previous_av_land2'), default=None),
+                'H69': self.safe_float(record.get('previous_av_improvements2'), default=None),
                 'A51': record.get('owner_administrator') or record.get('owner_name', ''),
                 'B59': str(record.get('memoranda_code', '')).upper() if record.get('memoranda_code') else '',
                 'A60': record.get('memoranda_paragraph') or '',
             }
+
 
             for i in range(min(4, len(land_appraisals))):
                 item = land_appraisals[i]
@@ -332,13 +334,10 @@ class FAASExcelGenerator:
 
             print(f"Processing UNIRRIG record for: {record.get('owner_name', 'Unknown')}")
 
-            # Debug: print sample field values
-
             land_appraisals = json.loads(record.get('land_appraisals_json', '[]')) if record.get('land_appraisals_json') else []
             improvements = json.loads(record.get('improvements_json', '[]')) if record.get('improvements_json') else []
             market_values = json.loads(record.get('market_values_json', '[]')) if record.get('market_values_json') else []
             assessments = json.loads(record.get('assessments_json', '[]')) if record.get('assessments_json') else []
-
 
             # ── SHEET 1 MAPPING ──
             unirrig_mapping = {
@@ -357,26 +356,20 @@ class FAASExcelGenerator:
                 'I21': record.get('south_boundary', ''),
                 'B22': record.get('east_boundary', ''),
                 'I22': record.get('west_boundary', ''),
-                'H62': record.get('memoranda_paragraph', ''),
+                'B64': record.get('memoranda_paragraph', ''),
             }
 
-            # % Adjustment → G52 (moved from G53)
             if market_values:
                 percent_adj = market_values[0].get('percent_adjustment')
                 if percent_adj:
                     unirrig_mapping['G52'] = self.safe_float(percent_adj) / 100.0
- 
-            # Adj. Factor parts → G44, G47, G50
-            if market_values:
+                
                 adj_factor_raw = market_values[0].get('adj_factor', '')
                 if adj_factor_raw:
                     adj_parts = [p.strip() for p in str(adj_factor_raw).split(',')]
-                    if len(adj_parts) > 0:
-                        unirrig_mapping['G44'] = self.safe_float(adj_parts[0]) / 100.0
-                    if len(adj_parts) > 1:
-                        unirrig_mapping['G47'] = self.safe_float(adj_parts[1]) / 100.0
-                    if len(adj_parts) > 2:
-                        unirrig_mapping['G50'] = self.safe_float(adj_parts[2]) / 100.0
+                    if len(adj_parts) > 0: unirrig_mapping['G44'] = self.safe_float(adj_parts[0]) / 100.0
+                    if len(adj_parts) > 1: unirrig_mapping['G47'] = self.safe_float(adj_parts[1]) / 100.0
+                    if len(adj_parts) > 2: unirrig_mapping['G50'] = self.safe_float(adj_parts[2]) / 100.0
 
             # Write Sheet1 mapping
             for cell, value in unirrig_mapping.items():
@@ -409,7 +402,6 @@ class FAASExcelGenerator:
                     else:
                         self.safe_write_cell(sheet, f'H{unirrig_row}', '')
                     
-                    # Only write area if it's not empty and > 0, to avoid 0.0000 in empty rows
                     area_val = self.safe_float(area_raw)
                     if area_val > 0:
                         self.safe_write_cell(sheet, f'G{unirrig_row}', f"{area_val:,.4f}")
@@ -422,13 +414,12 @@ class FAASExcelGenerator:
                     else:
                         self.safe_write_cell(sheet, f'I{unirrig_row}', '')
                 else:
-                    # Clear extra rows in template
                     self.safe_write_cell(sheet, f'E{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'H{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'G{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'I{unirrig_row}', '')
 
-            # ── COMPUTE ADJUSTED MARKET VALUES (MATCHES FAAS G36-G39) ──
+            # Improvements
             base_mvs: list[float] = []
             for item in land_appraisals:
                 cls = item.get('classification', '')
@@ -448,35 +439,18 @@ class FAASExcelGenerator:
                 mv = self.mround(qty * u_val_safe, 10) if qty and u_val_safe else 0
                 if mv: base_mvs.append(float(mv))
 
-                # Write Improvements to Sheet 1 → rows 42-45
                 if i < 4:
                     unirrig_row = 42 + i
-                    if pc:
-                        self.safe_write_cell(sheet, f'H{unirrig_row}', pc)
-                    if qty:
-                        self.safe_write_cell(sheet, f'I{unirrig_row}', qty)
-                    if u_val_safe:
-                        self.safe_write_cell(sheet, f'J{unirrig_row}', u_val_safe)
-                    if mv:
-                        self.safe_write_cell(sheet, f'K{unirrig_row}', mv)
-
-            adjusted_mvs: list[float] = []
-            for i in range(min(4, len(base_mvs))):
-                mv = base_mvs[i]
-                mv_item = market_values[i] if i < len(market_values) else {}
-                percent_adj = self.safe_float(mv_item.get('percent_adjustment'))
-                if percent_adj:
-                    calc_g = self.mround(mv * (percent_adj / 100.0), 10)
-                    adjusted_mvs.append(float(calc_g) if calc_g != 0 else float(mv))
-                else:
-                    adjusted_mvs.append(float(mv))
+                    if pc: self.safe_write_cell(sheet, f'H{unirrig_row}', pc)
+                    if qty: self.safe_write_cell(sheet, f'I{unirrig_row}', qty)
+                    if u_val_safe: self.safe_write_cell(sheet, f'J{unirrig_row}', u_val_safe)
+                    if mv: self.safe_write_cell(sheet, f'K{unirrig_row}', mv)
 
             if 'Sheet2' in workbook.sheetnames:
                 sheet2 = workbook['Sheet2']
                 sheet2.page_margins.top = 0.25
                 sheet2.page_margins.bottom = 0.25
 
-                # J36 result: Sum of Land MVs * % Adjustment
                 total_land_mv = 0.0
                 for item in land_appraisals:
                     cls = item.get('classification', '')
@@ -496,7 +470,6 @@ class FAASExcelGenerator:
                 else:
                     self.safe_write_cell(sheet2, 'J36', total_land_mv)
 
-                # J37 result: Sum of Improvements MVs * % Adjustment
                 total_impr_mv = 0.0
                 for item in improvements:
                     pc = item.get('product_class', '')
@@ -514,6 +487,17 @@ class FAASExcelGenerator:
                 else:
                     self.safe_write_cell(sheet2, 'J37', total_impr_mv)
 
+                adjusted_mvs: list[float] = []
+                for i in range(min(4, len(base_mvs))):
+                    mv = base_mvs[i]
+                    mv_item = market_values[i] if i < len(market_values) else {}
+                    percent_adj = self.safe_float(mv_item.get('percent_adjustment'))
+                    if percent_adj:
+                        calc_g = self.mround(mv * (percent_adj / 100.0), 10)
+                        adjusted_mvs.append(float(calc_g) if calc_g != 0 else float(mv))
+                    else:
+                        adjusted_mvs.append(float(mv))
+
                 for i in range(min(4, len(assessments))):
                     item = assessments[i]
                     row = 54 + i
@@ -522,21 +506,20 @@ class FAASExcelGenerator:
                     assessment_level = self.safe_float(item.get('assessment_level'))
                     market_val_detail = adjusted_mvs[i] if i < len(adjusted_mvs) else 0
 
-                    if kind:
-                        self.safe_write_cell(sheet2, f'A{row}', kind)
-                    if actual_use:
-                        self.safe_write_cell(sheet2, f'D{row}', actual_use)
-                    if market_val_detail:
-                        self.safe_write_cell(sheet2, f'G{row}', market_val_detail)
-                    if assessment_level:
-                        self.safe_write_cell(sheet2, f'I{row}', assessment_level / 100.0)
+                    if kind: self.safe_write_cell(sheet2, f'A{row}', kind)
+                    if actual_use: self.safe_write_cell(sheet2, f'D{row}', actual_use)
+                    if market_val_detail: self.safe_write_cell(sheet2, f'G{row}', market_val_detail)
+                    if assessment_level: self.safe_write_cell(sheet2, f'I{row}', assessment_level / 100.0)
                     if market_val_detail and assessment_level:
                         calc_av = self.mround(market_val_detail * (assessment_level / 100.0), 10)
                         self.safe_write_cell(sheet2, f'K{row}', calc_av if calc_av != 0 else '')
 
-                print(f"[OK] UNIRRIG Page 2 assessments written: {len(assessments)} row(s)")
-            else:
-                print("[WARN] UNIRRIG template has only 1 sheet — add Sheet2 to UNIRRIG_Template.xlsx first.")
+                # New Previous record mappings for Sheet 2
+                self.safe_write_cell(sheet2, 'E67', record.get('previous_td_no', ''))
+                self.safe_write_cell(sheet2, 'B69', record.get('effectivity_year', ''))
+                self.safe_write_cell(sheet2, 'E69', record.get('previous_owner', ''))
+                self.safe_write_cell(sheet2, 'E70', self.safe_float(record.get('previous_av_land'), default=None))
+                self.safe_write_cell(sheet2, 'H70', self.safe_float(record.get('previous_av_improvements'), default=None))
 
             owner_raw = record.get('owner_name', 'Unknown')
             owner_name_safe = self.clean_filename(owner_raw)

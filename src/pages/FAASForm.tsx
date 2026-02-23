@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Send, ArrowLeft, FileSpreadsheet, Loader2, X, ShieldCheck, User, MapPin, Calendar, FileText, ChevronRight, ChevronLeft, Eye, Edit, Trash2 } from "lucide-react";
+import { Save, Send, ArrowLeft, FileSpreadsheet, Loader2, X, ShieldCheck, User, MapPin, Calendar, FileText, ChevronRight, ChevronLeft, Eye, Edit, Trash2, XCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { faasAPI } from "@/services/api";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -127,10 +127,15 @@ interface FAASFormData {
   previous_owner: string;
   previous_av_land: string;
   previous_av_improvements: string;
+  previous_td_no2: string;
+  previous_owner2: string;
+  previous_av_land2: string;
+  previous_av_improvements2: string;
   memoranda: string;
   memoranda_code: string;
   memoranda_paragraph: string;
 }
+
 
 // Classification options for Land Appraisal
 const landClassificationOptions = [
@@ -287,10 +292,15 @@ const initialFormData: FAASFormData = {
   previous_owner: "",
   previous_av_land: "",
   previous_av_improvements: "",
+  previous_td_no2: "",
+  previous_owner2: "",
+  previous_av_land2: "",
+  previous_av_improvements2: "",
   memoranda: "",
   memoranda_code: '',
   memoranda_paragraph: '',
 };
+
 
 const statusStyles = {
   draft: "bg-slate-100 text-slate-600 border-slate-200",
@@ -304,7 +314,7 @@ export default function FAASForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { isEncoder } = useAuth() as { isEncoder?: boolean };
+  const { isEncoder, isAdmin } = useAuth() as { isEncoder?: boolean; isAdmin?: boolean };
   const [formData, setFormData] = useState<FAASFormData>(initialFormData);
   const tabOrder = ["basic", "property", "appraisal", "assessment", "previous"] as const;
   type TabValue = (typeof tabOrder)[number];
@@ -313,6 +323,7 @@ export default function FAASForm() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [recordStatus, setRecordStatus] = useState<string>('draft');
+  const [rejectionReason, setRejectionReason] = useState<string>('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -577,13 +588,19 @@ export default function FAASForm() {
           previous_owner: response.data.previous_owner || "",
           previous_av_land: response.data.previous_av_land?.toString() || "",
           previous_av_improvements: response.data.previous_av_improvements?.toString() || "",
+          previous_td_no2: response.data.previous_td_no2 || "",
+          previous_owner2: response.data.previous_owner2 || "",
+          previous_av_land2: response.data.previous_av_land2?.toString() || "",
+          previous_av_improvements2: response.data.previous_av_improvements2?.toString() || "",
           memoranda: response.data.memoranda || "",
           memoranda_code: response.data.memoranda_code || "",
           memoranda_paragraph: response.data.memoranda_paragraph || "",
         };
 
+
         setFormData(fetchedData);
         setRecordStatus(response.data.status || 'draft');
+        setRejectionReason(response.data.rejection_reason || '');
       }
     } catch (error: any) {
       showErrorToast(error, "Load Failed");
@@ -728,6 +745,16 @@ export default function FAASForm() {
           ? parseFloat(formData.previous_av_improvements)
           : null,
 
+        previous_td_no2: formData.previous_td_no2 || null,
+        previous_owner2: formData.previous_owner2 || null,
+        previous_av_land2: formData.previous_av_land2.trim() !== ''
+          ? parseFloat(formData.previous_av_land2)
+          : null,
+        previous_av_improvements2: formData.previous_av_improvements2.trim() !== ''
+          ? parseFloat(formData.previous_av_improvements2)
+          : null,
+
+
         memoranda: formData.memoranda || null,
         memoranda_code: formData.memoranda_code || null,
         memoranda_paragraph: formData.memoranda_paragraph || null,
@@ -738,7 +765,7 @@ export default function FAASForm() {
       if (isEditing) {
         if (recordStatus === 'draft') {
           response = await faasAPI.saveAsDraft(id!, requestData);
-        } else if (recordStatus === 'for_approval' || (recordStatus === 'rejected' && isEncoder)) {
+        } else if (isAdmin || recordStatus === 'for_approval' || (recordStatus === 'rejected' && isEncoder)) {
           response = await faasAPI.updateRecord(id!, requestData);
         } else {
           toast({
@@ -891,6 +918,15 @@ export default function FAASForm() {
           ? parseFloat(formData.previous_av_improvements)
           : null,
 
+        previous_td_no2: formData.previous_td_no2 || null,
+        previous_owner2: formData.previous_owner2 || null,
+        previous_av_land2: formData.previous_av_land2.trim() !== ''
+          ? parseFloat(formData.previous_av_land2)
+          : null,
+        previous_av_improvements2: formData.previous_av_improvements2.trim() !== ''
+          ? parseFloat(formData.previous_av_improvements2)
+          : null,
+
         memoranda: formData.memoranda || null,
         memoranda_code: formData.memoranda_code || null,
         memoranda_paragraph: formData.memoranda_paragraph || null,
@@ -928,7 +964,7 @@ export default function FAASForm() {
             navigate("/dashboard");
           }
         }
-      } else if (recordStatus === 'draft' || recordStatus === 'for_approval' || (recordStatus === 'rejected' && isEncoder)) {
+      } else if (isAdmin || recordStatus === 'draft' || recordStatus === 'for_approval' || (recordStatus === 'rejected' && isEncoder)) {
         toast({
           title: "Submitting for Approval",
           description: "Your FAAS record is being submitted and Excel is being generated...",
@@ -996,7 +1032,7 @@ export default function FAASForm() {
 
   // Update isEditable to consider edit mode
   const isEditable = (isEditMode || !isEditing) &&
-    (recordStatus === 'draft' || recordStatus === 'for_approval' || (!!isEncoder && recordStatus === 'rejected'));
+    (isAdmin || recordStatus === 'draft' || recordStatus === 'for_approval' || (isEncoder && recordStatus === 'rejected'));
 
   const currentTabIndex = Math.max(0, tabOrder.indexOf(activeTab));
   const isFirstTab = currentTabIndex === 0;
@@ -1225,6 +1261,40 @@ export default function FAASForm() {
           </CardHeader>
 
           <CardContent className="p-4">
+            {recordStatus === 'rejected' && (
+              <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="relative overflow-hidden rounded-2xl border-2 border-rose-200 bg-rose-50 p-5 shadow-sm">
+                  <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <XCircle className="w-24 h-24 text-rose-900" />
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-100 text-rose-600 shadow-inner">
+                        <AlertCircle className="h-6 w-6" />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-rose-900">Record Rejected</h3>
+                      <div className="mt-1 text-sm text-rose-700 leading-relaxed font-medium">
+                        {rejectionReason ? (
+                          <>
+                            <p className="mb-2 font-bold uppercase tracking-tight text-[10px] text-rose-500">Reason from Approver:</p>
+                            <p className="italic bg-white/50 p-3 rounded-lg border border-rose-100 shadow-sm">{rejectionReason}</p>
+                          </>
+                        ) : (
+                          "This record has been rejected by the approver. Please review and make the necessary corrections before resubmitting."
+                        )}
+                      </div>
+                      <div className="mt-4 flex items-center gap-2">
+                        <Badge className="bg-rose-500 text-white border-none px-2 py-0.5 text-[10px]">Action Required</Badge>
+                        <p className="text-[10px] text-rose-500 font-bold uppercase tracking-tighter">Please edit the fields below and click "Submit for Approval" to resend.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Tabs
               value={activeTab}
               onValueChange={(value) => {
@@ -1920,6 +1990,54 @@ export default function FAASForm() {
                             />
                           </div>
 
+                          <div className="pt-4 mt-4 border-t border-slate-200 space-y-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-sm font-semibold text-slate-700">Previous T.D. No. 2:</Label>
+                              <Input
+                                value={formData.previous_td_no2}
+                                onChange={(e) => handleInputChange("previous_td_no2", e.target.value)}
+                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                placeholder="Previous TD 2"
+                                disabled={!isEditable}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-sm font-semibold text-slate-700">Previous Owner 2:</Label>
+                              <Input
+                                value={formData.previous_owner2}
+                                onChange={(e) => handleInputChange("previous_owner2", e.target.value)}
+                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                placeholder="Previous owner 2"
+                                disabled={!isEditable}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-sm font-semibold text-slate-700">Previous AV - Land 2:</Label>
+                              <Input
+                                value={formData.previous_av_land2}
+                                onChange={(e) => handleInputChange("previous_av_land2", e.target.value)}
+                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                placeholder="Previous land AV 2"
+                                type="number"
+                                step="0.01"
+                                disabled={!isEditable}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-sm font-semibold text-slate-700">Previous AV - Improvements 2:</Label>
+                              <Input
+                                value={formData.previous_av_improvements2}
+                                onChange={(e) => handleInputChange("previous_av_improvements2", e.target.value)}
+                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                placeholder="Previous improvements AV 2"
+                                type="number"
+                                step="0.01"
+                                disabled={!isEditable}
+                              />
+                            </div>
+                          </div>
+
+
                         </div>
                       </div>
                     </div>
@@ -1984,6 +2102,8 @@ export default function FAASForm() {
                   </div>
                 </div>
               </TabsContent>
+
+
 
               {/* Navigation Buttons - Compact */}
               <div className="flex items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-100">

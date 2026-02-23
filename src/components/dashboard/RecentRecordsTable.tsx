@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext.jsx";
+
 import {
   Table,
   TableBody,
@@ -20,9 +22,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Eye, Edit, Trash2, Calendar, User, FileText } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Eye, Edit, Trash2, Calendar, User, FileText, History, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { RecordTimeline } from "./RecordTimeline";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FAASRecord {
   id: string | number;
@@ -31,6 +42,7 @@ interface FAASRecord {
   owner_name: string;
   property_location: string;
   status: "draft" | "for_approval" | "approved" | "rejected";
+  rejection_reason?: string;
   created_at: string;
   encoder_name: string;
   encoder_profile_picture?: string;
@@ -63,9 +75,12 @@ const rowHoverStyles = {
 } as const;
 
 export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProps) {
+  const { isAdmin } = useAuth() as { isAdmin?: boolean };
   const navigate = useNavigate();
+
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | number | null>(null);
+  const [historyRecord, setHistoryRecord] = useState<FAASRecord | null>(null);
 
   const handleConfirmDelete = async () => {
     if (deleteId && onDelete) {
@@ -89,6 +104,10 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
 
   const handleDelete = (id: string | number) => {
     setDeleteId(id);
+  };
+
+  const handleViewHistory = (record: FAASRecord) => {
+    setHistoryRecord(record);
   };
 
   return (
@@ -117,6 +136,28 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* History Dialog */}
+      <Dialog open={!!historyRecord} onOpenChange={(open) => !open && setHistoryRecord(null)}>
+        <DialogContent className="sm:max-w-[650px] rounded-2xl border-none shadow-2xl p-0 overflow-hidden bg-white">
+          <DialogHeader className="p-6 bg-white border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                <History className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-900">Record Progress</DialogTitle>
+                <DialogDescription className="text-slate-500 font-medium">
+                  Tracking history for ARF No: {historyRecord?.arf_no}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="p-6 max-h-[60vh] overflow-y-auto">
+            {historyRecord && <RecordTimeline recordId={historyRecord.id} />}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="overflow-x-auto">
         <Table>
@@ -238,6 +279,22 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                           record.status === "rejected" && "bg-rose-500"
                         )} />
                         {statusLabels[record.status]}
+                        {record.status === "rejected" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertCircle className="w-3 h-3 text-rose-500 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-rose-600 text-white border-none rounded-lg p-3 shadow-xl max-w-xs">
+                                <p className="font-bold flex items-center gap-1.5 mb-1.5">
+                                  <AlertCircle className="w-3.5 h-3.5" />
+                                  Rejection Reason
+                                </p>
+                                <p className="text-xs leading-relaxed opacity-90">{record.rejection_reason || "No reason provided"}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </Badge>
                   </TableCell>
@@ -258,6 +315,16 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => handleViewHistory(record)}
+                        className="h-9 w-9 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-gradient-to-br hover:from-indigo-50 hover:to-indigo-100 transition-all shadow-sm border border-slate-200 hover:border-indigo-200"
+                        title="View Progress"
+                      >
+                        <History className="w-4 h-4" />
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleView(record)}
                         className="h-9 w-9 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 transition-all shadow-sm border border-slate-200 hover:border-blue-200"
                         title="View Details"
@@ -265,7 +332,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                         <Eye className="w-4 h-4" />
                       </Button>
 
-                      {(record.status === "draft" || record.status === "for_approval" || record.status === "rejected") && (
+                      {(isAdmin || record.status === "draft" || record.status === "for_approval" || record.status === "rejected") && (
                         <Button
                           variant="ghost"
                           size="icon"

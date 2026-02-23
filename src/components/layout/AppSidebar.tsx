@@ -9,8 +9,10 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Users
 } from "lucide-react";
+
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,8 +26,10 @@ const NAV_ITEMS = [
   { title: "Drafts", url: "/drafts", icon: FileEdit, roles: ["encoder", "administrator"] },
   { title: "Approvals", url: "/approvals", icon: CheckCircle, roles: ["approver", "administrator"] },
   { title: "Print Preview", url: "/print", icon: Printer, roles: ["encoder", "approver", "administrator"] },
-  { title: "Settings", url: "/settings", icon: Settings, roles: ["encoder", "approver", "administrator"] },
+  { title: "Edit Profile", url: "/settings", icon: Settings, roles: ["encoder", "approver", "administrator"] },
+  { title: "User Management", url: "/users", icon: Users, roles: ["administrator"] },
 ] as const;
+
 
 const ROLE_LABELS: Record<string, string> = {
   encoder: "Encoder",
@@ -119,7 +123,7 @@ export function AppSidebar() {
                 end={item.url === "/dashboard"}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
-                  "text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+                  "text-slate-800 hover:bg-slate-50 hover:text-slate-800",
                   collapsed && "justify-center px-0"
                 )}
                 activeClassName="bg-blue-50 text-blue-600 font-semibold shadow-sm shadow-blue-50/50"
@@ -141,7 +145,7 @@ export function AppSidebar() {
           variant="ghost"
           onClick={handleLogout}
           className={cn(
-            "w-full h-12 justify-start gap-3 rounded-xl text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200",
+            "w-full h-12 justify-start gap-3 rounded-xl text-black hover:bg-rose-50 hover:text-rose-600 transition-all duration-200",
             collapsed && "justify-center px-0"
           )}
         >

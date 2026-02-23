@@ -30,12 +30,23 @@ import {
   Trash2,
   User,
   Calendar,
-  RotateCcw
+  RotateCcw,
+  History
 } from "lucide-react";
+import { RecordTimeline } from "@/components/dashboard/RecordTimeline";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { approvalAPI } from "@/services/api";
 import { useSSE } from "@/hooks/useSSE";
+import { useAuth } from "@/context/AuthContext.jsx";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import axios from "axios";
 
@@ -269,7 +280,39 @@ const PreviewPanel = ({
               </p>
             </div>
           </div>
-          {getStatusBadge(selectedRecord.status)}
+          <div className="flex items-center gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-50 h-9"
+                >
+                  <History className="w-4 h-4" />
+                  History
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[650px] rounded-2xl border-none shadow-2xl p-0 overflow-hidden bg-white">
+                <DialogHeader className="p-6 bg-white border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                      <History className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-bold text-slate-900">Record Progress</DialogTitle>
+                      <DialogDescription className="text-slate-500 font-medium">
+                        Tracking history for ARF No: {selectedRecord.arf_no}
+                      </DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+                <div className="p-6 max-h-[60vh] overflow-y-auto">
+                  <RecordTimeline recordId={selectedRecord.id} />
+                </div>
+              </DialogContent>
+            </Dialog>
+            {getStatusBadge(selectedRecord.status)}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-5">
@@ -456,6 +499,8 @@ const PreviewPanel = ({
 
 export default function Approvals() {
   const { toast } = useToast();
+  const { userRole } = useAuth() as { userRole: string };
+
   const [loading, setLoading] = useState(true);
   const [pendingRecords, setPendingRecords] = useState<ApprovalRecord[]>([]);
   const [rejectedRecords, setRejectedRecords] = useState<ApprovalRecord[]>([]);
@@ -925,7 +970,7 @@ export default function Approvals() {
           <div className="flex items-center gap-3 mt-3 md:mt-0">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
               <ShieldCheck className="w-4 h-4 text-white" />
-              <span className="text-xs font-medium text-white">Approver</span>
+              <span className="text-xs font-medium text-white capitalize">{userRole}</span>
             </div>
           </div>
         </div>
