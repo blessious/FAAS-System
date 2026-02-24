@@ -134,6 +134,7 @@ interface FAASFormData {
   memoranda: string;
   memoranda_code: string;
   memoranda_paragraph: string;
+  rw_row: string;
 }
 
 
@@ -299,6 +300,7 @@ const initialFormData: FAASFormData = {
   memoranda: "",
   memoranda_code: '',
   memoranda_paragraph: '',
+  rw_row: "",
 };
 
 
@@ -595,6 +597,7 @@ export default function FAASForm() {
           memoranda: response.data.memoranda || "",
           memoranda_code: response.data.memoranda_code || "",
           memoranda_paragraph: response.data.memoranda_paragraph || "",
+          rw_row: response.data.rw_row?.toString() || "",
         };
 
 
@@ -682,6 +685,7 @@ export default function FAASForm() {
         south_boundary: formData.south_boundary || null,
         east_boundary: formData.east_boundary || null,
         west_boundary: formData.west_boundary || null,
+        rw_row: formData.rw_row || null,
 
         classification: formData.landAppraisals[0]?.classification || null,
         sub_class: formData.landAppraisals[0]?.sub_class || null,
@@ -855,6 +859,7 @@ export default function FAASForm() {
         south_boundary: formData.south_boundary || null,
         east_boundary: formData.east_boundary || null,
         west_boundary: formData.west_boundary || null,
+        rw_row: formData.rw_row || null,
 
         classification: formData.landAppraisals[0]?.classification || null,
         sub_class: formData.landAppraisals[0]?.sub_class || null,
@@ -1634,6 +1639,28 @@ export default function FAASForm() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-semibold text-slate-900">Land Appraisal Details</h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="space-y-1.5 text-left">
+                          <Label htmlFor="rw_row" className="text-sm font-semibold text-slate-700">
+                            RW/ROW
+                          </Label>
+                          <Select
+                            value={formData.rw_row || "NONE"}
+                            onValueChange={(value) => handleInputChange("rw_row", value === "NONE" ? "" : value)}
+                            disabled={!isEditable}
+                          >
+                            <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm">
+                              <SelectValue placeholder="Select RW/ROW" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="NONE">-- None --</SelectItem>
+                              <SelectItem value="RW">RW</SelectItem>
+                              <SelectItem value="ROW">ROW</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
                       <div className="overflow-hidden rounded-lg border border-slate-200">

@@ -203,7 +203,7 @@ const PreviewPanel = ({
   // Tab content for PDF preview
   const renderPdfPreview = (type: 'faas' | 'unirrig') => {
     const url = type === 'faas' ? faasPdfUrl : unirrigPdfUrl;
-    const label = type === 'faas' ? 'FAAS' : 'UNIRRIG';
+    const label = type === 'faas' ? 'FAAS' : 'TDC';
     if (!url) {
       return (
         <div className="p-6 border border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100/30 rounded-xl">
@@ -335,7 +335,7 @@ const PreviewPanel = ({
                     value="unirrig"
                     className="rounded-md text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
                   >
-                    UNIRRIG
+                    TDC
                   </TabsTrigger>
                 </TabsList>
               </div>

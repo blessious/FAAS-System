@@ -226,6 +226,7 @@ class FAASController {
         previous_av_improvements2,
         memoranda_code,
         memoranda_paragraph,
+        rw_row,
 
         land_appraisals_json,
         improvements_json,
@@ -290,7 +291,7 @@ class FAASController {
     effectivity_year, taxability, tax_rate,
     previous_td_no, previous_owner, previous_av_land, previous_av_improvements, previous_total_av,
     previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
-    memoranda_code, memoranda_paragraph,
+    memoranda_code, memoranda_paragraph, rw_row,
 
     land_appraisals_json, improvements_json, market_values_json, assessments_json,
     encoder_id, status
@@ -301,7 +302,7 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?
+    ?, ?, ?, ?
   )
 
 
@@ -363,6 +364,7 @@ class FAASController {
         previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
         memoranda_code || null,
         memoranda_paragraph || null,
+        rw_row || null,
         land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
         improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
         market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
@@ -479,6 +481,7 @@ class FAASController {
         previous_av_improvements2,
         memoranda_code,
         memoranda_paragraph,
+        rw_row,
 
         land_appraisals_json,
         improvements_json,
@@ -554,7 +557,7 @@ class FAASController {
           effectivity_year = ?, taxability = ?, tax_rate = ?,
           previous_td_no = ?, previous_owner = ?, previous_av_land = ?, previous_av_improvements = ?, previous_total_av = ?,
           previous_td_no2 = ?, previous_owner2 = ?, previous_av_land2 = ?, previous_av_improvements2 = ?,
-          memoranda_code = ?, memoranda_paragraph = ?, 
+          memoranda_code = ?, memoranda_paragraph = ?, rw_row = ?,
 
           land_appraisals_json = ?, improvements_json = ?, market_values_json = ?, assessments_json = ?,
           status = ?, updated_at = NOW()
@@ -617,6 +620,7 @@ class FAASController {
         previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
         memoranda_code || null,
         memoranda_paragraph || null,
+        rw_row || null,
 
         land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
         improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
@@ -1049,6 +1053,7 @@ class FAASController {
         previous_av_improvements2,
         memoranda_code,
         memoranda_paragraph,
+        rw_row,
 
         land_appraisals_json,
         improvements_json,
@@ -1127,7 +1132,7 @@ class FAASController {
             effectivity_year = ?, taxability = ?, tax_rate = ?,
             previous_td_no = ?, previous_owner = ?, previous_av_land = ?, previous_av_improvements = ?, previous_total_av = ?,
             previous_td_no2 = ?, previous_owner2 = ?, previous_av_land2 = ?, previous_av_improvements2 = ?,
-            memoranda_code = ?, memoranda_paragraph = ?,
+            memoranda_code = ?, memoranda_paragraph = ?, rw_row = ?,
 
             land_appraisals_json = ?, improvements_json = ?, market_values_json = ?, assessments_json = ?,
             status = ?, updated_at = NOW()
@@ -1191,6 +1196,7 @@ class FAASController {
           previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
           memoranda_code || null,
           memoranda_paragraph || null,
+          rw_row || null,
 
           land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
           improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
@@ -1227,7 +1233,7 @@ class FAASController {
     effectivity_year, taxability, tax_rate,
     previous_td_no, previous_owner, previous_av_land, previous_av_improvements, previous_total_av,
     previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
-    memoranda_code, memoranda_paragraph,
+    memoranda_code, memoranda_paragraph, rw_row,
 
     land_appraisals_json, improvements_json, market_values_json, assessments_json,
     encoder_id, status
@@ -1238,7 +1244,7 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?
+    ?, ?, ?, ?
   )
 
 
@@ -1301,6 +1307,7 @@ class FAASController {
           previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
           memoranda_code || null,
           memoranda_paragraph || null,
+          rw_row || null,
 
           land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
           improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,

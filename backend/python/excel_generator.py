@@ -356,6 +356,7 @@ class FAASExcelGenerator:
                 'I21': record.get('south_boundary', ''),
                 'B22': record.get('east_boundary', ''),
                 'I22': record.get('west_boundary', ''),
+                'G59': record.get('rw_row', ''),
                 'B64': record.get('memoranda_paragraph', ''),
             }
 
@@ -384,10 +385,15 @@ class FAASExcelGenerator:
                 self.safe_write_cell(sheet, 'K19', pin_parts[4])
 
             # Land Appraisals → rows 28-31
+            # Special categories (Residential/Commercial) go to E58-E60
+            special_cats = ["RESIDENTIAL", "COMMERCIAL"]
+            regular_land = [a for a in land_appraisals if str(a.get('classification', '')).upper().strip() not in special_cats]
+            special_land = [a for a in land_appraisals if str(a.get('classification', '')).upper().strip() in special_cats]
+
             for i in range(4):
                 unirrig_row = 28 + i
-                if i < len(land_appraisals):
-                    item = land_appraisals[i]
+                if i < len(regular_land):
+                    item = regular_land[i]
                     classification = item.get('classification', '')
                     sub_class = item.get('sub_class', '')
                     area_raw = item.get('area', '')
@@ -418,6 +424,66 @@ class FAASExcelGenerator:
                     self.safe_write_cell(sheet, f'H{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'G{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'I{unirrig_row}', '')
+
+            # Special Land Appraisals (Residential/Commercial) → blocks starting at rows 58, 60
+            special_cats = ["RESIDENTIAL", "COMMERCIAL"]
+            special_land = [a for a in land_appraisals if str(a.get('classification', '')).upper().strip() in special_cats]
+
+            for i in range(2):
+                base_row = 58 + (i * 2)
+                if i < len(special_land):
+                    item = special_land[i]
+                    classification = item.get('classification', '')
+                    sub_class = item.get('sub_class', '')
+                    area_raw = item.get('area', '')
+                    area_val = self.safe_float(area_raw)
+                    
+                    # E column: Class + LOT
+                    cls_upper = str(classification).upper()
+                    if cls_upper in special_cats:
+                        cls_upper += " LOT"
+                    self.safe_write_cell(sheet, f'E{base_row}', cls_upper)
+                        
+                    # G column: Area + sq.m. + whole number formatting
+                    if area_val > 0:
+                        if area_val == int(area_val):
+                            formatted_area = f"{int(area_val):,}"
+                        else:
+                            formatted_area = f"{area_val:,.4f}"
+                        formatted_area += " sq.m."
+                        self.safe_write_cell(sheet, f'G{base_row}', formatted_area)
+                    else:
+                        self.safe_write_cell(sheet, f'G{base_row}', '')
+
+                    # H column: Unit Value
+                    # J column: Market Value
+                    unit_value = self.calculate_land_unit_value(classification, sub_class)
+                    if unit_value:
+                        self.safe_write_cell(sheet, f'H{base_row}', unit_value)
+                        mv = self.mround(area_val * unit_value, 10)
+                        if mv:
+                            self.safe_write_cell(sheet, f'J{base_row}', mv)
+                        else:
+                            self.safe_write_cell(sheet, f'J{base_row}', '')
+                    else:
+                        self.safe_write_cell(sheet, f'H{base_row}', '')
+                        self.safe_write_cell(sheet, f'J{base_row}', '')
+                    
+                    # H column (Row Below): Sub Class
+                    if sub_class:
+                        self.safe_write_cell(sheet, f'H{base_row + 1}', str(sub_class).upper())
+                    else:
+                        self.safe_write_cell(sheet, f'H{base_row + 1}', '')
+                    
+                    # Clear I column for both rows
+                    self.safe_write_cell(sheet, f'I{base_row}', '')
+                    self.safe_write_cell(sheet, f'I{base_row + 1}', '')
+                else:
+                    # Clear placeholders if no record
+                    for offset in [0, 1]:
+                        curr_row = base_row + offset
+                        for col in ['E', 'G', 'H', 'I', 'J']:
+                            self.safe_write_cell(sheet, f'{col}{curr_row}', '')
 
             # Improvements
             base_mvs: list[float] = []
