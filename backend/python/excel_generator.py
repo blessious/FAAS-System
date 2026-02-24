@@ -342,14 +342,14 @@ class FAASExcelGenerator:
             # ── SHEET 1 MAPPING ──
             unirrig_mapping = {
                 'J3':  record.get('pin', ''),
-                'A7':  record.get('memoranda_code', ''),
+                'A7':  str(record.get('memoranda_code', '')).upper(),
                 'B11': record.get('owner_name', ''),
                 'H11': record.get('owner_address', ''),
                 'B13': record.get('administrator_name', ''),
                 'H13': record.get('administrator_address', ''),
                 'C17': record.get('property_location', ''),
-                'I17': record.get('property_municipality', ''),
-                'G17': record.get('property_province', ''),
+                'I17': f"{record.get('property_municipality', '')}, {record.get('property_province', '')}",
+                'G17': record.get('property_barangay', ''),
                 'C19': record.get('oct_tct_no', ''),
                 'H19': record.get('cln', ''),
                 'B21': record.get('north_boundary', ''),
@@ -370,7 +370,7 @@ class FAASExcelGenerator:
                     adj_parts = [p.strip() for p in str(adj_factor_raw).split(',')]
                     if len(adj_parts) > 0: unirrig_mapping['G44'] = self.safe_float(adj_parts[0]) / 100.0
                     if len(adj_parts) > 1: unirrig_mapping['G47'] = self.safe_float(adj_parts[1]) / 100.0
-                    if len(adj_parts) > 2: unirrig_mapping['G50'] = self.safe_float(adj_parts[2]) / 100.0
+                    if len(adj_parts) > 2: unirrig_mapping['G49'] = self.safe_float(adj_parts[2]) / 100.0
 
             # Write Sheet1 mapping
             for cell, value in unirrig_mapping.items():

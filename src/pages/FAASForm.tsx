@@ -1438,19 +1438,6 @@ export default function FAASForm() {
                       />
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor="owner_administrator" className="text-sm font-semibold text-slate-700">
-                        Owner/Administrator <span className="text-red-500 text-[10px] italic font-normal ml-1">(Appears in A51 Signature Line)</span>
-                      </Label>
-                      <Input
-                        id="owner_administrator"
-                        value={formData.owner_administrator}
-                        onChange={(e) => handleInputChange("owner_administrator", e.target.value)}
-                        placeholder="Name of Owner or Administrator for signature"
-                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                        disabled={!isEditable}
-                      />
-                    </div>
                   </div>
                 </div>
                 {/* Administrator Information Section */}
@@ -1489,6 +1476,19 @@ export default function FAASForm() {
                         disabled={!isEditable}
                       />
                     </div>
+                  </div>
+                  <div className="space-y-1.5 mt-2">
+                    <Label htmlFor="owner_administrator" className="text-sm font-semibold text-slate-700">
+                      Owner/Administrator <span className="text-red-500 text-[10px] italic font-normal ml-1">(Appears in A51 Signature Line)</span>
+                    </Label>
+                    <Input
+                      id="owner_administrator"
+                      value={formData.owner_administrator}
+                      onChange={(e) => handleInputChange("owner_administrator", e.target.value)}
+                      placeholder="Name of Owner or Administrator for signature"
+                      className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                      disabled={!isEditable}
+                    />
                   </div>
                 </div>
               </TabsContent>
@@ -1642,7 +1642,7 @@ export default function FAASForm() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="space-y-1.5 text-left">
+                        <div className="space-y-1.5 text-left max-w-[160px]">
                           <Label htmlFor="rw_row" className="text-sm font-semibold text-slate-700">
                             RW/ROW
                           </Label>
