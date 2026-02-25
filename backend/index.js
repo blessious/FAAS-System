@@ -103,8 +103,8 @@ app.get('/api/events/stream', (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  // Get user ID from auth header (simple version - adjust based on your auth)
-  const userId = req.headers['x-user-id'] || 1; // Default to user 1 if no auth
+  // Get user ID from query param or header (simple version - adjust based on your auth)
+  const userId = req.query.userId || req.headers['x-user-id'] || 'anonymous';
 
   // Send initial connection message
   res.write(`event: connected\ndata: ${JSON.stringify({

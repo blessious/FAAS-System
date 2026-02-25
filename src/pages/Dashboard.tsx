@@ -67,6 +67,7 @@ export default function Dashboard() {
     hasPreviousPage: false
   });
   const recordsPerPage = 10;
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
 
   // Client-side filtering for search
   const filteredRecentRecords = useMemo(() => {
@@ -202,23 +203,30 @@ export default function Dashboard() {
 
   useSSE({
     onRecordChange: useCallback((data) => {
+      console.log('📡 Dashboard received record change:', data);
+
       const actionMessages: Record<string, string> = {
         created: 'New record created',
         updated: 'Record updated',
-        submitted: 'Record submitted for approval',
         approved: 'Record approved',
         rejected: 'Record rejected',
         deleted: 'Record deleted',
         files_generated: 'Files generated for record'
       };
 
-      if (data.action !== 'files_generated') {
+      // Only show toast if it's not a 'submitted' or 'files_generated' event
+      if (data.action !== 'submitted' && data.action !== 'files_generated' && actionMessages[data.action] && data.record) {
         toast({
-          title: actionMessages[data.action] || 'Record changed',
-          description: `ARF No: ${data.record.arf_no}`,
+          title: actionMessages[data.action],
+          description: `PIN: ${data.record.pin || 'N/A'}`,
         });
       }
-      fetchDashboardData(currentPage);
+
+      // Small delay to ensure DB is settled before fetching
+      setTimeout(() => {
+        fetchDashboardData(currentPage);
+        setLastRefresh(Date.now()); // Force sub-components to clear local state if needed
+      }, 500);
     }, [fetchDashboardData, currentPage, toast]),
 
     onConnected: useCallback(() => {
@@ -491,6 +499,7 @@ export default function Dashboard() {
                   <>
                     <div className="overflow-x-auto">
                       <RecentRecordsTable
+                        key={lastRefresh}
                         records={displayedRecords}
                         onDelete={handleDeleteDraft}
                       />

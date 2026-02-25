@@ -118,6 +118,7 @@ class FAASController {
     this.deleteHistoryEntry = this.deleteHistoryEntry.bind(this);
     this.clearRecordHistory = this.clearRecordHistory.bind(this);
     this.submitForApproval = this.submitForApproval.bind(this);
+    this.createLinkedEntry = this.createLinkedEntry.bind(this);
   }
 
   // Centralized database error handler
@@ -386,6 +387,7 @@ class FAASController {
           record: {
             id: result.insertId,
             arf_no: arf_no,
+            pin: pin,
             owner_name: owner_name,
             status: 'draft',
             encoder_id: userId
@@ -645,6 +647,7 @@ class FAASController {
           record: {
             id: id,
             arf_no: arf_no,
+            pin: pin,
             owner_name: owner_name,
             status: newStatus,
             encoder_id: record.encoder_id
@@ -820,6 +823,7 @@ class FAASController {
           record: {
             id: id,
             arf_no: record.arf_no,
+            pin: record.pin,
             owner_name: null,
             status: 'for_approval',
             encoder_id: record.encoder_id
@@ -995,6 +999,7 @@ class FAASController {
 
       const { id } = req.params;
       const {
+        parent_id,
         arf_no,
         pin,
         oct_tct_no,
@@ -1211,6 +1216,22 @@ class FAASController {
           VALUES (?, ?, ?, ?, ?)
         `, [userId, 'UPDATE', 'faas_records', id, `Saved FAAS record ${arf_no} as draft`]);
 
+        // Broadcast real-time event
+        if (global.broadcastSSE) {
+          global.broadcastSSE('recordChange', {
+            action: 'updated',
+            record: {
+              id: id,
+              arf_no: arf_no,
+              pin: pin,
+              owner_name: owner_name,
+              status: newStatus,
+              encoder_id: record.encoder_id
+            },
+            timestamp: new Date().toISOString()
+          });
+        }
+
         res.json({
           success: true,
           message: 'FAAS record saved as draft',
@@ -1220,7 +1241,7 @@ class FAASController {
       } else {
         const [result] = await pool.execute(`
   INSERT INTO faas_records (
-    arf_no, pin, oct_tct_no, cln, owner_name, owner_address,
+    parent_id, arf_no, pin, oct_tct_no, cln, owner_name, owner_address,
     owner_barangay, owner_municipality, owner_province,
     administrator_name, administrator_address, owner_administrator,
     property_location, property_barangay, property_municipality, property_province,
@@ -1244,11 +1265,12 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?, ?
+    ?, ?, ?, ?, ?
   )
 
 
 `, [
+          parent_id || null,
           arf_no,
           pin || null,
           oct_tct_no || null,
@@ -1321,6 +1343,22 @@ class FAASController {
           INSERT INTO activity_log (user_id, action, table_name, record_id, description)
           VALUES (?, ?, ?, ?, ?)
         `, [userId, 'CREATE', 'faas_records', result.insertId, `Created FAAS record ${arf_no} as draft`]);
+
+        // Broadcast real-time event
+        if (global.broadcastSSE) {
+          global.broadcastSSE('recordChange', {
+            action: 'created',
+            record: {
+              id: result.insertId,
+              arf_no: arf_no,
+              pin: pin,
+              owner_name: owner_name,
+              status: 'draft',
+              encoder_id: userId
+            },
+            timestamp: new Date().toISOString()
+          });
+        }
 
         res.status(201).json({
           success: true,
@@ -1397,6 +1435,7 @@ class FAASController {
           record: {
             id: id,
             arf_no: null,
+            pin: record.pin,
             owner_name: null,
             status: record.status,
             encoder_id: record.encoder_id
@@ -1455,6 +1494,15 @@ class FAASController {
 
       await pool.execute('DELETE FROM activity_log WHERE id = ?', [logId]);
 
+      // Broadcast real-time event
+      if (global.broadcastSSE) {
+        global.broadcastSSE('recordChange', {
+          action: 'updated',
+          record: { id: null },
+          timestamp: new Date().toISOString()
+        });
+      }
+
       res.json({
         success: true,
         message: 'History entry deleted successfully'
@@ -1478,6 +1526,15 @@ class FAASController {
         [id]
       );
 
+      // Broadcast real-time event
+      if (global.broadcastSSE) {
+        global.broadcastSSE('recordChange', {
+          action: 'updated',
+          record: { id },
+          timestamp: new Date().toISOString()
+        });
+      }
+
       res.json({
         success: true,
         message: 'Record history cleared successfully'
@@ -1488,6 +1545,159 @@ class FAASController {
         success: false,
         error: 'Failed to clear record history'
       });
+    }
+  }
+
+  async createLinkedEntry(req, res) {
+    try {
+      const { id: parentId } = req.params;
+      const {
+        arf_no, pin, oct_tct_no, cln, owner_name, owner_address,
+        owner_barangay, owner_municipality, owner_province,
+        administrator_name, administrator_address, owner_administrator,
+        property_location, property_barangay, property_municipality, property_province,
+        north_boundary, south_boundary, east_boundary, west_boundary,
+        classification, sub_class, area, unit_value_land, market_value,
+        product_class, improvement_qty, unit_value_improvement, market_value_improvement,
+        adj_factor, percent_adjustment, value_adjustment, adjusted_market_value,
+        kind, actual_use, market_value_detail, assessment_level, assessed_value, assessed_value_detail,
+        land_appraisal_total, improvements_total, adjustment_total, assessment_total,
+        effectivity_year, taxability, tax_rate,
+        previous_td_no, previous_owner, previous_av_land, previous_av_improvements, previous_total_av,
+        previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
+        memoranda_code, memoranda_paragraph, rw_row,
+        land_appraisals_json, improvements_json, market_values_json, assessments_json
+      } = req.body;
+
+      const userId = req.user.id;
+      const pool = getConnection();
+
+      // Check if parent exists
+      const [parent] = await pool.execute('SELECT id, parent_id FROM faas_records WHERE id = ? AND hidden = 0', [parentId]);
+      if (parent.length === 0) {
+        return res.status(404).json({ success: false, error: 'Parent record not found' });
+      }
+
+      // Always link to the absolute root to keep the hierarchy flat (one level of nesting)
+      // This ensures all revisions are grouped under the same main record in the dashboard
+      let rootParentId = parent[0].id;
+      let currentParentId = parent[0].parent_id;
+
+      while (currentParentId) {
+        const [rootData] = await pool.execute('SELECT id, parent_id FROM faas_records WHERE id = ?', [currentParentId]);
+        if (rootData.length > 0) {
+          rootParentId = rootData[0].id;
+          currentParentId = rootData[0].parent_id;
+        } else {
+          break;
+        }
+      }
+
+      const processedEffectivityDate = effectivity_year && effectivity_year.trim() !== '' ? effectivity_year : null;
+      const processedAssessedValue = assessed_value !== undefined && assessed_value !== null && assessed_value !== '' ? parseFloat(assessed_value) : null;
+      const processedMarketValue = market_value !== undefined && market_value !== null && market_value !== '' ? parseFloat(market_value) : null;
+      const processedTaxRate = tax_rate !== undefined && tax_rate !== null && tax_rate !== '' ? parseFloat(tax_rate) : null;
+
+      const [result] = await pool.execute(`
+        INSERT INTO faas_records (
+          parent_id, arf_no, pin, oct_tct_no, cln, owner_name, owner_address,
+          owner_barangay, owner_municipality, owner_province,
+          administrator_name, administrator_address, owner_administrator,
+          property_location, property_barangay, property_municipality, property_province,
+          north_boundary, south_boundary, east_boundary, west_boundary,
+          classification, sub_class, area, unit_value_land, market_value,
+          product_class, improvement_qty, unit_value_improvement, market_value_improvement,
+          adj_factor, percent_adjustment, value_adjustment, adjusted_market_value,
+          kind, actual_use, market_value_detail, assessment_level, assessed_value, assessed_value_detail,
+          land_appraisal_total, improvements_total, adjustment_total, assessment_total,
+          effectivity_year, taxability, tax_rate,
+          previous_td_no, previous_owner, previous_av_land, previous_av_improvements, previous_total_av,
+          previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
+          memoranda_code, memoranda_paragraph, rw_row,
+          land_appraisals_json, improvements_json, market_values_json, assessments_json,
+          encoder_id, status
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+          ?, ?, ?, ?, ?
+        )
+      `, [
+        rootParentId, arf_no, pin || null, oct_tct_no || null, cln || null, owner_name, owner_address || null,
+        owner_barangay || null, owner_municipality || null, owner_province || null,
+        administrator_name || null, administrator_address || null, owner_administrator || null,
+        property_location || null, property_barangay || null, property_municipality || null, property_province || null,
+        north_boundary || null, south_boundary || null, east_boundary || null, west_boundary || null,
+        classification || null, sub_class || null,
+        area !== undefined && area !== null && area !== '' ? parseFloat(area) : null,
+        unit_value_land !== undefined && unit_value_land !== null && unit_value_land !== '' ? parseFloat(unit_value_land) : null,
+        processedMarketValue, product_class || null,
+        improvement_qty !== undefined && improvement_qty !== null && improvement_qty !== '' ? parseInt(improvement_qty) : null,
+        unit_value_improvement !== undefined && unit_value_improvement !== null && unit_value_improvement !== '' ? parseFloat(unit_value_improvement) : null,
+        market_value_improvement !== undefined && market_value_improvement !== null && market_value_improvement !== '' ? parseFloat(market_value_improvement) : null,
+        adj_factor !== undefined && adj_factor !== null && adj_factor !== '' ? parseFloat(adj_factor) : null,
+        percent_adjustment !== undefined && percent_adjustment !== null && percent_adjustment !== '' ? parseFloat(percent_adjustment) : null,
+        value_adjustment !== undefined && value_adjustment !== null && value_adjustment !== '' ? parseFloat(value_adjustment) : null,
+        adjusted_market_value !== undefined && adjusted_market_value !== null && adjusted_market_value !== '' ? parseFloat(adjusted_market_value) : null,
+        kind || null, actual_use || null,
+        market_value_detail !== undefined && market_value_detail !== null && market_value_detail !== '' ? parseFloat(market_value_detail) : null,
+        assessment_level !== undefined && assessment_level !== null && assessment_level !== '' ? parseFloat(assessment_level) : null,
+        processedAssessedValue,
+        assessed_value_detail !== undefined && assessed_value_detail !== null && assessed_value_detail !== '' ? parseFloat(assessed_value_detail) : null,
+        land_appraisal_total !== undefined && land_appraisal_total !== null && land_appraisal_total !== '' ? parseFloat(land_appraisal_total) : null,
+        improvements_total !== undefined && improvements_total !== null && improvements_total !== '' ? parseFloat(improvements_total) : null,
+        adjustment_total !== undefined && adjustment_total !== null && adjustment_total !== '' ? parseFloat(adjustment_total) : null,
+        assessment_total !== undefined && assessment_total !== null && assessment_total !== '' ? parseFloat(assessment_total) : null,
+        processedEffectivityDate, taxability || null, processedTaxRate,
+        previous_td_no || null, previous_owner || null,
+        previous_av_land !== undefined && previous_av_land !== null && previous_av_land !== '' ? parseFloat(previous_av_land) : null,
+        previous_av_improvements !== undefined && previous_av_improvements !== null && previous_av_improvements !== '' ? parseFloat(previous_av_improvements) : null,
+        previous_total_av !== undefined && previous_total_av !== null && previous_total_av !== '' ? parseFloat(previous_total_av) : null,
+        previous_td_no2 || null, previous_owner2 || null,
+        previous_av_land2 !== undefined && previous_av_land2 !== null && previous_av_land2 !== '' ? parseFloat(previous_av_land2) : null,
+        previous_av_improvements2 !== undefined && previous_av_improvements2 !== null && previous_av_improvements2 !== '' ? parseFloat(previous_av_improvements2) : null,
+        memoranda_code || null, memoranda_paragraph || null, rw_row || null,
+        land_appraisals_json ? (typeof land_appraisals_json === 'string' ? land_appraisals_json : JSON.stringify(land_appraisals_json)) : null,
+        improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
+        market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
+        assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
+        userId, 'draft'
+      ]);
+
+      await pool.execute(`
+        INSERT INTO activity_log (user_id, action, table_name, record_id, description)
+        VALUES (?, ?, ?, ?, ?)
+      `, [userId, 'CREATE', 'faas_records', result.insertId, `Created Linked Entry for record ${parentId} (ARF: ${arf_no})`]);
+
+      // Broadcast real-time event
+      if (global.broadcastSSE) {
+        global.broadcastSSE('recordChange', {
+          action: 'created',
+          record: {
+            id: result.insertId,
+            parent_id: parentId,
+            arf_no: arf_no,
+            pin: pin,
+            owner_name: owner_name,
+            status: 'draft',
+            encoder_id: userId
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      res.status(201).json({
+        success: true,
+        message: 'Linked entry created successfully',
+        data: { id: result.insertId, arf_no }
+      });
+
+    } catch (error) {
+      const errorMessage = this.handleDatabaseError(error, 'Failed to create linked entry');
+      res.status(500).json({ success: false, error: errorMessage });
     }
   }
 }

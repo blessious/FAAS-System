@@ -189,11 +189,11 @@ export default function PrintPreview() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-4 lg:grid-cols-12">
         {/* Approved Records List */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-4">
           <Card className="h-full border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden flex flex-col">
-            <CardHeader className="bg-gradient-to-r from-slate-50 to-emerald-50/30 border-b border-slate-100 py-4 flex-shrink-0">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-emerald-50/30 border-b border-slate-100 px-4 py-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base font-bold">
                   <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg text-white shadow-md shadow-emerald-500/20">
@@ -234,7 +234,7 @@ export default function PrintPreview() {
                         key={record.id}
                         onClick={() => handleSelectRecord(record)}
                         className={cn(
-                          "w-full p-4 text-left transition-all duration-200 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-emerald-100/30",
+                          "w-full py-4 px-2 text-left transition-all duration-200 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-emerald-100/30",
                           selectedRecord?.id === record.id && "bg-gradient-to-r from-emerald-50/50 to-emerald-100/30 border-l-4 border-l-emerald-500 shadow-sm"
                         )}
                       >
@@ -286,7 +286,7 @@ export default function PrintPreview() {
         </div>
 
         {/* Print Preview with PDF Viewer */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-8">
           {selectedRecord ? (
             <Card className="h-full border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden flex flex-col">
               <CardHeader className="bg-gradient-to-r from-slate-50 to-emerald-50/30 border-b border-slate-100 py-4 flex-shrink-0">

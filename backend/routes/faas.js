@@ -21,6 +21,9 @@ router.put('/:id', authorize('encoder', 'administrator'), faasController.updateR
 // Submit FAAS record for approval
 router.post('/:id/submit', authorize('encoder', 'administrator'), faasController.submitForApproval);
 
+// Create linked entry for an existing record
+router.post('/:id/linked', authorize('encoder', 'administrator'), faasController.createLinkedEntry);
+
 // Get my FAAS records
 router.get('/user/my-records', faasController.getMyRecords);
 

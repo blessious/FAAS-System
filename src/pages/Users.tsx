@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSSE } from "@/hooks/useSSE";
 import {
     Users as UsersIcon,
     UserPlus,
@@ -227,6 +228,15 @@ export default function Users() {
         setSelectedUser(user);
         setIsDeleteDialogOpen(true);
     };
+
+    useSSE({
+        onUserChange: () => {
+            fetchUsers();
+        },
+        onConnected: () => {
+            console.log('✅ Users connected to real-time updates');
+        }
+    });
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-4 lg:p-8 space-y-8">

@@ -19,6 +19,7 @@ import {
   Printer,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Search,
   X,
   Filter,
@@ -44,7 +45,23 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { approvalAPI } from "@/services/api";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { approvalAPI, dashboardAPI, faasAPI } from "@/services/api";
 import { useSSE } from "@/hooks/useSSE";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -67,6 +84,10 @@ interface ApprovalRecord {
   pdf_preview_path?: string;
   unirrig_pdf_preview_path?: string;
   rejection_reason?: string;
+  parent_id?: string | number;
+  linked_entries_count?: number;
+  pending_linked_count?: number;
+  rejected_linked_count?: number;
 }
 
 // Extracts the subpath for the API route, e.g. FAAS/PDFs/filename.pdf or UNIRRIG/PDFs/filename.pdf
@@ -103,19 +124,20 @@ const statusLabels = {
   rejected: "Rejected",
 };
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string, small: boolean = false) => {
   const statusKey = status as keyof typeof statusStyles;
   return (
     <Badge
       variant="outline"
       className={cn(
-        "px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm",
+        small ? "px-1 py-px text-[8px] font-black uppercase tracking-tighter" : "px-3 py-1.5 rounded-full text-xs font-bold shadow-sm",
+        "border leading-none",
         statusStyles[statusKey]
       )}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <div className={cn(
-          "w-1.5 h-1.5 rounded-full",
+          small ? "w-0.5 h-0.5 rounded-full" : "w-1.5 h-1.5 rounded-full",
           status === "for_approval" && "bg-amber-500",
           status === "approved" && "bg-emerald-500",
           status === "rejected" && "bg-rose-500"
@@ -512,6 +534,11 @@ export default function Approvals() {
   const [pdfError, setPdfError] = useState(false);
   const [blockIframe, setBlockIframe] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedRootIds, setExpandedRootIds] = useState<Set<string>>(new Set());
+  const [linkedEntriesMap, setLinkedEntriesMap] = useState<Record<string, ApprovalRecord[]>>({});
+  const [loadingLinked, setLoadingLinked] = useState<Set<string>>(new Set());
+  const [historyRecord, setHistoryRecord] = useState<ApprovalRecord | null>(null);
+  const [deleteId, setDeleteId] = useState<string | number | null>(null);
 
   const fetchRecords = useCallback(async () => {
     try {
@@ -570,28 +597,31 @@ export default function Approvals() {
       console.log('📡 Approvals received record change:', data);
 
       const actionMessages: Record<string, string> = {
-        submitted: 'New record submitted for approval',
         approved: 'Record has been approved',
         rejected: 'Record has been rejected',
         updated: 'Record has been updated',
         deleted: 'Record has been deleted'
       };
 
-      if (actionMessages[data.action]) {
+      if (data.action !== 'submitted' && actionMessages[data.action] && data.record) {
         toast({
           title: actionMessages[data.action],
-          description: `ARF No: ${data.record.arf_no}`,
+          description: `PIN: ${data.record.pin || 'N/A'}`,
         });
       }
 
-      fetchRecords();
+      // Small delay to ensure DB is settled before fetching
+      setTimeout(() => {
+        fetchRecords();
+        setLinkedEntriesMap({}); // Clear expanded nested entries to force refresh
 
-      if (selectedRecord && selectedRecord.id === String(data.record.id)) {
-        if (data.action === 'deleted' || data.action === 'approved' || data.action === 'rejected') {
-          setSelectedRecord(null);
-          setRejectionReason("");
+        if (selectedRecord && data.record && String(selectedRecord.id) === String(data.record.id)) {
+          if (data.action === 'deleted' || data.action === 'approved' || data.action === 'rejected') {
+            setSelectedRecord(null);
+            setRejectionReason("");
+          }
         }
-      }
+      }, 500);
     }, [fetchRecords, selectedRecord, toast]),
 
     onConnected: useCallback(() => {
@@ -604,6 +634,34 @@ export default function Approvals() {
     setRejectionReason("");
     setPdfError(false);
     setBlockIframe(false);
+  };
+
+  const toggleExpand = async (e: React.MouseEvent, record: ApprovalRecord) => {
+    e.stopPropagation();
+    const rootId = record.id;
+    const newExpanded = new Set(expandedRootIds);
+
+    if (newExpanded.has(rootId)) {
+      newExpanded.delete(rootId);
+    } else {
+      newExpanded.add(rootId);
+      if (!linkedEntriesMap[rootId]) {
+        try {
+          setLoadingLinked(prev => new Set(prev).add(rootId));
+          const entries = await dashboardAPI.getLinkedEntries(rootId);
+          setLinkedEntriesMap(prev => ({ ...prev, [rootId]: entries }));
+        } catch (error) {
+          console.error("Failed to fetch linked entries:", error);
+        } finally {
+          setLoadingLinked(prev => {
+            const next = new Set(prev);
+            next.delete(rootId);
+            return next;
+          });
+        }
+      }
+    }
+    setExpandedRootIds(newExpanded);
   };
 
   const handleApprove = async () => {
@@ -759,6 +817,30 @@ export default function Approvals() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      await faasAPI.deleteDraft(String(deleteId));
+      toast({
+        title: "Record Deleted",
+        description: "The record has been permanently removed.",
+      });
+      setDeleteId(null);
+      fetchRecords();
+      if (selectedRecord?.id === String(deleteId)) {
+        setSelectedRecord(null);
+      }
+    } catch (error: any) {
+      console.error('Error deleting record:', error);
+      toast({
+        title: "Delete Failed",
+        description: error.error || "Failed to delete record",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -784,7 +866,7 @@ export default function Approvals() {
 
     return (
       <Card className="h-full border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden flex flex-col">
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50/30 border-b border-slate-100 py-4 flex-shrink-0">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50/30 border-b border-slate-100 px-4 py-4 flex-shrink-0">
           {/* CardHeader content remains the same */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -847,62 +929,168 @@ export default function Approvals() {
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {paginatedRecords.map((record) => (
-                  <button
-                    key={record.id}
-                    onClick={() => handleSelectRecord(record)}
-                    className={cn(
-                      "w-full p-4 text-left transition-all duration-200 hover:bg-gradient-to-r",
-                      status === 'pending' ? "hover:from-amber-50/50 hover:to-amber-100/30" :
-                        status === 'approved' ? "hover:from-emerald-50/50 hover:to-emerald-100/30" :
-                          "hover:from-rose-50/50 hover:to-rose-100/30",
-                      selectedRecord?.id === record.id && cn(
-                        "border-l-4 shadow-sm",
-                        status === 'pending' ? "bg-gradient-to-r from-amber-50/50 to-amber-100/30 border-l-amber-500" :
-                          status === 'approved' ? "bg-gradient-to-r from-emerald-50/50 to-emerald-100/30 border-l-emerald-500" :
-                            "bg-gradient-to-r from-rose-50/50 to-rose-100/30 border-l-rose-500"
-                      )
-                    )}
-                  >
-                    {/* Record item content remains the same */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-slate-900 truncate uppercase text-base">{record.owner_name}</span>
-                          {getStatusBadge(record.status)}
+                {paginatedRecords.map((record) => {
+                  const isExpanded = expandedRootIds.has(record.id);
+                  const hasLinked = record.linked_entries_count && record.linked_entries_count > 0;
+                  const isLoading = loadingLinked.has(record.id);
+                  const linkedEntries = linkedEntriesMap[record.id] || [];
+
+                  return (
+                    <div key={record.id} className="flex flex-col">
+                      <div
+                        onClick={() => handleSelectRecord(record)}
+                        className={cn(
+                          "w-full py-3 px-2 text-left transition-all duration-200 cursor-pointer flex items-start gap-2 group",
+                          status === 'pending' ? "hover:bg-amber-50/50" : "hover:bg-rose-50/50",
+                          selectedRecord?.id === record.id && cn(
+                            "border-l-4 shadow-sm",
+                            status === 'pending' ? "bg-amber-50/80 border-l-amber-500" : "bg-rose-50/80 border-l-rose-500"
+                          )
+                        )}
+                      >
+                        {/* Expand/Collapse Trigger */}
+                        <div
+                          className={cn(
+                            "flex-shrink-0 mt-1 px-1 text-center transition-colors",
+                            (record.linked_entries_count || 0) > 0 ? "hover:bg-blue-50/50 cursor-pointer" : ""
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent selecting the record when clicking the expand button
+                            if ((record.linked_entries_count || 0) > 0) {
+                              toggleExpand(e, record);
+                            }
+                          }}
+                        >
+                          {(record.linked_entries_count || 0) > 0 ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 rounded-md hover:bg-blue-100 hover:text-blue-600 pointer-events-none p-0"
+                            >
+                              {isLoading ? (
+                                <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                              ) : isExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </Button>
+                          ) : (
+                            <div className="w-6 h-6 flex items-center justify-center">
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 mb-2">
-                          <span className="text-slate-500 font-medium">PIN:</span> {record.pin || "N/A"}
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="font-bold text-slate-900 truncate uppercase text-[15px] flex-1 min-w-0" title={record.owner_name}>{record.owner_name}</span>
+                            <div className="flex-shrink-0">
+                              {getStatusBadge(record.status, true)}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
+                            <div className="flex items-center gap-1.5 text-sm font-semibold text-blue-600">
+                              <span className="text-slate-500 font-medium text-xs">PIN:</span> {record.pin || "N/A"}
+                            </div>
+                            {hasLinked && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] font-bold py-0 h-5">
+                                {record.linked_entries_count} {record.linked_entries_count === 1 ? 'Linked' : 'Linked Records'}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {Number(record.pending_linked_count) > 0 && record.status !== 'for_approval' && (
+                              <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[8px] py-0 px-1 h-auto font-bold">Rev Pending</Badge>
+                            )}
+                            {Number(record.rejected_linked_count) > 0 && record.status !== 'rejected' && (
+                              <Badge variant="outline" className="bg-rose-50 text-rose-600 border-rose-200 text-[8px] py-0 px-1 h-auto font-bold">Rev Reject</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-2">
+                            <span className="text-xs text-slate-500 flex items-center gap-2">
+                              <Avatar className="w-5 h-5 border border-slate-200">
+                                {record.encoder_profile_picture ? (
+                                  <AvatarImage
+                                    src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.encoder_profile_picture}`}
+                                    className="object-cover"
+                                  />
+                                ) : null}
+                                <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
+                                  {record.encoder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              {record.encoder_name}
+                            </span>
+                            <span className="text-xs text-slate-400">•</span>
+                            <span className="text-xs text-slate-400 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDate(record.created_at)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 mt-2">
-                          <span className="text-xs text-slate-500 flex items-center gap-2">
-                            <Avatar className="w-5 h-5 border border-slate-200">
-                              {record.encoder_profile_picture ? (
-                                <AvatarImage
-                                  src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.encoder_profile_picture}`}
-                                  className="object-cover"
-                                />
-                              ) : null}
-                              <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
-                                {record.encoder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            Encoder: {record.encoder_name}
-                          </span>
-                          <span className="text-xs text-slate-400">•</span>
-                          <span className="text-xs text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Submitted: {formatDate(record.created_at)}
-                          </span>
+
+                        <div className="flex items-center self-center pr-1">
+                          <ChevronRight className={cn(
+                            "w-4 h-4 transition-colors",
+                            selectedRecord?.id === record.id ? "text-blue-600" : "text-slate-300"
+                          )} />
                         </div>
                       </div>
-                      <ChevronRight className={cn(
-                        "w-4 h-4 flex-shrink-0 transition-colors self-center",
-                        selectedRecord?.id === record.id ? "text-blue-600" : "text-slate-300"
-                      )} />
+
+                      {/* Nested Records */}
+                      {isExpanded && (
+                        <div className="bg-slate-50/50 border-t border-slate-100 divide-y divide-slate-100/50">
+                          {linkedEntries.length > 0 ? (
+                            linkedEntries.map((subRecord) => (
+                              <div
+                                key={subRecord.id}
+                                onClick={() => handleSelectRecord(subRecord as unknown as ApprovalRecord)}
+                                className={cn(
+                                  "w-full pl-6 pr-2 py-2 text-left transition-all duration-200 cursor-pointer flex items-center justify-between gap-1.5 border-l-4 border-l-transparent group",
+                                  selectedRecord?.id === subRecord.id ? "bg-blue-50/50 border-l-blue-400 shadow-sm" : "hover:bg-slate-100/50"
+                                )}
+                              >
+                                <div className="flex-1 min-w-0 mr-1">
+                                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                                    <span className="font-bold text-slate-800 text-[12px] truncate uppercase flex-1 min-w-0" title={subRecord.owner_name}>{subRecord.owner_name}</span>
+                                    <div className="flex-shrink-0">
+                                      {getStatusBadge(subRecord.status, true)}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-[10px] font-semibold text-blue-600">
+                                    <span className="text-slate-500 font-medium whitespace-nowrap">PIN:</span>
+                                    <span className="truncate">{subRecord.pin || "N/A"}</span>
+                                  </div>
+                                  <div className="text-[9px] text-slate-500 mt-1 flex items-center gap-1.5">
+                                    <span className="flex items-center gap-1 whitespace-nowrap">
+                                      <Clock className="w-2.5 h-2.5" />
+                                      {formatDate(subRecord.created_at)}
+                                    </span>
+                                    <span>•</span>
+                                    <span>By {subRecord.encoder_name}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center self-center">
+                                  <ChevronRight className={cn(
+                                    "w-3.5 h-3.5 transition-colors",
+                                    selectedRecord?.id === subRecord.id ? "text-blue-500" : "text-slate-300"
+                                  )} />
+                                </div>
+                              </div>
+                            ))
+                          ) : !isLoading && (
+                            <div className="pl-12 pr-4 py-3 text-[11px] text-slate-400 italic">
+                              No revisions found.
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </ScrollArea>
@@ -949,7 +1137,7 @@ export default function Approvals() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-4 lg:p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6 lg:p-8 space-y-6">
       {/* Header Section */}
       <div className="relative rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 p-4 lg:p-6 overflow-hidden">
         <div className="absolute inset-0 bg-grid-slate-100/20"></div>
@@ -1015,8 +1203,8 @@ export default function Approvals() {
               </div>
             </div>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-4">
-              <div className="lg:col-span-1">
+            <div className="grid gap-4 lg:grid-cols-12">
+              <div className="lg:col-span-4">
                 <RecordList
                   records={pendingRecords}
                   status="pending"
@@ -1024,7 +1212,7 @@ export default function Approvals() {
                   icon={<Clock className="w-5 h-5" />}
                 />
               </div>
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-8">
                 <PreviewPanel
                   selectedRecord={selectedRecord}
                   rejectionReason={rejectionReason}
@@ -1061,8 +1249,8 @@ export default function Approvals() {
               </div>
             </div>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-4">
-              <div className="lg:col-span-1">
+            <div className="grid gap-4 lg:grid-cols-12">
+              <div className="lg:col-span-4">
                 <RecordList
                   records={rejectedRecords}
                   status="rejected"
@@ -1070,7 +1258,7 @@ export default function Approvals() {
                   icon={<XCircle className="w-5 h-5" />}
                 />
               </div>
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-8">
                 <PreviewPanel
                   selectedRecord={selectedRecord}
                   rejectionReason={rejectionReason}
@@ -1093,6 +1281,53 @@ export default function Approvals() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Action Dialogs */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="rounded-2xl border-2 border-rose-100 bg-white shadow-xl">
+          <AlertDialogHeader>
+            <div className="p-3 bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl inline-flex w-12 h-12 items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6 text-rose-600" />
+            </div>
+            <AlertDialogTitle className="text-xl font-bold text-slate-900">Delete record?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500">
+              This record will be permanently deleted from the system. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel className="rounded-xl border-2 border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-700 hover:to-rose-600 text-white shadow-lg shadow-rose-500/30"
+            >
+              Delete Record
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!historyRecord} onOpenChange={(open) => !open && setHistoryRecord(null)}>
+        <DialogContent className="sm:max-w-[650px] rounded-2xl border-none shadow-2xl p-0 overflow-hidden bg-white">
+          <DialogHeader className="p-6 bg-white border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                <History className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-900">Record Progress</DialogTitle>
+                <DialogDescription className="text-slate-500 font-medium">
+                  Tracking history for ARF No: {historyRecord?.arf_no}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="p-6 max-h-[60vh] overflow-y-auto">
+            {historyRecord && <RecordTimeline recordId={historyRecord.id} />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

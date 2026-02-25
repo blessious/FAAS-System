@@ -77,6 +77,15 @@ class UserController {
         VALUES (?, ?, ?, ?)
       `, [username, hashedPassword, role, full_name]);
 
+      // Broadcast real-time event
+      if (global.broadcastSSE) {
+        global.broadcastSSE('userChange', {
+          action: 'created',
+          userId: result.insertId,
+          timestamp: new Date().toISOString()
+        });
+      }
+
       res.json({
         success: true,
         message: 'User created successfully',
@@ -111,6 +120,15 @@ class UserController {
         SET username = ?, role = ?, full_name = ?
         WHERE id = ?
       `, [username, role, full_name, id]);
+
+      // Broadcast real-time event
+      if (global.broadcastSSE) {
+        global.broadcastSSE('userChange', {
+          action: 'updated',
+          userId: id,
+          timestamp: new Date().toISOString()
+        });
+      }
 
       res.json({
         success: true,
@@ -148,6 +166,15 @@ class UserController {
 
       const pool = getConnection();
       await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+
+      // Broadcast real-time event
+      if (global.broadcastSSE) {
+        global.broadcastSSE('userChange', {
+          action: 'deleted',
+          userId: id,
+          timestamp: new Date().toISOString()
+        });
+      }
 
       res.json({
         success: true,

@@ -152,7 +152,10 @@ export const faasAPI = {
     api.delete(`/faas/history/${logId}`),
 
   clearRecordHistory: (id: string | number): Promise<any> =>
-    api.delete(`/faas/${id}/history`)
+    api.delete(`/faas/${id}/history`),
+
+  createLinkedEntry: (id: string | number, data: any): Promise<any> =>
+    api.post(`/faas/${id}/linked`, data)
 };
 
 // Approvals API
@@ -206,6 +209,9 @@ export const dashboardAPI = {
 
   getActivityLog: (): Promise<any[]> =>
     api.get('/dashboard/activity'),
+
+  getLinkedEntries: (id: string | number): Promise<any[]> =>
+    api.get(`/dashboard/linked/${id}`),
 };
 
 // Users API

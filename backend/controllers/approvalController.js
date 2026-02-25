@@ -9,12 +9,19 @@ class ApprovalController {
           f.*,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
-          ua.full_name as approver_name
+          ua.full_name as approver_name,
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0) as linked_entries_count,
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'for_approval') as pending_linked_count,
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'rejected') as rejected_linked_count
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
-        WHERE f.status = 'for_approval'
+        WHERE f.parent_id IS NULL 
           AND f.hidden = 0
+          AND (
+            f.status = 'for_approval'
+            OR EXISTS (SELECT 1 FROM faas_records WHERE parent_id = f.id AND status = 'for_approval' AND hidden = 0)
+          )
         ORDER BY f.created_at DESC
       `); // ✅ No parameters needed
 
@@ -64,6 +71,7 @@ class ApprovalController {
           record: {
             id: record.id,
             arf_no: record.arf_no,
+            pin: record.pin,
             owner_name: record.owner_name,
             status: 'approved',
             encoder_id: record.encoder_id
@@ -105,6 +113,11 @@ class ApprovalController {
       const [records] = await pool.execute('SELECT * FROM faas_records WHERE id = ? AND hidden = 0', [id]);
       const record = records[0];
 
+      if (!record) {
+        return res.status(404).json({ success: false, error: 'Record not found' });
+      }
+
+      // Reject only the actual record
       await pool.execute(`
         UPDATE faas_records 
         SET 
@@ -112,22 +125,23 @@ class ApprovalController {
           approver_id = ?,
           approval_date = NOW(),
           rejection_reason = ?
-        WHERE id = ?
+        WHERE id = ? AND hidden = 0
       `, [userId, comment, id]);
 
       // Log activity
       await pool.execute(`
         INSERT INTO activity_log (user_id, action, table_name, record_id, description)
         VALUES (?, ?, ?, ?, ?)
-      `, [userId, 'REJECT', 'faas_records', id, `Rejected FAAS record ${id}: ${comment}`]);
+      `, [userId, 'REJECT', 'faas_records', id, `Rejected record ID ${id}. Reason: ${comment}`]);
 
       // Broadcast real-time event
       if (global.broadcastSSE && record) {
         global.broadcastSSE('recordChange', {
           action: 'rejected',
           record: {
-            id: record.id,
+            id: id,
             arf_no: record.arf_no,
+            pin: record.pin,
             owner_name: record.owner_name,
             status: 'rejected',
             encoder_id: record.encoder_id
@@ -187,12 +201,19 @@ class ApprovalController {
           f.*,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
-          ua.full_name as approver_name
+          ua.full_name as approver_name,
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0) as linked_entries_count,
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'for_approval') as pending_linked_count,
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'rejected') as rejected_linked_count
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
-        WHERE f.status = 'rejected'
+        WHERE f.parent_id IS NULL
           AND f.hidden = 0
+          AND (
+            f.status = 'rejected'
+            OR EXISTS (SELECT 1 FROM faas_records WHERE parent_id = f.id AND status = 'rejected' AND hidden = 0)
+          )
         ORDER BY f.approval_date DESC
       `);
 
@@ -268,6 +289,7 @@ class ApprovalController {
           action: 'updated',
           record: {
             ...record,
+            pin: record.pin,
             status: 'for_approval'
           },
           timestamp: new Date().toISOString()

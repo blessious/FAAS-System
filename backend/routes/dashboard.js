@@ -8,5 +8,6 @@ router.use(authenticate);
 router.get('/stats', dashboardController.getStats);
 router.get('/recent', dashboardController.getRecentRecords);
 router.get('/activity', dashboardController.getActivityLog);
+router.get('/linked/:id', dashboardController.getLinkedEntries);
 
 module.exports = router;

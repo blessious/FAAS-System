@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSSE } from "@/hooks/useSSE";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { Button } from "@/components/ui/button";
@@ -135,6 +136,7 @@ interface FAASFormData {
   memoranda_code: string;
   memoranda_paragraph: string;
   rw_row: string;
+  parent_id?: string | number | null;
 }
 
 
@@ -301,6 +303,7 @@ const initialFormData: FAASFormData = {
   memoranda_code: '',
   memoranda_paragraph: '',
   rw_row: "",
+  parent_id: null,
 };
 
 
@@ -328,6 +331,7 @@ export default function FAASForm() {
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [creatingLinked, setCreatingLinked] = useState(false);
 
   const showErrorToast = (error: any, defaultTitle: string = "Action Failed") => {
     console.error(`Error during ${defaultTitle}:`, error);
@@ -400,6 +404,30 @@ export default function FAASForm() {
       setIsEditMode(true);
     }
   }, [location.state, isEditing]);
+
+  useSSE({
+    onRecordChange: (data) => {
+      if (id && String(data.record.id) === String(id)) {
+        if (data.action === 'deleted') {
+          toast({
+            title: "Record Deleted",
+            description: "The record you are viewing has been deleted by another user.",
+            variant: "destructive"
+          });
+          navigate("/dashboard");
+        } else if (data.action === 'approved' || data.action === 'rejected') {
+          toast({
+            title: `Record ${data.action === 'approved' ? 'Approved' : 'Rejected'}`,
+            description: `PIN: ${data.record.pin || 'N/A'} has been ${data.action} by an approver.`,
+          });
+          fetchRecord(); // Refresh to show new status
+        }
+      }
+    },
+    onConnected: () => {
+      console.log('✅ FAASForm connected to real-time updates');
+    }
+  });
 
   useEffect(() => {
     if (id) {
@@ -598,6 +626,7 @@ export default function FAASForm() {
           memoranda_code: response.data.memoranda_code || "",
           memoranda_paragraph: response.data.memoranda_paragraph || "",
           rw_row: response.data.rw_row?.toString() || "",
+          parent_id: response.data.parent_id || null,
         };
 
 
@@ -769,6 +798,9 @@ export default function FAASForm() {
       if (isEditing) {
         if (recordStatus === 'draft') {
           response = await faasAPI.saveAsDraft(id!, requestData);
+        } else if (recordStatus === 'approved') {
+          // If approved, saving as draft means creating a new linked entry (revision)
+          response = await faasAPI.createLinkedEntry(id!, requestData);
         } else if (isAdmin || recordStatus === 'for_approval' || (recordStatus === 'rejected' && isEncoder)) {
           response = await faasAPI.updateRecord(id!, requestData);
         } else {
@@ -781,6 +813,7 @@ export default function FAASForm() {
           return;
         }
       } else {
+        // Standard new record draft
         response = await faasAPI.createDraft(requestData);
       }
 
@@ -809,6 +842,102 @@ export default function FAASForm() {
       showErrorToast(error, "Save Failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateLinkedEntry = async () => {
+    if (!id) return;
+
+    try {
+      setCreatingLinked(true);
+
+      const requiredFields = [
+        { field: 'pin', label: 'PIN' },
+        { field: 'oct_tct_no', label: 'OCT/TCT No.' },
+        { field: 'owner_name', label: 'Owner Name' },
+        { field: 'owner_address', label: 'Owner Address' },
+        { field: 'property_barangay', label: 'Property Barangay' }
+      ];
+
+      const missingFields = requiredFields.filter(f => !formData[f.field as keyof FAASFormData]?.toString().trim());
+
+      if (missingFields.length > 0) {
+        toast({
+          title: "Required Fields Missing",
+          description: `Please fill in: ${missingFields.map(f => f.label).join(', ')}`,
+          variant: "destructive",
+        });
+        setCreatingLinked(false);
+        return;
+      }
+
+      const requestData = {
+        arf_no: formData.arf_no || null,
+        pin: formData.pin || null,
+        oct_tct_no: formData.oct_tct_no || null,
+        cln: formData.cln || null,
+        owner_name: formData.owner_name,
+        owner_address: formData.owner_address || null,
+        owner_barangay: formData.owner_barangay || null,
+        owner_municipality: formData.owner_municipality || null,
+        owner_province: formData.owner_province || null,
+        administrator_name: formData.administrator_name || null,
+        administrator_address: formData.administrator_address || null,
+        owner_administrator: formData.owner_administrator || null,
+        property_location: formData.property_location || null,
+        property_barangay: formData.property_barangay || null,
+        property_municipality: formData.property_municipality || null,
+        property_province: formData.property_province || null,
+        north_boundary: formData.north_boundary || null,
+        south_boundary: formData.south_boundary || null,
+        east_boundary: formData.east_boundary || null,
+        west_boundary: formData.west_boundary || null,
+        rw_row: formData.rw_row || null,
+
+        land_appraisals_json: JSON.stringify(formData.landAppraisals),
+        improvements_json: JSON.stringify(formData.improvements),
+        market_values_json: JSON.stringify(formData.marketValues),
+        assessments_json: JSON.stringify(formData.propertyAssessments),
+
+        assessed_value: formData.assessed_value.trim() !== '' ? parseFloat(formData.assessed_value) : null,
+        effectivity_year: (formData.effectivity_year?.toString() || "").trim() !== '' ? formData.effectivity_year.toString() : null,
+        taxability: formData.taxability || null,
+        tax_rate: formData.tax_rate.trim() !== '' ? parseFloat(formData.tax_rate) : null,
+
+        land_appraisal_total: formData.land_appraisal_total.trim() !== '' ? parseFloat(formData.land_appraisal_total) : null,
+        improvements_total: formData.improvements_total.trim() !== '' ? parseFloat(formData.improvements_total) : null,
+        adjustment_total: formData.adjustment_total.trim() !== '' ? parseFloat(formData.adjustment_total) : null,
+        assessment_total: formData.assessment_total.trim() !== '' ? parseFloat(formData.assessment_total) : null,
+
+        previous_td_no: formData.previous_td_no || null,
+        previous_owner: formData.previous_owner || null,
+        previous_av_land: formData.previous_av_land.trim() !== '' ? parseFloat(formData.previous_av_land) : null,
+        previous_av_improvements: formData.previous_av_improvements.trim() !== '' ? parseFloat(formData.previous_av_improvements) : null,
+
+        previous_td_no2: formData.previous_td_no2 || null,
+        previous_owner2: formData.previous_owner2 || null,
+        previous_av_land2: formData.previous_av_land2.trim() !== '' ? parseFloat(formData.previous_av_land2) : null,
+        previous_av_improvements2: formData.previous_av_improvements2.trim() !== '' ? parseFloat(formData.previous_av_improvements2) : null,
+
+        memoranda: formData.memoranda || null,
+        memoranda_code: formData.memoranda_code || null,
+        memoranda_paragraph: formData.memoranda_paragraph || null,
+      };
+
+      const response = await faasAPI.createLinkedEntry(id, requestData);
+
+      if (response.success) {
+        toast({
+          title: "Linked Entry Created",
+          description: "New revision has been saved as a linked entry (draft).",
+        });
+        // Navigate to the newly created record
+        navigate(`/faas/${response.data.id}/edit`, { state: { mode: 'edit' } });
+      }
+    } catch (error: any) {
+      showErrorToast(error, "Failed to create linked entry");
+    } finally {
+      setCreatingLinked(false);
     }
   };
 
@@ -981,18 +1110,33 @@ export default function FAASForm() {
           const submitResponse = await faasAPI.submitForApproval(id);
 
           if (submitResponse.success) {
-            if (submitResponse.excelGenerated) {
-              toast({
-                title: "✅ Submitted Successfully",
-                description: "FAAS record submitted for approval and Excel file generated.",
-              });
-            } else {
-              toast({
-                title: "⚠️ Submitted with Warning",
-                description: "Record submitted but Excel generation may have failed.",
-                variant: "destructive",
-              });
-            }
+            toast({
+              title: "✅ Submitted Successfully",
+              description: submitResponse.excelGenerated
+                ? "FAAS record submitted for approval and Excel file generated."
+                : "Record submitted successfully (Excel generation warning).",
+            });
+            navigate("/dashboard");
+          }
+        }
+      } else if (recordStatus === 'approved') {
+        toast({
+          title: "Creating Revision",
+          description: "Creating a new linked revision and submitting for approval...",
+        });
+
+        // Create linked entry first
+        const createResponse = await faasAPI.createLinkedEntry(id!, requestData);
+
+        if (createResponse.success && createResponse.data?.id) {
+          const newId = createResponse.data.id;
+          const submitResponse = await faasAPI.submitForApproval(newId);
+
+          if (submitResponse.success) {
+            toast({
+              title: "✅ Revision Submitted",
+              description: "New revision has been created and submitted for approval.",
+            });
             navigate("/dashboard");
           }
         }
@@ -1037,7 +1181,7 @@ export default function FAASForm() {
 
   // Update isEditable to consider edit mode
   const isEditable = (isEditMode || !isEditing) &&
-    (isAdmin || recordStatus === 'draft' || recordStatus === 'for_approval' || (isEncoder && recordStatus === 'rejected'));
+    (isAdmin || recordStatus === 'draft' || recordStatus === 'for_approval' || (isEncoder && recordStatus === 'rejected') || recordStatus === 'approved');
 
   const currentTabIndex = Math.max(0, tabOrder.indexOf(activeTab));
   const isFirstTab = currentTabIndex === 0;
@@ -1197,6 +1341,23 @@ export default function FAASForm() {
                   )}
                   <span className="hidden sm:inline">{saving ? "Saving..." : "Save Draft"}</span>
                 </Button>
+
+                {isEditing && (
+                  <Button
+                    variant="outline"
+                    onClick={handleCreateLinkedEntry}
+                    size="sm"
+                    className="gap-1 rounded-lg border-emerald-200 text-emerald-600 hover:bg-emerald-50 h-9 px-3"
+                    disabled={creatingLinked}
+                  >
+                    {creatingLinked ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    <span className="hidden sm:inline">{creatingLinked ? "Creating..." : "Add Linked Entry"}</span>
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -1479,7 +1640,7 @@ export default function FAASForm() {
                   </div>
                   <div className="space-y-1.5 mt-2">
                     <Label htmlFor="owner_administrator" className="text-sm font-semibold text-slate-700">
-                      Owner/Administrator <span className="text-red-500 text-[10px] italic font-normal ml-1">(Appears in A51 Signature Line)</span>
+                      Owner/Administrator <span className="text-red-500 text-[10px] italic font-normal ml-1">(Signatory)</span>
                     </Label>
                     <Input
                       id="owner_administrator"
@@ -2017,7 +2178,7 @@ export default function FAASForm() {
                             />
                           </div>
 
-                          <div className="pt-4 mt-4 border-t border-slate-200 space-y-3">
+                          <div className="pt-4 mt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
                             <div className="space-y-1.5">
                               <Label className="text-sm font-semibold text-slate-700">Previous T.D. No. 2:</Label>
                               <Input
@@ -2025,16 +2186,6 @@ export default function FAASForm() {
                                 onChange={(e) => handleInputChange("previous_td_no2", e.target.value)}
                                 className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
                                 placeholder="Previous TD 2"
-                                disabled={!isEditable}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-sm font-semibold text-slate-700">Previous Owner 2:</Label>
-                              <Input
-                                value={formData.previous_owner2}
-                                onChange={(e) => handleInputChange("previous_owner2", e.target.value)}
-                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
-                                placeholder="Previous owner 2"
                                 disabled={!isEditable}
                               />
                             </div>
@@ -2047,6 +2198,16 @@ export default function FAASForm() {
                                 placeholder="Previous land AV 2"
                                 type="number"
                                 step="0.01"
+                                disabled={!isEditable}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-sm font-semibold text-slate-700">Previous Owner 2:</Label>
+                              <Input
+                                value={formData.previous_owner2}
+                                onChange={(e) => handleInputChange("previous_owner2", e.target.value)}
+                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                placeholder="Previous owner 2"
                                 disabled={!isEditable}
                               />
                             </div>
