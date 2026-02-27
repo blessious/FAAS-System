@@ -232,7 +232,10 @@ class FAASController {
         land_appraisals_json,
         improvements_json,
         market_values_json,
-        assessments_json
+        assessments_json,
+        ctc_no,
+        ctc_issued_on,
+        ctc_issued_at
       } = req.body;
 
       const userId = req.user.id;
@@ -295,7 +298,8 @@ class FAASController {
     memoranda_code, memoranda_paragraph, rw_row,
 
     land_appraisals_json, improvements_json, market_values_json, assessments_json,
-    encoder_id, status
+    ctc_no, ctc_issued_on, ctc_issued_at,
+    encoder_id, updated_by, status
   ) VALUES (
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
@@ -303,7 +307,7 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?
   )
 
 
@@ -370,7 +374,11 @@ class FAASController {
         improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
         market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
         assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
+        ctc_no || null,
+        ctc_issued_on || null,
+        ctc_issued_at || null,
 
+        userId,
         userId,
         'draft'                                        // 58
       ]);
@@ -488,7 +496,10 @@ class FAASController {
         land_appraisals_json,
         improvements_json,
         market_values_json,
-        assessments_json
+        assessments_json,
+        ctc_no,
+        ctc_issued_on,
+        ctc_issued_at
       } = req.body;
 
       const userId = req.user.id;
@@ -562,7 +573,8 @@ class FAASController {
           memoranda_code = ?, memoranda_paragraph = ?, rw_row = ?,
 
           land_appraisals_json = ?, improvements_json = ?, market_values_json = ?, assessments_json = ?,
-          status = ?, updated_at = NOW()
+          ctc_no = ?, ctc_issued_on = ?, ctc_issued_at = ?,
+          status = ?, updated_by = ?, updated_at = NOW()
         WHERE id = ? AND hidden = 0
       `, [
         arf_no,
@@ -628,7 +640,11 @@ class FAASController {
         improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
         market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
         assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
+        ctc_no || null,
+        ctc_issued_on || null,
+        ctc_issued_at || null,
         newStatus,
+        userId,
         id
       ]);
 
@@ -716,8 +732,8 @@ class FAASController {
       }
 
       await pool.execute(
-        'UPDATE faas_records SET status = "for_approval", updated_at = NOW() WHERE id = ? AND hidden = 0',
-        [id]
+        'UPDATE faas_records SET status = "for_approval", updated_by = ?, updated_at = NOW() WHERE id = ? AND hidden = 0',
+        [userId, id]
       );
 
       await pool.execute(`
@@ -870,13 +886,16 @@ class FAASController {
 
       let query = `
         SELECT 
-          f.*, f.unirrig_pdf_preview_path,
+          f.*, f.updated_at, f.unirrig_pdf_preview_path,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
-          ua.full_name as approver_name
+          ua.full_name as approver_name,
+          uu.full_name as updater_name,
+          uu.profile_picture as updater_profile_picture
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
+        LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.id = ? AND f.hidden = 0
       `;
 
@@ -913,13 +932,16 @@ class FAASController {
 
       let query = `
         SELECT 
-          f.*,
+          f.*, f.updated_at,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
-          ua.full_name as approver_name
+          ua.full_name as approver_name,
+          uu.full_name as updater_name,
+          uu.profile_picture as updater_profile_picture
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
+        LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.hidden = 0
       `;
 
@@ -959,13 +981,16 @@ class FAASController {
 
       const [records] = await pool.execute(
         `SELECT 
-          f.*,
+          f.*, f.updated_at,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
-          ua.full_name as approver_name
+          ua.full_name as approver_name,
+          uu.full_name as updater_name,
+          uu.profile_picture as updater_profile_picture
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
+        LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.status = 'draft' 
           AND f.hidden = 0
         ORDER BY f.created_at DESC`,
@@ -1063,7 +1088,10 @@ class FAASController {
         land_appraisals_json,
         improvements_json,
         market_values_json,
-        assessments_json
+        assessments_json,
+        ctc_no,
+        ctc_issued_on,
+        ctc_issued_at
       } = req.body;
 
       const userId = req.user.id;
@@ -1140,7 +1168,8 @@ class FAASController {
             memoranda_code = ?, memoranda_paragraph = ?, rw_row = ?,
 
             land_appraisals_json = ?, improvements_json = ?, market_values_json = ?, assessments_json = ?,
-            status = ?, updated_at = NOW()
+            ctc_no = ?, ctc_issued_on = ?, ctc_issued_at = ?,
+            status = ?, updated_by = ?, updated_at = NOW()
           WHERE id = ? AND hidden = 0
         `, [
           arf_no,
@@ -1207,7 +1236,11 @@ class FAASController {
           improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
           market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
           assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
+          ctc_no || null,
+          ctc_issued_on || null,
+          ctc_issued_at || null,
           newStatus,
+          userId,
           id
         ]);
 
@@ -1257,7 +1290,8 @@ class FAASController {
     memoranda_code, memoranda_paragraph, rw_row,
 
     land_appraisals_json, improvements_json, market_values_json, assessments_json,
-    encoder_id, status
+    ctc_no, ctc_issued_on, ctc_issued_at,
+    encoder_id, updated_by, status
 ) VALUES (
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
@@ -1265,7 +1299,7 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?
   )
 
 
@@ -1335,6 +1369,10 @@ class FAASController {
           improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
           market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
           assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
+          ctc_no || null,
+          ctc_issued_on || null,
+          ctc_issued_at || null,
+          userId,
           userId,
           'draft'                                        // 58
         ]);
@@ -1615,7 +1653,7 @@ class FAASController {
           previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
           memoranda_code, memoranda_paragraph, rw_row,
           land_appraisals_json, improvements_json, market_values_json, assessments_json,
-          encoder_id, status
+          encoder_id, updated_by, status
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
@@ -1623,7 +1661,7 @@ class FAASController {
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-          ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?
         )
       `, [
         rootParentId, arf_no, pin || null, oct_tct_no || null, cln || null, owner_name, owner_address || null,
@@ -1664,7 +1702,7 @@ class FAASController {
         improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
         market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
         assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
-        userId, 'draft'
+        userId, userId, 'draft'
       ]);
 
       await pool.execute(`

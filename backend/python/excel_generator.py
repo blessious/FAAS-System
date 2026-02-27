@@ -109,6 +109,45 @@ class FAASExcelGenerator:
         while '__' in filename:
             filename = filename.replace('__', '_')
         return filename.strip('_')
+
+    def number_to_words(self, n):
+        if n == 0:
+            return "ZERO PESOS"
+        
+        def convert_less_than_thousand(num):
+            units = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN", "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN", "EIGHTEEN", "NINETEEN"]
+            tens = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"]
+            
+            res = ""
+            if num >= 100:
+                res += units[num // 100] + " HUNDRED "
+                num %= 100
+            
+            if num >= 20:
+                res += tens[num // 10]
+                if num % 10 > 0:
+                    res += "-" + units[num % 10]
+            elif num > 0:
+                res += units[num]
+            
+            return res.strip()
+
+        val = int(round(n))
+        chunks = []
+        thousands = ["", "THOUSAND", "MILLION", "BILLION"]
+        
+        i = 0
+        while val > 0:
+            rem = val % 1000
+            if rem > 0:
+                word = convert_less_than_thousand(rem)
+                if thousands[i]:
+                    word += " " + thousands[i]
+                chunks.append(word)
+            val //= 1000
+            i += 1
+            
+        return " ".join(reversed(chunks)).strip() + " PESOS ONLY"
     
     def get_faas_record(self, record_id):
         try:
@@ -210,23 +249,37 @@ class FAASExcelGenerator:
             }
 
 
+            # Logic for FAAS RW/ROW placement below last land appraisal
+            last_used_row = 21
             for i in range(min(4, len(land_appraisals))):
                 item = land_appraisals[i]
                 row = 22 + i
                 classification = item.get('classification')
                 sub_class = item.get('sub_class')
+                area_val = self.safe_float(item.get('area'))
+                
                 if classification:
                     cell_mapping[f'A{row}'] = classification
+                    last_used_row = max(last_used_row, row)
                 if sub_class:
                     cell_mapping[f'C{row}'] = sub_class
-                if item.get('area'):
-                    cell_mapping[f'D{row}'] = self.safe_float(item.get('area'))
+                    last_used_row = max(last_used_row, row)
+                if area_val > 0:
+                    cell_mapping[f'D{row}'] = area_val
+                    last_used_row = max(last_used_row, row)
+                
                 unit_value = self.calculate_land_unit_value(classification, sub_class)
-                area = self.safe_float(item.get('area'))
                 if unit_value:
                     cell_mapping[f'E{row}'] = unit_value
-                    if area > 0:
-                        cell_mapping[f'G{row}'] = self.mround(area * unit_value, 10)
+                    if area_val > 0:
+                        cell_mapping[f'G{row}'] = self.mround(area_val * unit_value, 10)
+                        last_used_row = max(last_used_row, row)
+
+            rw_row_raw = record.get('rw_row')
+            if rw_row_raw and str(rw_row_raw).strip():
+                rw_next_row = last_used_row + 1
+                if 22 <= rw_next_row <= 25:
+                    cell_mapping[f'A{rw_next_row}'] = f"({str(rw_row_raw).strip()})"
 
             for i in range(min(4, len(improvements))):
                 item = improvements[i]
@@ -356,7 +409,6 @@ class FAASExcelGenerator:
                 'I21': record.get('south_boundary', ''),
                 'B22': record.get('east_boundary', ''),
                 'I22': record.get('west_boundary', ''),
-                'G59': record.get('rw_row', ''),
                 'B64': record.get('memoranda_paragraph', ''),
             }
 
@@ -485,6 +537,11 @@ class FAASExcelGenerator:
                         for col in ['E', 'G', 'H', 'I', 'J']:
                             self.safe_write_cell(sheet, f'{col}{curr_row}', '')
 
+            # Write RW/ROW to E59 with parentheses
+            rw_row_raw = record.get('rw_row')
+            if rw_row_raw and str(rw_row_raw).strip():
+                self.safe_write_cell(sheet, 'E59', f"({str(rw_row_raw).strip()})")
+
             # Improvements
             base_mvs: list[float] = []
             for item in land_appraisals:
@@ -564,6 +621,7 @@ class FAASExcelGenerator:
                     else:
                         adjusted_mvs.append(float(mv))
 
+                total_assessed_value = 0.0
                 for i in range(min(4, len(assessments))):
                     item = assessments[i]
                     row = 54 + i
@@ -579,6 +637,13 @@ class FAASExcelGenerator:
                     if market_val_detail and assessment_level:
                         calc_av = self.mround(market_val_detail * (assessment_level / 100.0), 10)
                         self.safe_write_cell(sheet2, f'K{row}', calc_av if calc_av != 0 else '')
+                        total_assessed_value += float(calc_av)
+
+                # Round total and write words to D59
+                total_rounded = self.mround(total_assessed_value, 10)
+                if total_rounded > 0:
+                    words = self.number_to_words(total_rounded)
+                    self.safe_write_cell(sheet2, 'D59', words)
 
                 # New Previous record mappings for Sheet 2
                 self.safe_write_cell(sheet2, 'E67', record.get('previous_td_no', ''))

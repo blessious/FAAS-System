@@ -90,6 +90,7 @@ export default function Dashboard() {
       const haystack = [
         r.id,
         r.arf_no,
+        r.pin,
         r.owner_name,
         r.property_location,
         r.status,
@@ -448,7 +449,7 @@ export default function Dashboard() {
                     type="search"
                     value={recentRecordsQuery}
                     onChange={(e) => setRecentRecordsQuery(e.target.value)}
-                    placeholder="Search ARF No, Owner, Location..."
+                    placeholder="Search PIN, Owner, Location..."
                     className="pl-9 pr-8 w-full sm:w-[280px] bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 rounded-lg transition-all text-sm h-9"
                   />
                   {recentRecordsQuery && (

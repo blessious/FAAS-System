@@ -29,7 +29,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Eye, Edit, Trash2, Calendar, User, FileText, History, AlertCircle, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Eye, Edit, Trash2, Calendar, User, FileText, History, AlertCircle, ChevronDown, ChevronRight, Loader2, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { RecordTimeline } from "./RecordTimeline";
@@ -45,8 +45,11 @@ interface FAASRecord {
   status: "draft" | "for_approval" | "approved" | "rejected";
   rejection_reason?: string;
   created_at: string;
+  updated_at?: string;
   encoder_name: string;
   encoder_profile_picture?: string;
+  updater_name?: string;
+  updater_profile_picture?: string;
   linked_entries_count?: number;
 }
 
@@ -77,7 +80,7 @@ const rowHoverStyles = {
 } as const;
 
 export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProps) {
-  const { isAdmin } = useAuth() as { isAdmin?: boolean };
+  const { isAdmin, isEncoder, isApprover } = useAuth() as { isAdmin?: boolean, isEncoder?: boolean, isApprover?: boolean };
   const navigate = useNavigate();
 
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
@@ -183,7 +186,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
               <div>
                 <DialogTitle className="text-xl font-bold text-slate-900">Record Progress</DialogTitle>
                 <DialogDescription className="text-slate-500 font-medium">
-                  Tracking history for ARF No: {historyRecord?.arf_no}
+                  Tracking history for PIN: {historyRecord?.pin || historyRecord?.arf_no}
                 </DialogDescription>
               </div>
             </div>
@@ -214,7 +217,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
               <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
                 <div className="flex items-center gap-2">
                   <User className="w-3.5 h-3.5 text-slate-400" />
-                  Encoded By
+                  Last Actor
                 </div>
               </TableHead>
               <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
@@ -224,6 +227,12 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                 <div className="flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-slate-400" />
                   Date Created
+                </div>
+              </TableHead>
+              <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  Last Updated
                 </div>
               </TableHead>
               <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 text-center">
@@ -245,11 +254,12 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                 </TableCell>
               </TableRow>
             ) : (
-              records.map((record) => (
+              records.map((record, index) => (
                 <div key={record.id} style={{ display: "contents" }}>
                   <TableRow
                     className={cn(
                       "group border-b border-slate-100 transition-all duration-200 cursor-pointer select-none",
+                      index % 2 === 1 && "bg-slate-300/30",
                       rowHoverStyles[record.status],
                       hoveredRow === record.id && "shadow-lg shadow-slate-100"
                     )}
@@ -314,22 +324,22 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="w-8 h-8 border border-slate-200 shrink-0">
-                          {record.encoder_profile_picture ? (
+                          {(record.updater_profile_picture || record.encoder_profile_picture) ? (
                             <AvatarImage
-                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.encoder_profile_picture}`}
+                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.updater_profile_picture || record.encoder_profile_picture}`}
                               className="object-cover"
                             />
                           ) : null}
                           <AvatarFallback className="bg-slate-100 text-[10px] font-bold text-slate-600">
-                            {record.encoder_name ? record.encoder_name.split(' ').map(n => (n ? n[0] : '')).join('').toUpperCase() : '??'}
+                            {(record.updater_name || record.encoder_name || '??').split(' ').map(n => (n ? n[0] : '')).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <span className="text-sm font-medium text-slate-700 line-clamp-1">
-                            {record.encoder_name || "Not specified"}
+                            {record.updater_name || record.encoder_name || "Not specified"}
                           </span>
                           <div className="flex items-center gap-1 mt-1">
-                            <span className="text-xs text-slate-500">Encoded by</span>
+                            <span className="text-xs text-slate-500">{record.updater_name ? "Updated by" : "Encoded by"}</span>
                           </div>
                         </div>
                       </div>
@@ -377,7 +387,21 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                             {new Date(record.created_at).toLocaleDateString()}
                           </span>
                           <div className="flex items-center gap-1 mt-1">
-                            <span className="text-xs text-slate-500">Created</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Created</span>
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <span className="text-sm font-medium text-slate-700">
+                            {new Date(record.updated_at || record.created_at).toLocaleDateString()}
+                          </span>
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              {new Date(record.updated_at || record.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -404,7 +428,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                           <Eye className="w-4 h-4" />
                         </Button>
 
-                        {(isAdmin || record.status === "draft" || record.status === "for_approval" || record.status === "rejected") && (
+                        {(isAdmin || isEncoder) && (record.status === "draft" || record.status === "for_approval" || record.status === "rejected") && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -426,6 +450,34 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+                        )}
+
+                        {record.status === 'approved' && (isEncoder || isAdmin || isApprover) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={async () => {
+                                    try {
+                                      const { approvalAPI } = await import("@/services/api");
+                                      await approvalAPI.cancelAction(record.id);
+                                      window.location.reload(); // Quick refresh
+                                    } catch (err) {
+                                      console.error(err);
+                                    }
+                                  }}
+                                  className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-gradient-to-br hover:from-rose-50 hover:to-rose-100 transition-all shadow-sm border border-slate-200 hover:border-rose-200"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Cancel Approval</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </div>
                     </TableCell>
@@ -455,14 +507,14 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                       <TableCell className="px-6 py-2">
                         <div className="flex items-center gap-2">
                           <Avatar className="w-6 h-6 border border-slate-200">
-                            {subRecord.encoder_profile_picture ? (
+                            {(subRecord.updater_profile_picture || subRecord.encoder_profile_picture) ? (
                               <AvatarImage
-                                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${subRecord.encoder_profile_picture}`}
+                                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${subRecord.updater_profile_picture || subRecord.encoder_profile_picture}`}
                               />
                             ) : null}
-                            <AvatarFallback className="text-[8px] font-bold">{subRecord.encoder_name ? subRecord.encoder_name[0] : '?'}</AvatarFallback>
+                            <AvatarFallback className="text-[8px] font-bold">{(subRecord.updater_name || subRecord.encoder_name || '?')[0].toUpperCase()}</AvatarFallback>
                           </Avatar>
-                          <span className="text-[10px] text-slate-500">{subRecord.encoder_name}</span>
+                          <span className="text-[10px] text-slate-500">{subRecord.updater_name || subRecord.encoder_name}</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-2">
@@ -471,7 +523,14 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                         </Badge>
                       </TableCell>
                       <TableCell className="px-6 py-2">
-                        <span className="text-xs text-slate-500">{new Date(subRecord.created_at).toLocaleDateString()}</span>
+                        <span className="text-xs text-slate-500">
+                          {new Date(subRecord.created_at).toLocaleDateString()}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-6 py-2">
+                        <span className="text-xs text-slate-500" title={`Created: ${new Date(subRecord.created_at).toLocaleString()}`}>
+                          {new Date(subRecord.updated_at || subRecord.created_at).toLocaleDateString()}
+                        </span>
                       </TableCell>
                       <TableCell className="px-6 py-2">
                         <div className="flex items-center justify-center gap-1.5">
@@ -494,7 +553,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </Button>
-                          {(isAdmin || subRecord.status === "draft" || subRecord.status === "for_approval" || subRecord.status === "rejected") && (
+                          {(isAdmin || isEncoder) && (subRecord.status === "draft" || subRecord.status === "for_approval" || subRecord.status === "rejected") && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -515,6 +574,26 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                               title="Delete Revision"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+
+                          {subRecord.status === 'approved' && (isEncoder || isAdmin || isApprover) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                try {
+                                  const { approvalAPI } = await import("@/services/api");
+                                  await approvalAPI.cancelAction(subRecord.id);
+                                  window.location.reload();
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }}
+                              className="h-7 w-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
+                              title="Cancel Approval"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
                             </Button>
                           )}
                         </div>

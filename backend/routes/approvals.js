@@ -22,7 +22,7 @@ router.post('/:id/approve', authorize('approver', 'administrator'), approvalCont
 router.post('/:id/reject', authorize('approver', 'administrator'), approvalController.rejectRecord);
 
 // Cancel an approval/rejection action
-router.post('/:id/cancel', authorize('approver', 'administrator'), approvalController.cancelAction);
+router.post('/:id/cancel', authorize('encoder', 'approver', 'administrator'), approvalController.cancelAction);
 
 // Get approval history
 router.get('/history', approvalController.getApprovalHistory);

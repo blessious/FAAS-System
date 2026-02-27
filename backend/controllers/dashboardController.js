@@ -49,12 +49,16 @@ class DashboardController {
           f.status,
           f.rejection_reason,
           f.created_at,
+          f.updated_at,
           f.parent_id,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0) as linked_entries_count,
           ue.full_name as encoder_name,
-          ue.profile_picture as encoder_profile_picture
+          ue.profile_picture as encoder_profile_picture,
+          uu.full_name as updater_name,
+          uu.profile_picture as updater_profile_picture
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id 
+        LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.hidden = 0 AND f.parent_id IS NULL
         ORDER BY f.created_at DESC
         LIMIT ? OFFSET ?`,
@@ -123,9 +127,12 @@ class DashboardController {
           f.pdf_preview_path,
           f.unirrig_pdf_preview_path,
           ue.full_name as encoder_name,
-          ue.profile_picture as encoder_profile_picture
+          ue.profile_picture as encoder_profile_picture,
+          uu.full_name as updater_name,
+          uu.profile_picture as updater_profile_picture
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
+        LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.parent_id = ? AND f.hidden = 0
         ORDER BY f.created_at DESC
       `, [parentId]);

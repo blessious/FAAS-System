@@ -49,7 +49,7 @@ export default function PrintPreview() {
   const [selectedRecord, setSelectedRecord] = useState<ApprovedRecord | null>(null);
   const [approvedRecords, setApprovedRecords] = useState<ApprovedRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'faas' | 'unirrig'>('faas');
+  const [activeTab, setActiveTab] = useState<'faas' | 'TDC'>('faas');
   const [pdfError, setPdfError] = useState(false);
   const [blockIframe, setBlockIframe] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -138,7 +138,7 @@ export default function PrintPreview() {
 
       toast({
         title: "Action Cancelled",
-        description: `FAAS record ${selectedRecord.arf_no} has been reverted to pending status.`,
+        description: `FAAS record PIN: ${selectedRecord.pin || selectedRecord.arf_no} has been reverted to pending status.`,
       });
 
       setSelectedRecord(null);
@@ -297,7 +297,7 @@ export default function PrintPreview() {
                     </div>
                     <div>
                       <CardTitle className="text-lg font-bold text-slate-900">
-                        {selectedRecord.arf_no}
+                        {selectedRecord.pin || "No PIN"}
                       </CardTitle>
                       <p className="text-xs text-slate-500 mt-0.5">
                         Approved by {selectedRecord.approver_name} • {formatDate(selectedRecord.approved_at)}
@@ -306,7 +306,7 @@ export default function PrintPreview() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Tabs defaultValue={activeTab} value={activeTab} onValueChange={val => {
-                      setActiveTab(val as 'faas' | 'unirrig');
+                      setActiveTab(val as 'faas' | 'TDC');
                       setPdfError(false);
                     }} className="w-auto">
                       <TabsList className="grid w-[180px] grid-cols-2 bg-slate-100 p-1 rounded-lg">
@@ -320,7 +320,7 @@ export default function PrintPreview() {
                           value="unirrig"
                           className="rounded-md text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm"
                         >
-                          UNIRRIG
+                          TDC
                         </TabsTrigger>
                       </TabsList>
                     </Tabs>
@@ -355,7 +355,7 @@ export default function PrintPreview() {
                         <div className="flex items-center gap-2">
                           <FileText className="w-4 h-4 text-emerald-500" />
                           <span className="font-semibold text-slate-900">
-                            {activeTab.toUpperCase()} Preview - {selectedRecord.arf_no}
+                            {activeTab.toUpperCase()} Preview - {selectedRecord.pin || "No PIN"}
                           </span>
                         </div>
                         <a

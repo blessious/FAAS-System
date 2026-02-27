@@ -7,15 +7,19 @@ class ApprovalController {
       const [records] = await pool.execute(`
         SELECT 
           f.*,
+          f.updated_at,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
           ua.full_name as approver_name,
+          uu.full_name as updater_name,
+          uu.profile_picture as updater_profile_picture,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0) as linked_entries_count,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'for_approval') as pending_linked_count,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'rejected') as rejected_linked_count
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
+        LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.parent_id IS NULL 
           AND f.hidden = 0
           AND (
@@ -48,15 +52,18 @@ class ApprovalController {
       const [records] = await pool.execute('SELECT * FROM faas_records WHERE id = ? AND hidden = 0', [id]);
       const record = records[0];
 
+      console.log(`✅ Approving record ${id} by user ${userId}`);
       await pool.execute(`
         UPDATE faas_records 
         SET 
           status = 'approved',
           approver_id = ?,
           approval_date = NOW(),
-          rejection_reason = ?
+          rejection_reason = ?,
+          updated_by = ?,
+          updated_at = NOW()
         WHERE id = ?
-      `, [userId, comment || null, id]);
+      `, [userId, comment || null, userId, id]);
 
       // Log activity
       await pool.execute(`
@@ -117,6 +124,7 @@ class ApprovalController {
         return res.status(404).json({ success: false, error: 'Record not found' });
       }
 
+      console.log(`❌ Rejecting record ${id} by user ${userId}`);
       // Reject only the actual record
       await pool.execute(`
         UPDATE faas_records 
@@ -124,9 +132,11 @@ class ApprovalController {
           status = 'rejected',
           approver_id = ?,
           approval_date = NOW(),
-          rejection_reason = ?
+          rejection_reason = ?,
+          updated_by = ?,
+          updated_at = NOW()
         WHERE id = ? AND hidden = 0
-      `, [userId, comment, id]);
+      `, [userId, comment, userId, id]);
 
       // Log activity
       await pool.execute(`
@@ -170,12 +180,16 @@ class ApprovalController {
       const [records] = await pool.execute(`
         SELECT 
           f.*,
+          f.updated_at,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
-          ua.full_name as approver_name
+          ua.full_name as approver_name,
+          uu.full_name as updater_name,
+          uu.profile_picture as updater_profile_picture
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
+        LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.status IN ('approved', 'rejected')
           AND f.hidden = 0
         ORDER BY f.approval_date DESC
@@ -199,15 +213,19 @@ class ApprovalController {
       const [records] = await pool.execute(`
         SELECT 
           f.*,
+          f.updated_at,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
           ua.full_name as approver_name,
+          uu.full_name as updater_name,
+          uu.profile_picture as updater_profile_picture,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0) as linked_entries_count,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'for_approval') as pending_linked_count,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'rejected') as rejected_linked_count
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
+        LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.parent_id IS NULL
           AND f.hidden = 0
           AND (
@@ -267,15 +285,18 @@ class ApprovalController {
         return res.status(404).json({ success: false, error: 'Record not found' });
       }
 
+      console.log(`🔄 Cancelling action for record ${id} by user ${userId}`);
       await pool.execute(`
         UPDATE faas_records 
         SET 
           status = 'for_approval',
           approver_id = NULL,
           approval_date = NULL,
-          rejection_reason = NULL
+          rejection_reason = NULL,
+          updated_by = ?,
+          updated_at = NOW()
         WHERE id = ?
-      `, [id]);
+      `, [userId, id]);
 
       // Log activity
       await pool.execute(`

@@ -26,6 +26,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Helper to format number string with commas for display
+const formatNumberWithCommas = (value: string | number | undefined | null) => {
+  if (value === null || value === undefined || value === "") return "";
+  const stringValue = value.toString().replace(/,/g, "");
+  if (isNaN(Number(stringValue)) && stringValue !== "." && stringValue !== "-") return stringValue;
+
+  const parts = stringValue.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
+};
+
+// Helper to remove commas for processing
+const parseCommaValue = (value: string) => {
+  return value.replace(/,/g, "");
+};
+
 // Define interfaces for each row type
 interface LandAppraisalRow {
   classification: string;
@@ -136,6 +152,9 @@ interface FAASFormData {
   memoranda_code: string;
   memoranda_paragraph: string;
   rw_row: string;
+  ctc_no: string;
+  ctc_issued_on: string;
+  ctc_issued_at: string;
   parent_id?: string | number | null;
 }
 
@@ -303,6 +322,9 @@ const initialFormData: FAASFormData = {
   memoranda_code: '',
   memoranda_paragraph: '',
   rw_row: "",
+  ctc_no: "",
+  ctc_issued_on: "",
+  ctc_issued_at: "",
   parent_id: null,
 };
 
@@ -319,7 +341,7 @@ export default function FAASForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { isEncoder, isAdmin } = useAuth() as { isEncoder?: boolean; isAdmin?: boolean };
+  const { isEncoder, isAdmin, isApprover } = useAuth() as { isEncoder?: boolean; isAdmin?: boolean; isApprover?: boolean };
   const [formData, setFormData] = useState<FAASFormData>(initialFormData);
   const tabOrder = ["basic", "property", "appraisal", "assessment", "previous"] as const;
   type TabValue = (typeof tabOrder)[number];
@@ -328,6 +350,7 @@ export default function FAASForm() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [recordStatus, setRecordStatus] = useState<string>('draft');
+  const [approvalDate, setApprovalDate] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -626,12 +649,16 @@ export default function FAASForm() {
           memoranda_code: response.data.memoranda_code || "",
           memoranda_paragraph: response.data.memoranda_paragraph || "",
           rw_row: response.data.rw_row?.toString() || "",
+          ctc_no: response.data.ctc_no || "",
+          ctc_issued_on: response.data.ctc_issued_on ? response.data.ctc_issued_on.substring(0, 10) : "",
+          ctc_issued_at: response.data.ctc_issued_at || "",
           parent_id: response.data.parent_id || null,
         };
 
 
         setFormData(fetchedData);
         setRecordStatus(response.data.status || 'draft');
+        setApprovalDate(response.data.approval_date || null);
         setRejectionReason(response.data.rejection_reason || '');
       }
     } catch (error: any) {
@@ -715,6 +742,9 @@ export default function FAASForm() {
         east_boundary: formData.east_boundary || null,
         west_boundary: formData.west_boundary || null,
         rw_row: formData.rw_row || null,
+        ctc_no: formData.ctc_no || null,
+        ctc_issued_on: formData.ctc_issued_on || null,
+        ctc_issued_at: formData.ctc_issued_at || null,
 
         classification: formData.landAppraisals[0]?.classification || null,
         sub_class: formData.landAppraisals[0]?.sub_class || null,
@@ -893,6 +923,9 @@ export default function FAASForm() {
         east_boundary: formData.east_boundary || null,
         west_boundary: formData.west_boundary || null,
         rw_row: formData.rw_row || null,
+        ctc_no: formData.ctc_no || null,
+        ctc_issued_on: formData.ctc_issued_on || null,
+        ctc_issued_at: formData.ctc_issued_at || null,
 
         land_appraisals_json: JSON.stringify(formData.landAppraisals),
         improvements_json: JSON.stringify(formData.improvements),
@@ -989,6 +1022,9 @@ export default function FAASForm() {
         east_boundary: formData.east_boundary || null,
         west_boundary: formData.west_boundary || null,
         rw_row: formData.rw_row || null,
+        ctc_no: formData.ctc_no || null,
+        ctc_issued_on: formData.ctc_issued_on || null,
+        ctc_issued_at: formData.ctc_issued_at || null,
 
         classification: formData.landAppraisals[0]?.classification || null,
         sub_class: formData.landAppraisals[0]?.sub_class || null,
@@ -1179,9 +1215,11 @@ export default function FAASForm() {
     );
   };
 
-  // Update isEditable to consider edit mode
-  const isEditable = (isEditMode || !isEditing) &&
-    (isAdmin || recordStatus === 'draft' || recordStatus === 'for_approval' || (isEncoder && recordStatus === 'rejected') || recordStatus === 'approved');
+  // Permissions for editing
+  const canEditRecord = isAdmin || isEncoder || recordStatus === 'draft' || recordStatus === 'for_approval' || recordStatus === 'rejected';
+
+  // State determining if fields are currently editable
+  const isEditable = (isEditMode || !isEditing) && (isAdmin || isEncoder || recordStatus === 'draft' || recordStatus === 'rejected');
 
   const currentTabIndex = Math.max(0, tabOrder.indexOf(activeTab));
   const isFirstTab = currentTabIndex === 0;
@@ -1286,7 +1324,7 @@ export default function FAASForm() {
             )}
 
             {/* View mode actions */}
-            {isEditing && !isEditMode && isEditable && (
+            {isEditing && !isEditMode && (isAdmin || isEncoder) && (
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -1650,6 +1688,72 @@ export default function FAASForm() {
                       className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
                       disabled={!isEditable}
                     />
+                  </div>
+                </div>
+
+                {/* CTC/ID No. Section */}
+                <div className="space-y-4 mt-6 pt-4 border-t border-slate-200">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center">
+                      <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    </div>
+                    <h4 className="text-sx font-semibold text-slate-900">CTC/ID No.</h4>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <div className="text-xs text-slate-600 italic mb-4 leading-relaxed bg-white/50 p-3 rounded-lg border border-slate-100 shadow-sm">
+                      {recordStatus === 'approved' && approvalDate ? (
+                        <p>
+                          Subscribed and sworn to before me this <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).getDate()}</span> day of <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).toLocaleDateString('en-US', { month: 'long' })}</span> 20 <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).getFullYear().toString().substring(2)}</span> the person taking oath presenting Residence Certificate No. below.
+                        </p>
+                      ) : (
+                        <p>
+                          Subscribed and sworn to before me this __________ day of _______________________ 20 ______ the person taking oath presenting Residence Certificate No. below <span className="text-blue-500 font-medium">(This will be automated upon approval)</span>.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="ctc_no" className="text-sm font-semibold text-slate-700">
+                          Residence Certificate No.
+                        </Label>
+                        <Input
+                          id="ctc_no"
+                          value={formData.ctc_no}
+                          onChange={(e) => handleInputChange("ctc_no", e.target.value)}
+                          placeholder="Enter CTC/ID No."
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                          disabled={!isEditable}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="ctc_issued_on" className="text-sm font-semibold text-slate-700">
+                          Issued on
+                        </Label>
+                        <Input
+                          id="ctc_issued_on"
+                          type="date"
+                          value={formData.ctc_issued_on}
+                          onChange={(e) => handleInputChange("ctc_issued_on", e.target.value)}
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                          disabled={!isEditable}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="ctc_issued_at" className="text-sm font-semibold text-slate-700">
+                          Issued at
+                        </Label>
+                        <Input
+                          id="ctc_issued_at"
+                          value={formData.ctc_issued_at}
+                          onChange={(e) => handleInputChange("ctc_issued_at", e.target.value)}
+                          placeholder="Enter location"
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                          disabled={!isEditable}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </TabsContent>
@@ -2156,24 +2260,30 @@ export default function FAASForm() {
                           <div className="space-y-1.5">
                             <Label className="text-sm font-semibold text-slate-700">Previous AV - Land:</Label>
                             <Input
-                              value={formData.previous_av_land}
-                              onChange={(e) => handleInputChange("previous_av_land", e.target.value)}
+                              value={formatNumberWithCommas(formData.previous_av_land)}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9.,-]/g, "");
+                                if ((val.match(/\./g) || []).length > 1) return;
+                                handleInputChange("previous_av_land", parseCommaValue(val));
+                              }}
                               className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
                               placeholder="Previous land AV"
-                              type="number"
-                              step="0.01"
+                              type="text"
                               disabled={!isEditable}
                             />
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-sm font-semibold text-slate-700">Previous AV - Improvements:</Label>
                             <Input
-                              value={formData.previous_av_improvements}
-                              onChange={(e) => handleInputChange("previous_av_improvements", e.target.value)}
+                              value={formatNumberWithCommas(formData.previous_av_improvements)}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9.,-]/g, "");
+                                if ((val.match(/\./g) || []).length > 1) return;
+                                handleInputChange("previous_av_improvements", parseCommaValue(val));
+                              }}
                               className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
                               placeholder="Previous improvements AV"
-                              type="number"
-                              step="0.01"
+                              type="text"
                               disabled={!isEditable}
                             />
                           </div>
@@ -2192,12 +2302,15 @@ export default function FAASForm() {
                             <div className="space-y-1.5">
                               <Label className="text-sm font-semibold text-slate-700">Previous AV - Land 2:</Label>
                               <Input
-                                value={formData.previous_av_land2}
-                                onChange={(e) => handleInputChange("previous_av_land2", e.target.value)}
+                                value={formatNumberWithCommas(formData.previous_av_land2)}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^0-9.,-]/g, "");
+                                  if ((val.match(/\./g) || []).length > 1) return;
+                                  handleInputChange("previous_av_land2", parseCommaValue(val));
+                                }}
                                 className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
                                 placeholder="Previous land AV 2"
-                                type="number"
-                                step="0.01"
+                                type="text"
                                 disabled={!isEditable}
                               />
                             </div>
@@ -2214,12 +2327,15 @@ export default function FAASForm() {
                             <div className="space-y-1.5">
                               <Label className="text-sm font-semibold text-slate-700">Previous AV - Improvements 2:</Label>
                               <Input
-                                value={formData.previous_av_improvements2}
-                                onChange={(e) => handleInputChange("previous_av_improvements2", e.target.value)}
+                                value={formatNumberWithCommas(formData.previous_av_improvements2)}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^0-9.,-]/g, "");
+                                  if ((val.match(/\./g) || []).length > 1) return;
+                                  handleInputChange("previous_av_improvements2", parseCommaValue(val));
+                                }}
                                 className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
                                 placeholder="Previous improvements AV 2"
-                                type="number"
-                                step="0.01"
+                                type="text"
                                 disabled={!isEditable}
                               />
                             </div>
@@ -2337,6 +2453,6 @@ export default function FAASForm() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </div >
   );
 }

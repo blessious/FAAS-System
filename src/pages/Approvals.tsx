@@ -79,6 +79,8 @@ interface ApprovalRecord {
   created_at: string;
   encoder_name: string;
   encoder_profile_picture?: string;
+  updater_name?: string;
+  updater_profile_picture?: string;
   status: 'for_approval' | 'approved' | 'rejected';
   excel_file_path?: string;
   pdf_preview_path?: string;
@@ -164,7 +166,10 @@ const PreviewPanel = ({
   pdfError,
   setPdfError,
   blockIframe,
-  setBlockIframe
+  setBlockIframe,
+  isAdmin,
+  isEncoder,
+  isApprover
 }: {
   selectedRecord: ApprovalRecord | null;
   rejectionReason: string;
@@ -181,6 +186,9 @@ const PreviewPanel = ({
   setPdfError: (val: boolean) => void;
   blockIframe: boolean;
   setBlockIframe: (val: boolean) => void;
+  isAdmin: boolean;
+  isEncoder: boolean;
+  isApprover: boolean;
 }) => {
   const [activeTab, setActiveTab] = useState<'faas' | 'unirrig'>('faas');
   // Always call hooks, use guards inside
@@ -246,7 +254,7 @@ const PreviewPanel = ({
         <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 p-3 text-sm font-medium border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-blue-500" />
-            <span className="font-semibold text-slate-900">{label} Preview - {selectedRecord.arf_no}</span>
+            <span className="font-semibold text-slate-900">{label} Preview - {selectedRecord.pin || "No PIN"}</span>
           </div>
         </div>
         <div className="h-[1500px] bg-slate-50">
@@ -295,10 +303,10 @@ const PreviewPanel = ({
             </div>
             <div>
               <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                {selectedRecord.arf_no}
+                {selectedRecord.pin || "No PIN"}
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                Submitted by {selectedRecord.encoder_name} • {formatDate(selectedRecord.created_at)}
+                Submitted by {selectedRecord.updater_name || selectedRecord.encoder_name} • {formatDate(selectedRecord.created_at)}
               </p>
             </div>
           </div>
@@ -323,7 +331,7 @@ const PreviewPanel = ({
                     <div>
                       <DialogTitle className="text-xl font-bold text-slate-900">Record Progress</DialogTitle>
                       <DialogDescription className="text-slate-500 font-medium">
-                        Tracking history for ARF No: {selectedRecord.arf_no}
+                        Tracking history for PIN: {selectedRecord.pin || selectedRecord.arf_no}
                       </DialogDescription>
                     </div>
                   </div>
@@ -394,18 +402,18 @@ const PreviewPanel = ({
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Encoded By</label>
               <div className="flex items-center gap-2 mt-0.5">
                 <Avatar className="w-6 h-6 border border-slate-200">
-                  {selectedRecord.encoder_profile_picture ? (
+                  {(selectedRecord.updater_profile_picture || selectedRecord.encoder_profile_picture) ? (
                     <AvatarImage
-                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${selectedRecord.encoder_profile_picture}`}
+                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${selectedRecord.updater_profile_picture || selectedRecord.encoder_profile_picture}`}
                       className="object-cover"
                     />
                   ) : null}
                   <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
-                    {selectedRecord.encoder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {(selectedRecord.updater_name || selectedRecord.encoder_name || '??').split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <p className="font-medium text-slate-700">
-                  {selectedRecord.encoder_name}
+                  {selectedRecord.updater_name || selectedRecord.encoder_name}
                 </p>
               </div>
             </div>
@@ -476,16 +484,29 @@ const PreviewPanel = ({
         )}
 
         {selectedRecord.status === 'approved' && (
-          <div className="p-5 bg-gradient-to-r from-emerald-50 to-emerald-100/30 border border-emerald-200 rounded-xl">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h4 className="font-bold text-emerald-800 mb-1">Record Approved</h4>
-                <p className="text-emerald-600 text-sm">This FAAS record has been approved and is now active.</p>
+          <div className="space-y-4">
+            <div className="p-5 bg-gradient-to-r from-emerald-50 to-emerald-100/30 border border-emerald-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-emerald-800 mb-1">Record Approved</h4>
+                  <p className="text-emerald-600 text-sm">This FAAS record has been approved and is now active.</p>
+                </div>
               </div>
             </div>
+            {(isAdmin || isApprover || isEncoder) && (
+              <Button
+                onClick={handleCancelAction}
+                disabled={cancelling}
+                variant="outline"
+                className="w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-2 rounded-xl font-semibold h-11"
+              >
+                {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                Cancel Approval & Revert to Pending
+              </Button>
+            )}
           </div>
         )}
 
@@ -502,16 +523,17 @@ const PreviewPanel = ({
                 </div>
               </div>
             </div>
-            {/* Keeping cancel button for rejected in Approvals since rejected is already a tab here */}
-            <Button
-              onClick={handleCancelAction}
-              disabled={cancelling}
-              variant="outline"
-              className="w-full border-rose-200 text-rose-700 hover:bg-rose-50 gap-2 rounded-xl font-semibold h-11"
-            >
-              {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-              Cancel Rejection & Revert to Pending
-            </Button>
+            {(isAdmin || isApprover || isEncoder) && (
+              <Button
+                onClick={handleCancelAction}
+                disabled={cancelling}
+                variant="outline"
+                className="w-full border-rose-200 text-rose-700 hover:bg-rose-50 gap-2 rounded-xl font-semibold h-11"
+              >
+                {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                Cancel Rejection & Revert to Pending
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
@@ -521,7 +543,7 @@ const PreviewPanel = ({
 
 export default function Approvals() {
   const { toast } = useToast();
-  const { userRole } = useAuth() as { userRole: string };
+  const { isAdmin, isEncoder, isApprover, userRole } = useAuth() as { isAdmin: boolean, isEncoder: boolean, isApprover: boolean, userRole: string };
 
   const [loading, setLoading] = useState(true);
   const [pendingRecords, setPendingRecords] = useState<ApprovalRecord[]>([]);
@@ -572,6 +594,7 @@ export default function Approvals() {
 
     const q = searchQuery.toLowerCase();
     return pendingRecords.filter(record =>
+      record.pin?.toLowerCase().includes(q) ||
       record.arf_no.toLowerCase().includes(q) ||
       record.owner_name.toLowerCase().includes(q) ||
       record.property_location.toLowerCase().includes(q) ||
@@ -584,6 +607,7 @@ export default function Approvals() {
 
     const q = searchQuery.toLowerCase();
     return rejectedRecords.filter(record =>
+      record.pin?.toLowerCase().includes(q) ||
       record.arf_no.toLowerCase().includes(q) ||
       record.owner_name.toLowerCase().includes(q) ||
       record.property_location.toLowerCase().includes(q) ||
@@ -677,7 +701,7 @@ export default function Approvals() {
 
       toast({
         title: "Record Approved",
-        description: `FAAS record ${selectedRecord.arf_no} has been approved successfully.`,
+        description: `FAAS record PIN: ${selectedRecord.pin || selectedRecord.arf_no} has been approved successfully.`,
       });
 
       setSelectedRecord(null);
@@ -716,7 +740,7 @@ export default function Approvals() {
 
       toast({
         title: "Record Rejected",
-        description: `FAAS record ${selectedRecord.arf_no} has been rejected.`,
+        description: `FAAS record PIN: ${selectedRecord.pin || selectedRecord.arf_no} has been rejected.`,
       });
 
       setSelectedRecord(null);
@@ -746,7 +770,7 @@ export default function Approvals() {
 
       toast({
         title: "Action Cancelled",
-        description: `FAAS record ${selectedRecord.arf_no} has been reverted to pending status.`,
+        description: `FAAS record PIN: ${selectedRecord.pin || selectedRecord.arf_no} has been reverted to pending status.`,
       });
 
       setSelectedRecord(null);
@@ -898,7 +922,7 @@ export default function Approvals() {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search ARF No, Owner, Location..."
+              placeholder="Search PIN, Owner, Location..."
               className="pl-9 pr-8 w-full bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 rounded-lg transition-all text-sm h-9"
             />
             {searchQuery && (
@@ -1012,17 +1036,17 @@ export default function Approvals() {
                           <div className="flex items-center gap-3 mt-2">
                             <span className="text-xs text-slate-500 flex items-center gap-2">
                               <Avatar className="w-5 h-5 border border-slate-200">
-                                {record.encoder_profile_picture ? (
+                                {(record.updater_profile_picture || record.encoder_profile_picture) ? (
                                   <AvatarImage
-                                    src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.encoder_profile_picture}`}
+                                    src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.updater_profile_picture || record.encoder_profile_picture}`}
                                     className="object-cover"
                                   />
                                 ) : null}
                                 <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
-                                  {record.encoder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                  {(record.updater_name || record.encoder_name || '??').split(' ').map(n => n[0]).join('').toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              {record.encoder_name}
+                              {record.updater_name || record.encoder_name}
                             </span>
                             <span className="text-xs text-slate-400">•</span>
                             <span className="text-xs text-slate-400 flex items-center gap-1">
@@ -1070,7 +1094,7 @@ export default function Approvals() {
                                       {formatDate(subRecord.created_at)}
                                     </span>
                                     <span>•</span>
-                                    <span>By {subRecord.encoder_name}</span>
+                                    <span>{subRecord.updater_name ? 'Updated by' : 'By'} {subRecord.updater_name || subRecord.encoder_name}</span>
                                   </div>
                                 </div>
                                 <div className="flex items-center self-center">
@@ -1229,6 +1253,9 @@ export default function Approvals() {
                   setPdfError={setPdfError}
                   blockIframe={blockIframe}
                   setBlockIframe={setBlockIframe}
+                  isAdmin={isAdmin}
+                  isEncoder={isEncoder}
+                  isApprover={isApprover}
                 />
               </div>
             </div>
@@ -1275,6 +1302,9 @@ export default function Approvals() {
                   setPdfError={setPdfError}
                   blockIframe={blockIframe}
                   setBlockIframe={setBlockIframe}
+                  isAdmin={isAdmin}
+                  isEncoder={isEncoder}
+                  isApprover={isApprover}
                 />
               </div>
             </div>
@@ -1318,7 +1348,7 @@ export default function Approvals() {
               <div>
                 <DialogTitle className="text-xl font-bold text-slate-900">Record Progress</DialogTitle>
                 <DialogDescription className="text-slate-500 font-medium">
-                  Tracking history for ARF No: {historyRecord?.arf_no}
+                  Tracking history for PIN: {historyRecord?.pin || historyRecord?.arf_no}
                 </DialogDescription>
               </div>
             </div>

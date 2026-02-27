@@ -34,10 +34,12 @@ const App = () => (
             <Route path="/" element={<Login />} />
             <Route element={<MainLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route element={<RoleGuard allowedRoles={["encoder", "administrator", "approver"]} />}>
+                <Route path="/faas/:id" element={<FAASForm />} />
+              </Route>
               <Route element={<RoleGuard allowedRoles={["encoder", "administrator"]} />}>
                 <Route path="/drafts" element={<Drafts />} />
                 <Route path="/faas/new" element={<FAASForm />} />
-                <Route path="/faas/:id" element={<FAASForm />} />
                 <Route path="/faas/:id/edit" element={<FAASForm />} />
               </Route>
               <Route element={<RoleGuard allowedRoles={["approver", "administrator"]} />}>

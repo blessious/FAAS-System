@@ -16,8 +16,11 @@ interface DraftRecord {
   property_location: string;
   status: "draft" | "for_approval" | "approved" | "rejected";
   created_at: string;
+  updated_at?: string;
   encoder_name: string;
   encoder_profile_picture?: string;
+  updater_name?: string;
+  updater_profile_picture?: string;
 }
 
 export default function Drafts() {
@@ -43,6 +46,8 @@ export default function Drafts() {
         r.arf_no,
         r.owner_name,
         r.property_location,
+        r.encoder_name,
+        r.updater_name,
         createdText,
       ]
         .filter(Boolean)
