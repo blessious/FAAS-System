@@ -10,7 +10,8 @@ router.get('/files/pdf/*', printController.servePdfFile);
 router.use(authenticate);
 
 router.post('/generate-faas', printController.generateFAASExcel);
-router.get('/download/:filename', printController.downloadFile);
+router.get('/download/:folder/:filename', printController.downloadFile);
+router.get('/download/:filename', printController.downloadFile); // Fallback for root files
 router.get('/files/:recordId', printController.getGeneratedFiles);
 router.get('/approved', printController.getApprovedRecords);
 

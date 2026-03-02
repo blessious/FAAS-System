@@ -412,32 +412,48 @@ class PrintController {
 
   async downloadFile(req, res) {
     try {
-      const { filename } = req.params;
-      const generatedDir = path.join(__dirname, '../python/generated');
-      const filePath = path.join(generatedDir, filename);
+      const { folder, filename: paramFilename } = req.params;
+      const rawParam = req.params[0] || req.params.filename || paramFilename || '';
+      const filename = decodeURIComponent(rawParam);
 
-      console.log(`📥 Download request for: ${filename}`);
-      console.log(`📁 Looking for file at: ${filePath}`);
-      console.log(`📁 Directory exists: ${fs.existsSync(generatedDir)}`);
+      const generatedDir = path.resolve(__dirname, '../python/generated');
+      let filePath;
+
+      if (folder && paramFilename) {
+        filePath = path.resolve(generatedDir, folder, paramFilename);
+      } else {
+        filePath = path.resolve(generatedDir, filename);
+      }
+
+      console.log('📥 DOWNLOAD DEBUG:');
+      console.log(`- Folder: ${folder}, ParamFilename: ${paramFilename}`);
+      console.log(`- Raw param: ${rawParam}`);
+      console.log(`- Final FilePath: ${filePath}`);
 
       if (!fs.existsSync(filePath)) {
         console.error('❌ File not found:', filePath);
-
-        // Try to find file anywhere in generated folder
-        if (fs.existsSync(generatedDir)) {
-          const files = fs.readdirSync(generatedDir);
-          console.log('Available files in generated folder:', files);
+        // List directory to help debug
+        const subDir = filename.includes('/') ? path.dirname(filename) : '';
+        const searchDir = path.join(generatedDir, subDir);
+        if (fs.existsSync(searchDir)) {
+          console.log(`- Directory ${searchDir} exists. Contents:`, fs.readdirSync(searchDir));
+        } else {
+          console.log(`- Directory ${searchDir} does NOT exist.`);
         }
 
-        return res.status(404).json({
-          success: false,
-          error: 'File not found'
-        });
+        return res.status(404).json({ success: false, error: 'File not found' });
+      }
+
+      // Security: ensure filePath is within generatedDir
+      if (!filePath.startsWith(generatedDir)) {
+        return res.status(403).json({ success: false, error: 'Invalid file path' });
       }
 
       console.log('✅ File found, sending download...');
 
-      res.download(filePath, filename, (err) => {
+      // Pass only the basename as the second argument (the name the user sees)
+      const downloadName = path.basename(filename);
+      res.download(filePath, downloadName, (err) => {
         if (err) {
           console.error('❌ Download error:', err);
           if (!res.headersSent) {
@@ -533,6 +549,7 @@ class PrintController {
         f.created_at,
         f.approval_date as approved_at,
         f.excel_file_path,
+        f.unirrig_excel_file_path,
         f.pdf_preview_path,
         f.unirrig_pdf_preview_path,
         ue.full_name as encoder_name,

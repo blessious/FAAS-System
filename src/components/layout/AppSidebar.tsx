@@ -92,7 +92,7 @@ export function AppSidebar() {
           <Avatar className="w-10 h-10 border border-slate-200 shrink-0 shadow-sm">
             {user?.profile_picture ? (
               <AvatarImage
-                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${user.profile_picture}`}
+                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${user.profile_picture}`}
                 className="object-cover"
               />
             ) : null}

@@ -1,4 +1,82 @@
 const { getConnection } = require('../utils/database');
+const path = require('path');
+const fs = require('fs');
+const { exec } = require('child_process');
+const printController = require('./printController');
+
+// Helper function for PDF generation
+async function generatePDF(recordId, excelFilePath) {
+  try {
+    const pythonDir = path.resolve(__dirname, '../python');
+    const pythonScript = path.join(pythonDir, 'pdf_converter.py');
+
+    if (!fs.existsSync(pythonScript)) {
+      return { success: false, error: 'PDF converter script not found' };
+    }
+
+    const pdfDir = path.join(path.dirname(excelFilePath), 'generated-pdf');
+    const pdfFilename = path.basename(excelFilePath).replace('.xlsx', '.pdf');
+    const pdfPath = path.join(pdfDir, pdfFilename);
+
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
+
+    const absoluteExcelPath = path.resolve(excelFilePath);
+    const absolutePdfPath = path.resolve(pdfPath);
+
+    const command = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${absoluteExcelPath}" --pdf-path "${absolutePdfPath}"`;
+
+    console.log(`📄 PDF Conversion Command: ${command}`);
+
+    return new Promise((resolve) => {
+      exec(command, { cwd: pythonDir }, (error, stdout, stderr) => {
+        if (stdout) console.log('📄 PDF Conversion STDOUT:', stdout);
+        if (stderr) console.error('📄 PDF Conversion STDERR:', stderr);
+
+        if (error) {
+          console.error('❌ PDF process error:', error.message);
+          resolve({
+            success: false,
+            error: stderr || error.message,
+            message: 'PDF conversion process failed'
+          });
+          return;
+        }
+
+        try {
+          // Look for any line that starts with { and ends with }
+          const lines = stdout.split('\n');
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i].trim();
+            if (line.startsWith('{') && line.endsWith('}')) {
+              try {
+                const jsonData = JSON.parse(line);
+                if (jsonData.success) {
+                  resolve({
+                    success: true,
+                    message: 'PDF generated successfully',
+                    data: { pdfPath: jsonData.pdf_path || pdfPath }
+                  });
+                  return;
+                }
+              } catch (e) { }
+            }
+          }
+        } catch (parseError) { }
+
+        if (fs.existsSync(pdfPath)) {
+          resolve({ success: true, message: 'PDF generated successfully', data: { pdfPath } });
+        } else {
+          resolve({ success: false, error: 'PDF file not created', message: 'PDF generation failed' });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 class ApprovalController {
   async getPendingApprovals(req, res) {
@@ -64,6 +142,42 @@ class ApprovalController {
           updated_at = NOW()
         WHERE id = ?
       `, [userId, comment || null, userId, id]);
+
+      // ✅ REGENERATE EXCEL & PDF AFTER APPROVAL (to include approval_date)
+      console.log(`📊 Regenerating Excel for approved record: ${id}`);
+      try {
+        const excelResult = await new Promise((resolve) => {
+          const mockReq = { body: { recordId: id }, user: req.user };
+          const mockRes = {
+            json: (result) => resolve(result),
+            status: () => ({ json: (result) => resolve({ success: false, ...result }) })
+          };
+          printController.generateFAASExcel(mockReq, mockRes);
+        });
+
+        if (excelResult.success && excelResult.data) {
+          const faasExcelPath = excelResult.data.faas ? excelResult.data.faas.filePath : (excelResult.data.filePath || null);
+          const unirrigExcelPath = excelResult.data.unirrig ? excelResult.data.unirrig.filePath : null;
+
+          if (faasExcelPath) {
+            console.log(`📄 Generating FAAS PDF preview for ${id}`);
+            const pdfRes = await generatePDF(id, faasExcelPath);
+            if (pdfRes.success) {
+              await pool.execute('UPDATE faas_records SET pdf_preview_path = ? WHERE id = ?', [pdfRes.data.pdfPath, id]);
+            }
+          }
+
+          if (unirrigExcelPath) {
+            console.log(`📄 Generating UNIRRIG PDF preview for ${id}`);
+            const pdfRes = await generatePDF(id, unirrigExcelPath);
+            if (pdfRes.success) {
+              await pool.execute('UPDATE faas_records SET unirrig_pdf_preview_path = ? WHERE id = ?', [pdfRes.data.pdfPath, id]);
+            }
+          }
+        }
+      } catch (genError) {
+        console.error('⚠️ Post-approval regeneration error (non-critical):', genError.message);
+      }
 
       // Log activity
       await pool.execute(`

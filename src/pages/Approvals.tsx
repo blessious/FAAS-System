@@ -195,7 +195,7 @@ const PreviewPanel = ({
   const faasPdfUrl = useMemo(() => {
     if (!selectedRecord) return '';
     const filename = extractFilename(selectedRecord.pdf_preview_path || '');
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:3000`;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:3001`;
     return filename ? `${baseUrl}/api/print/files/pdf/${filename}` : '';
   }, [selectedRecord?.id, selectedRecord?.pdf_preview_path]);
 
@@ -212,7 +212,7 @@ const PreviewPanel = ({
     }
 
     const filename = extractFilename(targetPath);
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:3000`;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:3001`;
     return filename ? `${baseUrl}/api/print/files/pdf/${filename}` : '';
   }, [selectedRecord?.id, selectedRecord?.pdf_preview_path, selectedRecord?.unirrig_pdf_preview_path]);
 
@@ -404,7 +404,7 @@ const PreviewPanel = ({
                 <Avatar className="w-6 h-6 border border-slate-200">
                   {(selectedRecord.updater_profile_picture || selectedRecord.encoder_profile_picture) ? (
                     <AvatarImage
-                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${selectedRecord.updater_profile_picture || selectedRecord.encoder_profile_picture}`}
+                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${selectedRecord.updater_profile_picture || selectedRecord.encoder_profile_picture}`}
                       className="object-cover"
                     />
                   ) : null}
@@ -793,7 +793,7 @@ export default function Approvals() {
 
     try {
       const filename = extractFilename(selectedRecord.pdf_preview_path);
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:3000`;
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:3001`;
       const url = `${baseUrl}/api/files/pdf/${filename}`;
 
       const response = await axios.get(url, {
@@ -830,7 +830,7 @@ export default function Approvals() {
     if (!selectedRecord?.pdf_preview_path) return;
 
     const filename = extractFilename(selectedRecord.pdf_preview_path);
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:3000`;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://localhost:3001`;
     const url = `${baseUrl}/api/files/pdf/${filename}`;
 
     const printWindow = window.open(url, '_blank');
@@ -1038,7 +1038,7 @@ export default function Approvals() {
                               <Avatar className="w-5 h-5 border border-slate-200">
                                 {(record.updater_profile_picture || record.encoder_profile_picture) ? (
                                   <AvatarImage
-                                    src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.updater_profile_picture || record.encoder_profile_picture}`}
+                                    src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${record.updater_profile_picture || record.encoder_profile_picture}`}
                                     className="object-cover"
                                   />
                                 ) : null}

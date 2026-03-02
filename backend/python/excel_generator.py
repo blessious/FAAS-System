@@ -50,6 +50,18 @@ class FAASExcelGenerator:
         except (ValueError, TypeError):
             return default
 
+    def get_ordinal(self, n):
+        if n is None: return ""
+        try:
+            val = int(n)
+            if 11 <= (val % 100) <= 13:
+                suffix = 'th'
+            else:
+                suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(val % 10, 'th')
+            return f"{val}{suffix}"
+        except:
+            return str(n)
+
     def calculate_land_unit_value(self, classification, sub_class):
         if not classification:
             return None
@@ -442,7 +454,7 @@ class FAASExcelGenerator:
             regular_land = [a for a in land_appraisals if str(a.get('classification', '')).upper().strip() not in special_cats]
             special_land = [a for a in land_appraisals if str(a.get('classification', '')).upper().strip() in special_cats]
 
-            for i in range(4):
+            for i in range(8):
                 unirrig_row = 28 + i
                 if i < len(regular_land):
                     item = regular_land[i]
@@ -467,15 +479,30 @@ class FAASExcelGenerator:
                         self.safe_write_cell(sheet, f'G{unirrig_row}', '')
                     
                     unit_value = self.calculate_land_unit_value(classification, sub_class)
+                    if unit_value is None and item.get('unit_value_land'):
+                        unit_value = self.safe_float(item.get('unit_value_land'))
+                        
+                    market_value = item.get('market_value')
+                    if market_value:
+                        market_value = self.safe_float(market_value)
+                    elif area_val > 0 and unit_value:
+                        market_value = self.mround(area_val * unit_value, 10)
+                    
                     if unit_value:
                         self.safe_write_cell(sheet, f'I{unirrig_row}', unit_value)
                     else:
                         self.safe_write_cell(sheet, f'I{unirrig_row}', '')
+                        
+                    if market_value:
+                        self.safe_write_cell(sheet, f'J{unirrig_row}', market_value)
+                    else:
+                        self.safe_write_cell(sheet, f'J{unirrig_row}', '')
                 else:
                     self.safe_write_cell(sheet, f'E{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'H{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'G{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'I{unirrig_row}', '')
+                    self.safe_write_cell(sheet, f'J{unirrig_row}', '')
 
             # Special Land Appraisals (Residential/Commercial) → blocks starting at rows 58, 60
             special_cats = ["RESIDENTIAL", "COMMERCIAL"]
@@ -588,10 +615,10 @@ class FAASExcelGenerator:
                     pct_adj = self.safe_float(market_values[0].get('percent_adjustment')) / 100.0
                 
                 if pct_adj != 0:
-                    j36_final = self.mround(total_land_mv * pct_adj, 10)
-                    self.safe_write_cell(sheet2, 'J36', j36_final)
+                    l36_final = self.mround(total_land_mv * pct_adj, 10)
+                    self.safe_write_cell(sheet2, 'L36', l36_final)
                 else:
-                    self.safe_write_cell(sheet2, 'J36', total_land_mv)
+                    self.safe_write_cell(sheet2, 'L36', total_land_mv)
 
                 total_impr_mv = 0.0
                 for item in improvements:
@@ -605,10 +632,10 @@ class FAASExcelGenerator:
                     total_impr_mv += float(mv)
 
                 if pct_adj != 0:
-                    j37_final = self.mround(total_impr_mv * pct_adj, 10)
-                    self.safe_write_cell(sheet2, 'J37', j37_final)
+                    l37_final = self.mround(total_impr_mv * pct_adj, 10)
+                    self.safe_write_cell(sheet2, 'L37', l37_final)
                 else:
-                    self.safe_write_cell(sheet2, 'J37', total_impr_mv)
+                    self.safe_write_cell(sheet2, 'L37', total_impr_mv)
 
                 adjusted_mvs: list[float] = []
                 for i in range(min(4, len(base_mvs))):
@@ -633,10 +660,10 @@ class FAASExcelGenerator:
                     if kind: self.safe_write_cell(sheet2, f'A{row}', kind)
                     if actual_use: self.safe_write_cell(sheet2, f'D{row}', actual_use)
                     if market_val_detail: self.safe_write_cell(sheet2, f'G{row}', market_val_detail)
-                    if assessment_level: self.safe_write_cell(sheet2, f'I{row}', assessment_level / 100.0)
+                    if assessment_level: self.safe_write_cell(sheet2, f'K{row}', assessment_level / 100.0)
                     if market_val_detail and assessment_level:
                         calc_av = self.mround(market_val_detail * (assessment_level / 100.0), 10)
-                        self.safe_write_cell(sheet2, f'K{row}', calc_av if calc_av != 0 else '')
+                        self.safe_write_cell(sheet2, f'M{row}', calc_av if calc_av != 0 else '')
                         total_assessed_value += float(calc_av)
 
                 # Round total and write words to D59
@@ -645,12 +672,59 @@ class FAASExcelGenerator:
                     words = self.number_to_words(total_rounded)
                     self.safe_write_cell(sheet2, 'D59', words)
 
+                # CTC Information
+                self.safe_write_cell(sheet2, 'G43', record.get('ctc_no', ''))
+                self.safe_write_cell(sheet2, 'D44', record.get('ctc_issued_at', ''))
+                ctc_date = record.get('ctc_issued_on')
+                if ctc_date:
+                    if isinstance(ctc_date, str):
+                        try:
+                            ctc_date = datetime.strptime(ctc_date[:10], '%Y-%m-%d')
+                        except:
+                            pass
+                    
+                    if hasattr(ctc_date, 'strftime'):
+                        month_name = ctc_date.strftime('%B')
+                        day_num = ctc_date.day
+                        self.safe_write_cell(sheet2, 'J43', f"{month_name} {day_num},")
+                        self.safe_write_cell(sheet2, 'B44', ctc_date.strftime('%y'))
+
+                # Sworn to (Approval Date) Information
+                appr_date = record.get('approval_date')
+                if appr_date:
+                    if isinstance(appr_date, str):
+                        try:
+                            appr_date = datetime.strptime(appr_date[:10], '%Y-%m-%d')
+                        except:
+                            pass
+                    
+                    if hasattr(appr_date, 'strftime'):
+                        day_ord = self.get_ordinal(appr_date.day)
+                        self.safe_write_cell(sheet2, 'E42', day_ord)
+                        # We use %B for Month name as it's standard for "day of Month 20YY"
+                        # even though user example mentioned "Monday"
+                        self.safe_write_cell(sheet2, 'G42', appr_date.strftime('%B'))
+                        self.safe_write_cell(sheet2, 'I42', appr_date.strftime('%y'))
+
                 # New Previous record mappings for Sheet 2
                 self.safe_write_cell(sheet2, 'E67', record.get('previous_td_no', ''))
                 self.safe_write_cell(sheet2, 'B69', record.get('effectivity_year', ''))
                 self.safe_write_cell(sheet2, 'E69', record.get('previous_owner', ''))
                 self.safe_write_cell(sheet2, 'E70', self.safe_float(record.get('previous_av_land'), default=None))
-                self.safe_write_cell(sheet2, 'H70', self.safe_float(record.get('previous_av_improvements'), default=None))
+                self.safe_write_cell(sheet2, 'I70', self.safe_float(record.get('previous_av_improvements'), default=None))
+
+                self.safe_write_cell(sheet2, 'A71', record.get('previous_owner2', ''))
+                
+                prev_land2 = self.safe_float(record.get('previous_av_land2'))
+                prev_impr2 = self.safe_float(record.get('previous_av_improvements2'))
+                
+                if prev_land2:
+                    self.safe_write_cell(sheet2, 'E71', f"L={prev_land2:,.2f}")
+                if prev_impr2:
+                    self.safe_write_cell(sheet2, 'I71', f"I={prev_impr2:,.2f}")
+                if prev_land2 or prev_impr2:
+                    total2 = self.mround(prev_land2 + prev_impr2, 10)
+                    self.safe_write_cell(sheet2, 'L71', f"T={total2:,.2f}")
 
             owner_raw = record.get('owner_name', 'Unknown')
             owner_name_safe = self.clean_filename(owner_raw)

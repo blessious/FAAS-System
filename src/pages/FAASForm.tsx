@@ -1292,7 +1292,7 @@ export default function FAASForm() {
                       <Avatar className="w-5 h-5 border border-slate-200">
                         {formData.encoder_profile_picture ? (
                           <AvatarImage
-                            src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${formData.encoder_profile_picture}`}
+                            src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${formData.encoder_profile_picture}`}
                             className="object-cover"
                           />
                         ) : null}

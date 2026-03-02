@@ -40,7 +40,7 @@ export const useSSE = ({ onRecordChange, onUserChange, onConnected, enabled = tr
   useEffect(() => {
     if (!enabled) return;
 
-    const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const userId = user.id || 'anonymous';
 

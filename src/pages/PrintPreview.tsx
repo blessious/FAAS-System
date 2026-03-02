@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Printer, CheckCircle, User, MapPin, Loader2, FileText, Eye, AlertTriangle, ChevronRight, Clock, RotateCcw } from "lucide-react";
+import { Printer, CheckCircle, User, MapPin, Loader2, FileText, FileSpreadsheet, Eye, AlertTriangle, ChevronRight, Clock, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { printAPI, approvalAPI } from "@/services/api";
@@ -28,6 +28,7 @@ interface ApprovedRecord {
   encoder_profile_picture?: string;
   status: string;
   excel_file_path?: string;
+  unirrig_excel_file_path?: string;
   pdf_preview_path?: string;
   unirrig_pdf_preview_path?: string;
 }
@@ -44,12 +45,19 @@ const extractFilename = (filePath: string): string => {
   return parts.slice(-3).join('/');
 };
 
+const extractExcelFilename = (filePath: string): string => {
+  if (!filePath) return '';
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const parts = normalizedPath.split('/');
+  return parts.slice(-2).join('/');
+};
+
 export default function PrintPreview() {
   const { toast } = useToast();
   const [selectedRecord, setSelectedRecord] = useState<ApprovedRecord | null>(null);
   const [approvedRecords, setApprovedRecords] = useState<ApprovedRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'faas' | 'TDC'>('faas');
+  const [activeTab, setActiveTab] = useState<'faas' | 'unirrig'>('faas');
   const [pdfError, setPdfError] = useState(false);
   const [blockIframe, setBlockIframe] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -91,7 +99,7 @@ export default function PrintPreview() {
     if (!pdfPath) return '';
 
     const filename = extractFilename(pdfPath);
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:3000`;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:3001`;
     return filename ? `${baseUrl}/api/print/files/pdf/${filename}` : '';
   }, [selectedRecord, activeTab]);
 
@@ -111,6 +119,53 @@ export default function PrintPreview() {
       printWindow.onload = () => {
         printWindow.print();
       };
+    }
+  };
+
+
+  const handleDownloadExcel = async () => {
+    if (!selectedRecord) return;
+
+    const filePath = activeTab === 'faas'
+      ? selectedRecord.excel_file_path
+      : selectedRecord.unirrig_excel_file_path;
+
+    if (!filePath) {
+      toast({
+        title: "Excel Not Found",
+        description: `No Excel file path found for this ${activeTab.toUpperCase()} record.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const filename = extractExcelFilename(filePath);
+    if (!filename) return;
+
+    try {
+      toast({
+        title: "Downloading...",
+        description: "Preparing your Excel file for download.",
+      });
+
+      const response = await printAPI.downloadFile(filename);
+
+      // Create a blob from the response data
+      const url = window.URL.createObjectURL(new Blob([response]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename.split('/').pop() || 'record.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: error.error || "Failed to download the Excel file.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -254,7 +309,7 @@ export default function PrintPreview() {
                                 <Avatar className="w-5 h-5 border border-slate-200">
                                   {record.encoder_profile_picture ? (
                                     <AvatarImage
-                                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.encoder_profile_picture}`}
+                                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${record.encoder_profile_picture}`}
                                       className="object-cover"
                                     />
                                   ) : null}
@@ -306,7 +361,7 @@ export default function PrintPreview() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Tabs defaultValue={activeTab} value={activeTab} onValueChange={val => {
-                      setActiveTab(val as 'faas' | 'TDC');
+                      setActiveTab(val as 'faas' | 'unirrig');
                       setPdfError(false);
                     }} className="w-auto">
                       <TabsList className="grid w-[180px] grid-cols-2 bg-slate-100 p-1 rounded-lg">
@@ -333,6 +388,16 @@ export default function PrintPreview() {
                     >
                       {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                       Cancel Approval
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleDownloadExcel}
+                      disabled={cancelling}
+                      variant="outline"
+                      className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-lg h-9 shadow-sm"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      Download Excel
                     </Button>
                     <Button
                       size="sm"
@@ -455,7 +520,7 @@ export default function PrintPreview() {
                         <Avatar className="w-6 h-6 border border-slate-200">
                           {selectedRecord.encoder_profile_picture ? (
                             <AvatarImage
-                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${selectedRecord.encoder_profile_picture}`}
+                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${selectedRecord.encoder_profile_picture}`}
                               className="object-cover"
                             />
                           ) : null}

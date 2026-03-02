@@ -336,7 +336,7 @@ export default function Users() {
                                                     <div className="flex items-center gap-3">
                                                         <Avatar className="w-10 h-10 border-2 border-white shadow-sm ring-1 ring-slate-100">
                                                             {user.profile_picture ? (
-                                                                <AvatarImage src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${user.profile_picture}`} />
+                                                                <AvatarImage src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${user.profile_picture}`} />
                                                             ) : null}
                                                             <AvatarFallback className="bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 font-bold text-xs uppercase">
                                                                 {user.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : '??'}

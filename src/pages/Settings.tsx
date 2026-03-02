@@ -304,7 +304,7 @@ export default function Settings() {
 
     const picturePath = userData?.profile_picture || user?.profile_picture;
     if (picturePath) {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
       return `${baseUrl}${picturePath}`;
     }
     return null;

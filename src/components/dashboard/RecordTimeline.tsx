@@ -402,7 +402,7 @@ export function RecordTimeline({ recordId, className }: RecordTimelineProps) {
                                             <div className="flex items-start gap-2">
                                                 <Avatar className="w-9 h-9 ring-2 ring-white shadow-sm flex-shrink-0">
                                                     {activity.profile_picture ? (
-                                                        <AvatarImage src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${activity.profile_picture}`} />
+                                                        <AvatarImage src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${activity.profile_picture}`} />
                                                     ) : null}
                                                     <AvatarFallback className="text-xs font-bold bg-gray-100 text-gray-600">
                                                         {activity.full_name ? activity.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??'}

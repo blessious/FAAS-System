@@ -307,7 +307,7 @@ class FAASController {
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-    ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?
   )
 
 
@@ -1604,7 +1604,8 @@ class FAASController {
         previous_td_no, previous_owner, previous_av_land, previous_av_improvements, previous_total_av,
         previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
         memoranda_code, memoranda_paragraph, rw_row,
-        land_appraisals_json, improvements_json, market_values_json, assessments_json
+        land_appraisals_json, improvements_json, market_values_json, assessments_json,
+        ctc_no, ctc_issued_on, ctc_issued_at
       } = req.body;
 
       const userId = req.user.id;
@@ -1653,6 +1654,7 @@ class FAASController {
           previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
           memoranda_code, memoranda_paragraph, rw_row,
           land_appraisals_json, improvements_json, market_values_json, assessments_json,
+          ctc_no, ctc_issued_on, ctc_issued_at,
           encoder_id, updated_by, status
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
@@ -1661,7 +1663,7 @@ class FAASController {
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-          ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
       `, [
         rootParentId, arf_no, pin || null, oct_tct_no || null, cln || null, owner_name, owner_address || null,
@@ -1702,6 +1704,9 @@ class FAASController {
         improvements_json ? (typeof improvements_json === 'string' ? improvements_json : JSON.stringify(improvements_json)) : null,
         market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
         assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
+        ctc_no || null,
+        ctc_issued_on || null,
+        ctc_issued_at || null,
         userId, userId, 'draft'
       ]);
 

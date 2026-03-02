@@ -326,7 +326,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                         <Avatar className="w-8 h-8 border border-slate-200 shrink-0">
                           {(record.updater_profile_picture || record.encoder_profile_picture) ? (
                             <AvatarImage
-                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${record.updater_profile_picture || record.encoder_profile_picture}`}
+                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${record.updater_profile_picture || record.encoder_profile_picture}`}
                               className="object-cover"
                             />
                           ) : null}
@@ -509,7 +509,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                           <Avatar className="w-6 h-6 border border-slate-200">
                             {(subRecord.updater_profile_picture || subRecord.encoder_profile_picture) ? (
                               <AvatarImage
-                                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${subRecord.updater_profile_picture || subRecord.encoder_profile_picture}`}
+                                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${subRecord.updater_profile_picture || subRecord.encoder_profile_picture}`}
                               />
                             ) : null}
                             <AvatarFallback className="text-[8px] font-bold">{(subRecord.updater_name || subRecord.encoder_name || '?')[0].toUpperCase()}</AvatarFallback>
