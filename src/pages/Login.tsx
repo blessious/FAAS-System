@@ -37,13 +37,7 @@ export default function Login() {
           description: `Welcome ${result.user.full_name || result.user.username}`,
         });
 
-        if (result.user.role === "encoder") {
-          navigate("/dashboard");
-        } else if (result.user.role === "approver" || result.user.role === "administrator") {
-          navigate("/approvals");
-        } else {
-          navigate("/dashboard");
-        }
+        navigate("/dashboard");
       } else {
         toast({
           title: "Login Failed",
@@ -172,8 +166,8 @@ export default function Login() {
             <form onSubmit={handleLogin} className="space-y-5">
               {/* Username Field */}
               <div className="space-y-2.5">
-                <Label 
-                  htmlFor="username" 
+                <Label
+                  htmlFor="username"
                   className="text-sm font-semibold text-gray-700 tracking-wide"
                 >
                   Username
@@ -198,8 +192,8 @@ export default function Login() {
               {/* Password Field */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <Label 
-                    htmlFor="password" 
+                  <Label
+                    htmlFor="password"
                     className="text-sm font-semibold text-gray-700 tracking-wide"
                   >
                     Password

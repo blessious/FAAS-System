@@ -14,5 +14,7 @@ router.get('/download/:folder/:filename', printController.downloadFile);
 router.get('/download/:filename', printController.downloadFile); // Fallback for root files
 router.get('/files/:recordId', printController.getGeneratedFiles);
 router.get('/approved', printController.getApprovedRecords);
+router.put('/release/:id', printController.releaseRecord);
+router.get('/released-history', printController.getReleasedRecords);
 
 module.exports = router;  // ✅ CommonJS export

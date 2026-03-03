@@ -197,6 +197,12 @@ export const printAPI = {
 
   getApprovedRecords: (): Promise<any[]> =>
     api.get('/print/approved'),
+
+  releaseRecord: (id: string | number): Promise<any> =>
+    api.put(`/print/release/${id}`),
+
+  getReleasedHistory: (): Promise<any[]> =>
+    api.get('/print/released-history'),
 };
 
 export const dashboardAPI = {
@@ -204,7 +210,7 @@ export const dashboardAPI = {
     api.get('/dashboard/stats'),
 
   // Update this to handle the new paginated response
-  getRecentRecords: (params?: { page?: number; limit?: number }): Promise<any> =>
+  getRecentRecords: (params?: { page?: number; limit?: number; search?: string }): Promise<any> =>
     api.get('/dashboard/recent', { params }),
 
   getActivityLog: (): Promise<any[]> =>

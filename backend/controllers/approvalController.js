@@ -104,7 +104,7 @@ class ApprovalController {
             f.status = 'for_approval'
             OR EXISTS (SELECT 1 FROM faas_records WHERE parent_id = f.id AND status = 'for_approval' AND hidden = 0)
           )
-        ORDER BY f.created_at DESC
+        ORDER BY COALESCE(f.updated_at, f.created_at) DESC
       `); // ✅ No parameters needed
 
       res.json(records);

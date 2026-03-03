@@ -27,6 +27,7 @@ interface DashboardRecord {
   property_location: string;
   status: "approved" | "for_approval" | "draft" | "rejected";
   created_at: string;
+  updated_at?: string;
   encoder_name: string;
   encoder_profile_picture?: string;
 }
@@ -56,7 +57,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Pagination state
+  // Pagination and Search state
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
@@ -68,58 +69,28 @@ export default function Dashboard() {
   });
   const recordsPerPage = 10;
   const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
-  // Client-side filtering for search
-  const filteredRecentRecords = useMemo(() => {
-    const q = recentRecordsQuery.trim().toLowerCase();
-    if (!q) return recentRecords;
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(recentRecordsQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [recentRecordsQuery]);
 
-    const statusLabel: Record<DashboardRecord["status"], string> = {
-      draft: "Draft",
-      for_approval: "Pending",
-      approved: "Approved",
-      rejected: "Rejected",
-    };
-
-    return recentRecords.filter((r) => {
-      const created = new Date(r.created_at);
-      const createdText = Number.isNaN(created.getTime())
-        ? String(r.created_at ?? "")
-        : created.toLocaleDateString();
-
-      const haystack = [
-        r.id,
-        r.arf_no,
-        r.pin,
-        r.owner_name,
-        r.property_location,
-        r.status,
-        statusLabel[r.status],
-        createdText,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(q);
-    });
-  }, [recentRecords, recentRecordsQuery]);
-
-  // When searching, use client-side pagination on filtered results
-  // When not searching, use server-side pagination info
-  const displayedRecords = recentRecordsQuery ? filteredRecentRecords : recentRecords;
-  const totalPages = recentRecordsQuery
-    ? Math.ceil(filteredRecentRecords.length / recordsPerPage)
-    : pagination.totalPages;
-
-  const fetchDashboardData = useCallback(async (page: number = 1) => {
+  const fetchDashboardData = useCallback(async (page: number = 1, search: string = "") => {
     try {
       setLoading(true);
       setError(null);
 
       const [statsResponse, recordsResponse] = await Promise.all([
         dashboardAPI.getStats(),
-        dashboardAPI.getRecentRecords({ page, limit: recordsPerPage }),
+        dashboardAPI.getRecentRecords({
+          page,
+          limit: recordsPerPage,
+          search: search.trim()
+        }),
       ]);
 
       if (statsResponse) {
@@ -131,10 +102,9 @@ export default function Dashboard() {
         });
       }
 
-      // Handle the new paginated response format
+      // Handle the paginated response format
       if (recordsResponse && typeof recordsResponse === "object") {
         if (Array.isArray(recordsResponse)) {
-          // Legacy format: array of records
           setRecentRecords(recordsResponse);
           setPagination({
             page: 1,
@@ -145,7 +115,6 @@ export default function Dashboard() {
             hasPreviousPage: false
           });
         } else if ("data" in recordsResponse && Array.isArray(recordsResponse.data)) {
-          // New paginated format
           setRecentRecords(recordsResponse.data);
           if (recordsResponse.pagination) {
             setPagination(recordsResponse.pagination);
@@ -172,7 +141,7 @@ export default function Dashboard() {
         title: "Draft deleted",
         description: "The draft has been deleted successfully.",
       });
-      fetchDashboardData(currentPage);
+      fetchDashboardData(currentPage, debouncedSearchQuery);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -183,23 +152,18 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchDashboardData(currentPage);
-  }, [currentPage]);
+    fetchDashboardData(currentPage, debouncedSearchQuery);
+  }, [currentPage, debouncedSearchQuery, fetchDashboardData]);
 
   // Reset to page 1 when search query changes
   useEffect(() => {
-    if (recentRecordsQuery) {
-      setCurrentPage(1);
-    }
-  }, [recentRecordsQuery]);
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
 
   // Handle page changes
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    // Only fetch from server if not searching
-    if (!recentRecordsQuery) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   useSSE({
@@ -225,10 +189,10 @@ export default function Dashboard() {
 
       // Small delay to ensure DB is settled before fetching
       setTimeout(() => {
-        fetchDashboardData(currentPage);
+        fetchDashboardData(currentPage, debouncedSearchQuery);
         setLastRefresh(Date.now()); // Force sub-components to clear local state if needed
       }, 500);
-    }, [fetchDashboardData, currentPage, toast]),
+    }, [fetchDashboardData, currentPage, debouncedSearchQuery, toast]),
 
     onConnected: useCallback(() => {
       console.log('✅ Dashboard connected to real-time updates');
@@ -237,53 +201,47 @@ export default function Dashboard() {
 
   // Calculate the correct start and end indices for display
   const getDisplayRange = () => {
-    if (recentRecordsQuery) {
-      // Client-side pagination when searching
-      const start = (currentPage - 1) * recordsPerPage + 1;
-      const end = Math.min(filteredRecentRecords.length, currentPage * recordsPerPage);
-      return { start, end, total: filteredRecentRecords.length };
-    } else {
-      // Server-side pagination
-      const start = (pagination.page - 1) * pagination.limit + 1;
-      const end = Math.min(pagination.totalRecords, pagination.page * pagination.limit);
-      return { start, end, total: pagination.totalRecords };
-    }
+    // Always use server-side pagination info now that search is server-side
+    const start = (pagination.page - 1) * pagination.limit + 1;
+    const end = Math.min(pagination.totalRecords, pagination.page * pagination.limit);
+    return { start, end, total: pagination.totalRecords };
   };
 
   const { start, end, total } = getDisplayRange();
+  const displayedRecords = recentRecords;
+  const totalPages = pagination.totalPages;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-4 lg:p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-4 lg:p-6 space-y-4 lg:space-y-6">
       {/* Compact Header Section */}
-      <div className="relative rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 p-4 lg:p-6 overflow-hidden">
+      <div className="relative rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 p-4 lg:p-5 overflow-hidden">
         <div className="absolute inset-0 bg-grid-slate-100/20"></div>
         <div className="absolute top-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-indigo-300/20 rounded-full blur-3xl translate-x-1/3 translate-y-1/3"></div>
 
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-3 lg:gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white drop-shadow-md flex items-center gap-2">
-              <BarChart3 className="w-7 h-7" />
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white drop-shadow-md flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 lg:w-7 lg:h-7" />
               Dashboard Overview
             </h1>
-            <p className="text-blue-100 text-sm mt-1 drop-shadow">
+            <p className="text-blue-100 text-xs lg:text-sm mt-0.5 lg:mt-1 drop-shadow opacity-90">
               Welcome back, <span className="font-bold text-white uppercase">{user?.full_name}</span>.
-              Monitor your FAAS records and system activity.
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-4 mt-3 md:mt-0">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
-              <ShieldCheck className="w-4 h-4 text-white" />
-              <span className="text-xs font-medium text-white capitalize">{userRole}</span>
+          <div className="flex flex-col md:flex-row items-center gap-2 lg:gap-4 mt-1 md:mt-0">
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
+              <ShieldCheck className="w-3.5 h-3.5 text-white" />
+              <span className="text-[10px] lg:text-xs font-medium text-white capitalize">{userRole}</span>
             </div>
 
             {(isEncoder || isAdmin) && (
               <Button
                 onClick={() => navigate("/faas/new")}
-                className="bg-white hover:bg-blue-50 text-blue-600 shadow-xl hover:shadow-2xl gap-2 px-5 py-2 rounded-lg font-semibold transition-all duration-300 hover:scale-105 w-full md:w-auto"
+                className="bg-white hover:bg-blue-50 text-blue-600 shadow-xl hover:shadow-2xl gap-2 px-4 py-1.5 rounded-lg font-semibold transition-all duration-300 hover:scale-105 w-full md:w-auto h-9"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 New Record
               </Button>
             )}
@@ -320,113 +278,98 @@ export default function Dashboard() {
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Records Card */}
-            <Card className="group relative overflow-hidden border border-blue-100/50 bg-gradient-to-br from-white to-blue-50/50 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 rounded-xl">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white shadow-md shadow-blue-500/20">
-                    <FileText className="w-5 h-5" />
+            <Card className="relative overflow-hidden border border-slate-100 bg-white shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl group cursor-default">
+              <CardContent className="p-4 lg:p-5">
+                {/* Decorative ring — bottom right */}
+                <svg className="absolute -bottom-5 -right-5 opacity-[0.07] text-blue-500 group-hover:scale-110 group-hover:opacity-[0.12] transition-all duration-500" width="100" height="100" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" />
+                </svg>
+                <p className="text-[10px] lg:text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3 group-hover:text-blue-500 transition-colors">Total Records</p>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-800 leading-none tabular-nums group-hover:text-blue-600 transition-colors">{stats.totalRecords}</h3>
+                    <p className="text-[10px] lg:text-xs text-slate-400 mt-1.5 lg:mt-2">All time entries</p>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600/70">Total</span>
-                    <div className="flex items-center justify-end gap-1 mt-0.5">
-                      <TrendingUp className="w-3 h-3 text-blue-500" />
-                      <span className="text-xs text-blue-600 font-medium">+12%</span>
-                    </div>
-                  </div>
+                  <FileText className="w-8 h-8 text-blue-200 mb-1 shrink-0 group-hover:text-blue-400 group-hover:rotate-6 transition-all duration-300" />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold text-slate-900">{stats.totalRecords}</h3>
-                  <p className="text-sm text-slate-600 font-medium">Total Records</p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-blue-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-blue-600/70">This Month</span>
-                    <span className="text-xs font-medium text-blue-700">+24</span>
-                  </div>
+                <div className="flex items-center gap-1.5 mt-4 lg:mt-5">
+                  <TrendingUp className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-blue-500" />
+                  <span className="text-[10px] lg:text-xs font-semibold text-blue-600">+24 this month</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Pending Approval Card */}
-            <Card className="group relative overflow-hidden border border-amber-100/50 bg-gradient-to-br from-white to-amber-50/50 shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-300 rounded-xl">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2.5 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg text-white shadow-md shadow-amber-500/20">
-                    <Clock className="w-5 h-5" />
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600/70">Pending</span>
-                    <div className="flex items-center justify-end gap-1 mt-0.5">
-                      <TrendingUp className="w-3 h-3 text-amber-500" />
-                      <span className="text-xs text-amber-600 font-medium">+8%</span>
-                    </div>
-                  </div>
+            <Card
+              onClick={() => navigate("/approvals")}
+              className="relative overflow-hidden border border-slate-100 bg-white shadow-sm hover:shadow-xl hover:border-amber-200 hover:-translate-y-1 transition-all duration-300 rounded-2xl group cursor-pointer active:scale-[0.98]"
+            >
+              <CardContent className="p-4 lg:p-5">
+                <svg className="absolute -bottom-5 -right-5 opacity-[0.07] text-amber-500 group-hover:scale-110 group-hover:opacity-[0.12] transition-all duration-500" width="100" height="100" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" />
+                </svg>
+                <div className="flex items-center justify-between mb-3 lg:mb-4">
+                  <p className="text-[10px] lg:text-[11px] font-semibold uppercase tracking-widest text-slate-400 group-hover:text-amber-600 transition-colors">Pending</p>
+                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold text-slate-900">{stats.pendingApproval}</h3>
-                  <p className="text-sm text-slate-600 font-medium">Awaiting Review</p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-amber-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-amber-600/70">Avg. Time</span>
-                    <span className="text-xs font-medium text-amber-700">2.5 days</span>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-800 leading-none tabular-nums group-hover:text-amber-600 transition-colors">{stats.pendingApproval}</h3>
+                    <p className="text-[10px] lg:text-xs text-slate-400 mt-1.5 lg:mt-2">Awaiting review</p>
                   </div>
+                  <Clock className="w-7 h-7 lg:w-8 lg:h-8 text-amber-200 mb-1 shrink-0 group-hover:text-amber-400 group-hover:rotate-12 transition-all duration-300" />
+                </div>
+                <div className="flex items-center gap-1.5 mt-4 lg:mt-5">
+                  <TrendingUp className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-amber-500" />
+                  <span className="text-[10px] lg:text-xs font-semibold text-amber-600">Avg. 2.5 days wait</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Approved Card */}
-            <Card className="group relative overflow-hidden border border-emerald-100/50 bg-gradient-to-br from-white to-emerald-50/50 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-300 rounded-xl">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg text-white shadow-md shadow-emerald-500/20">
-                    <CheckCircle className="w-5 h-5" />
+            <Card
+              onClick={() => navigate("/print")}
+              className="relative overflow-hidden border border-slate-100 bg-white shadow-sm hover:shadow-xl hover:border-emerald-200 hover:-translate-y-1 transition-all duration-300 rounded-2xl group cursor-pointer active:scale-[0.98]"
+            >
+              <CardContent className="p-4 lg:p-5">
+                <svg className="absolute -bottom-5 -right-5 opacity-[0.07] text-emerald-500 group-hover:scale-110 group-hover:opacity-[0.12] transition-all duration-500" width="100" height="100" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" />
+                </svg>
+                <p className="text-[10px] lg:text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3 lg:mb-4 group-hover:text-emerald-600 transition-colors">Approved</p>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-800 leading-none tabular-nums group-hover:text-emerald-600 transition-colors">{stats.approved}</h3>
+                    <p className="text-[10px] lg:text-xs text-slate-400 mt-1.5 lg:mt-2">Ready to print</p>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/70">Approved</span>
-                    <div className="flex items-center justify-end gap-1 mt-0.5">
-                      <TrendingUp className="w-3 h-3 text-emerald-500" />
-                      <span className="text-xs text-emerald-600 font-medium">+15%</span>
-                    </div>
-                  </div>
+                  <CheckCircle className="w-7 h-7 lg:w-8 lg:h-8 text-emerald-200 mb-1 shrink-0 group-hover:text-emerald-400 group-hover:scale-110 transition-all duration-300" />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold text-slate-900">{stats.approved}</h3>
-                  <p className="text-sm text-slate-600 font-medium">Completed</p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-emerald-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-emerald-600/70">Success Rate</span>
-                    <span className="text-xs font-medium text-emerald-700">94%</span>
-                  </div>
+                <div className="flex items-center gap-1.5 mt-4 lg:mt-5">
+                  <TrendingUp className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-emerald-500" />
+                  <span className="text-[10px] lg:text-xs font-semibold text-emerald-600">94% success rate</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Rejected Card */}
-            <Card className="group relative overflow-hidden border border-rose-100/50 bg-gradient-to-br from-white to-rose-50/50 shadow-sm hover:shadow-md hover:border-rose-200 transition-all duration-300 rounded-xl">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2.5 bg-gradient-to-br from-rose-500 to-rose-600 rounded-lg text-white shadow-md shadow-rose-500/20">
-                    <XCircle className="w-5 h-5" />
+            <Card
+              onClick={() => navigate("/approvals", { state: { activeTab: "rejected" } })}
+              className="relative overflow-hidden border border-slate-100 bg-white shadow-sm hover:shadow-xl hover:border-rose-200 hover:-translate-y-1 transition-all duration-300 rounded-2xl group cursor-pointer active:scale-[0.98]"
+            >
+              <CardContent className="p-4 lg:p-5">
+                <svg className="absolute -bottom-5 -right-5 opacity-[0.07] text-rose-500 group-hover:scale-110 group-hover:opacity-[0.12] transition-all duration-500" width="100" height="100" viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" />
+                </svg>
+                <p className="text-[10px] lg:text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3 lg:mb-4 group-hover:text-rose-600 transition-colors">Rejected</p>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-800 leading-none tabular-nums group-hover:text-rose-600 transition-colors">{stats.rejected}</h3>
+                    <p className="text-[10px] lg:text-xs text-slate-400 mt-1.5 lg:mt-2">Needs revision</p>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600/70">Rejected</span>
-                    <div className="flex items-center justify-end gap-1 mt-0.5">
-                      <TrendingUp className="w-3 h-3 text-rose-500" />
-                      <span className="text-xs text-rose-600 font-medium">-5%</span>
-                    </div>
-                  </div>
+                  <XCircle className="w-7 h-7 lg:w-8 lg:h-8 text-rose-200 mb-1 shrink-0 group-hover:text-rose-400 group-hover:animate-shake transition-all duration-300" />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold text-slate-900">{stats.rejected}</h3>
-                  <p className="text-sm text-slate-600 font-medium">Needs Revision</p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-rose-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-rose-600/70">Resolved</span>
-                    <span className="text-xs font-medium text-rose-700">85%</span>
-                  </div>
+                <div className="flex items-center gap-1.5 mt-4 lg:mt-5">
+                  <TrendingUp className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-rose-500" />
+                  <span className="text-[10px] lg:text-xs font-semibold text-rose-600">85% resolved</span>
                 </div>
               </CardContent>
             </Card>

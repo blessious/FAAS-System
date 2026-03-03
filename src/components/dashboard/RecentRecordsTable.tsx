@@ -201,7 +201,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
         <Table>
           <TableHeader className="bg-gradient-to-r from-slate-50 to-blue-50/30">
             <TableRow className="border-b-2 border-slate-100 hover:bg-transparent text-[10px]">
-              <TableHead className="w-[50px] bg-white/50 border-r border-slate-100"></TableHead>
+              <TableHead className="w-10 bg-white/50 border-r border-slate-100 px-0 text-center"></TableHead>
               <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
                 <div className="flex items-center gap-2">
                   <FileText className="w-3.5 h-3.5 text-slate-400" />
@@ -269,9 +269,10 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                   >
                     <TableCell
                       className={cn(
-                        "px-3 border-r border-slate-100 text-center transition-colors",
+                        "w-10 px-0 border-r border-slate-100 text-center transition-colors",
                         (record.linked_entries_count || 0) > 0 ? "hover:bg-blue-50/50 cursor-pointer" : ""
                       )}
+                      onDoubleClick={(e) => e.stopPropagation()} // Prevent viewing record on double click
                       onClick={(e) => {
                         if ((record.linked_entries_count || 0) > 0) {
                           toggleExpand(e, record);
@@ -296,7 +297,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2 max-w-full">
                             <span className="font-bold text-slate-900 tracking-tight block uppercase truncate flex-1 min-w-0" title={record.pin || "N/A"}>
                               {record.pin || "N/A"}
@@ -399,14 +400,12 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                             {new Date(record.updated_at || record.created_at).toLocaleDateString()}
                           </span>
                           <div className="flex items-center gap-1 mt-1">
-                            <span className="text-[10px] text-slate-500 font-medium">
-                              {new Date(record.updated_at || record.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">Last Updated</span>
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Button
                           variant="ghost"

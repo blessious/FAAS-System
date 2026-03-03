@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  Users
+  Users,
+  History
 } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
@@ -24,8 +25,9 @@ const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["encoder", "approver", "administrator"] },
   { title: "New FAAS", url: "/faas/new", icon: FileText, roles: ["encoder", "administrator"] },
   { title: "Drafts", url: "/drafts", icon: FileEdit, roles: ["encoder", "administrator"] },
-  { title: "Approvals", url: "/approvals", icon: CheckCircle, roles: ["approver", "administrator"] },
+  { title: "Approvals", url: "/approvals", icon: CheckCircle, roles: ["encoder", "approver", "administrator"] },
   { title: "Print Preview", url: "/print", icon: Printer, roles: ["encoder", "approver", "administrator"] },
+  { title: "Released History", url: "/released", icon: History, roles: ["encoder", "approver", "administrator"] },
   { title: "Edit Profile", url: "/settings", icon: Settings, roles: ["encoder", "approver", "administrator"] },
   { title: "User Management", url: "/users", icon: Users, roles: ["administrator"] },
 ] as const;

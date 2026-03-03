@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Printer, CheckCircle, User, MapPin, Loader2, FileText, FileSpreadsheet, Eye, AlertTriangle, ChevronRight, Clock, RotateCcw } from "lucide-react";
+import { Printer, CheckCircle, User, MapPin, Loader2, FileText, FileSpreadsheet, Eye, AlertTriangle, ChevronLeft, ChevronRight, Clock, RotateCcw, Search, X, CheckCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { printAPI, approvalAPI } from "@/services/api";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 
 interface ApprovedRecord {
@@ -52,16 +53,56 @@ const extractExcelFilename = (filePath: string): string => {
   return parts.slice(-2).join('/');
 };
 
+const statusStyles = {
+  for_approval: "bg-gradient-to-r from-amber-50 to-amber-100/50 text-amber-700 border border-amber-200",
+  approved: "bg-gradient-to-r from-emerald-50 to-emerald-100/50 text-emerald-700 border border-emerald-200",
+  rejected: "bg-gradient-to-r from-rose-50 to-rose-100/50 text-rose-700 border border-rose-200",
+} as const;
+
+const statusLabels = {
+  for_approval: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
+} as const;
+
+const getStatusBadge = (status: string, small: boolean = false) => {
+  const statusKey = status as keyof typeof statusStyles;
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        small ? "px-1 py-px text-[8px] font-black uppercase tracking-tighter" : "px-3 py-1.5 rounded-full text-xs font-bold shadow-sm",
+        "border leading-none",
+        statusStyles[statusKey]
+      )}
+    >
+      <div className="flex items-center gap-1">
+        <div className={cn(
+          small ? "w-0.5 h-0.5 rounded-full" : "w-1.5 h-1.5 rounded-full",
+          status === "for_approval" && "bg-amber-500",
+          status === "approved" && "bg-emerald-500",
+          status === "rejected" && "bg-rose-500"
+        )} />
+        {statusLabels[statusKey]}
+      </div>
+    </Badge>
+  );
+};
+
 export default function PrintPreview() {
   const { toast } = useToast();
   const [selectedRecord, setSelectedRecord] = useState<ApprovedRecord | null>(null);
   const [approvedRecords, setApprovedRecords] = useState<ApprovedRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [releasing, setReleasing] = useState(false);
   const [activeTab, setActiveTab] = useState<'faas' | 'unirrig'>('faas');
   const [pdfError, setPdfError] = useState(false);
   const [blockIframe, setBlockIframe] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Fetch approved records
   useEffect(() => {
@@ -72,7 +113,7 @@ export default function PrintPreview() {
     try {
       setLoading(true);
       const data = await printAPI.getApprovedRecords();
-      setApprovedRecords(data);
+      setApprovedRecords(data || []);
     } catch (error: any) {
       console.error('Error fetching approved records:', error);
       toast({
@@ -84,6 +125,40 @@ export default function PrintPreview() {
       setLoading(false);
     }
   };
+
+  // Filter approved records based on search query
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery.trim()) return approvedRecords;
+
+    const q = searchQuery.toLowerCase();
+    return approvedRecords.filter(record => {
+      const date = new Date(record.created_at);
+      const formattedDate = date.toLocaleDateString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }).toLowerCase();
+
+      return (record.pin?.toLowerCase() || "").includes(q) ||
+        (record.arf_no?.toLowerCase() || "").includes(q) ||
+        (record.owner_name?.toLowerCase() || "").includes(q) ||
+        (record.property_location?.toLowerCase() || "").includes(q) ||
+        (record.encoder_name?.toLowerCase() || "").includes(q) ||
+        (record.approver_name?.toLowerCase() || "").includes(q) ||
+        formattedDate.includes(q);
+    });
+  }, [approvedRecords, searchQuery]);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredRecords.slice(start, start + itemsPerPage);
+  }, [filteredRecords, currentPage]);
 
   // Generate PDF URL based on active tab
   const getPdfUrl = useMemo(() => {
@@ -211,6 +286,35 @@ export default function PrintPreview() {
     }
   };
 
+  const handleReleaseRecord = async () => {
+    if (!selectedRecord) return;
+
+    try {
+      setReleasing(true);
+      setBlockIframe(true);
+
+      await printAPI.releaseRecord(selectedRecord.id);
+
+      toast({
+        title: "Record Released",
+        description: `FAAS record for ${selectedRecord.owner_name} has been marked as released and moved to history.`,
+      });
+
+      setSelectedRecord(null);
+      await fetchApprovedRecords();
+    } catch (error: any) {
+      console.error('Error releasing record:', error);
+      toast({
+        title: "Error",
+        description: error.error || "Failed to mark record as released",
+        variant: "destructive",
+      });
+    } finally {
+      setReleasing(false);
+      setBlockIframe(false);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -229,7 +333,7 @@ export default function PrintPreview() {
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-4 lg:p-6 xl:p-8 space-y-4 lg:space-y-6">
       {/* Header */}
       <div className="relative rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 p-6 overflow-hidden">
         <div className="absolute inset-0 bg-grid-slate-100/20"></div>
@@ -248,7 +352,7 @@ export default function PrintPreview() {
         {/* Approved Records List */}
         <div className="lg:col-span-4">
           <Card className="h-full border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden flex flex-col">
-            <CardHeader className="bg-gradient-to-r from-slate-50 to-emerald-50/30 border-b border-slate-100 px-4 py-4 flex-shrink-0">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-emerald-50/30 border-b border-slate-100 px-4 py-4 flex-shrink-0 space-y-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base font-bold">
                   <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg text-white shadow-md shadow-emerald-500/20">
@@ -257,8 +361,27 @@ export default function PrintPreview() {
                   Approved Records
                 </CardTitle>
                 <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                  {approvedRecords.length}
+                  {filteredRecords.length}
                 </Badge>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Search PIN, owner, location..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-8 h-9 text-xs border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-lg bg-white"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 rounded-full transition-colors"
+                  >
+                    <X className="w-3 h-3 text-slate-400" />
+                  </button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col min-h-0">
@@ -283,56 +406,103 @@ export default function PrintPreview() {
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100">
-                    {approvedRecords.map((record) => (
-                      <button
-                        key={record.id}
-                        onClick={() => handleSelectRecord(record)}
-                        className={cn(
-                          "w-full py-4 px-2 text-left transition-all duration-200 hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-emerald-100/30",
-                          selectedRecord?.id === record.id && "bg-gradient-to-r from-emerald-50/50 to-emerald-100/30 border-l-4 border-l-emerald-500 shadow-sm"
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-slate-900 truncate uppercase text-base">{record.owner_name}</span>
-                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">
-                                Approved
-                              </Badge>
+                  <div className="flex flex-col h-full bg-white">
+                    <div className="divide-y divide-slate-100 flex-1 overflow-y-auto">
+                      {paginatedRecords.map((record) => (
+                        <button
+                          key={record.id}
+                          onClick={() => handleSelectRecord(record)}
+                          className={cn(
+                            "w-full text-left transition-all duration-200 border-l-4 border-y border-y-transparent",
+                            selectedRecord?.id === record.id
+                              ? "bg-emerald-50/70 border-l-emerald-500 border-y-emerald-100/50 shadow-sm z-10"
+                              : "hover:bg-slate-50 border-l-transparent hover:border-l-slate-200"
+                          )}
+                        >
+                          <div className="flex items-start gap-3 p-3 pl-5">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <span className="font-bold text-slate-900 truncate uppercase text-[15px] flex-1 min-w-0" title={record.owner_name}>{record.owner_name}</span>
+                                <div className="flex-shrink-0">
+                                  {getStatusBadge(record.status || 'approved', true)}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
+                                <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
+                                  <span className="text-slate-500 font-medium text-xs">PIN:</span> {record.pin || "N/A"}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 mt-2">
+                                <span className="text-xs text-slate-500 flex items-center gap-2">
+                                  <Avatar className="w-5 h-5 border border-slate-200">
+                                    {record.encoder_profile_picture ? (
+                                      <AvatarImage
+                                        src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${record.encoder_profile_picture}`}
+                                        className="object-cover"
+                                      />
+                                    ) : null}
+                                    <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
+                                      {record.encoder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  {record.encoder_name}
+                                </span>
+                                <span className="text-xs text-slate-400">•</span>
+                                <span className="text-xs text-slate-400 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatDate(record.approved_at || record.created_at)}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 mb-2">
-                              <span className="text-slate-500 font-medium">PIN:</span> {record.pin || "N/A"}
-                            </div>
-                            <div className="flex items-center gap-3 mt-2">
-                              <span className="text-xs text-slate-500 flex items-center gap-2">
-                                <Avatar className="w-5 h-5 border border-slate-200">
-                                  {record.encoder_profile_picture ? (
-                                    <AvatarImage
-                                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${record.encoder_profile_picture}`}
-                                      className="object-cover"
-                                    />
-                                  ) : null}
-                                  <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
-                                    {record.encoder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                Encoder: {record.encoder_name}
-                              </span>
-                              <span className="text-xs text-slate-400">•</span>
-                              <span className="text-xs text-slate-400 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Submitted: {formatDate(record.created_at)}
-                              </span>
+
+                            <div className="flex items-center self-center pr-1">
+                              <ChevronRight className={cn(
+                                "w-4 h-4 transition-colors",
+                                selectedRecord?.id === record.id ? "text-emerald-600" : "text-slate-300"
+                              )} />
                             </div>
                           </div>
-                          <ChevronRight className={cn(
-                            "w-4 h-4 flex-shrink-0 transition-colors self-center",
-                            selectedRecord?.id === record.id ? "text-emerald-600" : "text-slate-300"
-                          )} />
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                      <div className="p-3 border-t border-slate-100 bg-gradient-to-r from-slate-50/50 to-emerald-50/30 flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0">
+                        <div className="text-xs text-slate-600 font-medium">
+                          Showing <span className="font-bold text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(filteredRecords.length, currentPage * itemsPerPage)}</span> of <span className="font-bold text-slate-900">{filteredRecords.length}</span> records
                         </div>
-                      </button>
-                    ))}
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            className="rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-300 h-8 px-3"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+                            Prev
+                          </Button>
+                          <div className="flex items-center gap-1 px-2 py-1.5 bg-white border border-slate-200 rounded-md">
+                            <span className="text-sm font-bold text-slate-900">{currentPage}</span>
+                            <span className="text-sm text-slate-400">/</span>
+                            <span className="text-sm text-slate-600">{totalPages}</span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            className="rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-300 h-8 px-3"
+                          >
+                            Next
+                            <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </ScrollArea>
@@ -344,70 +514,85 @@ export default function PrintPreview() {
         <div className="lg:col-span-8">
           {selectedRecord ? (
             <Card className="h-full border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden flex flex-col">
-              <CardHeader className="bg-gradient-to-r from-slate-50 to-emerald-50/30 border-b border-slate-100 py-4 flex-shrink-0">
-                <div className="flex items-center justify-between">
+              <CardHeader className="bg-gradient-to-r from-slate-50 to-emerald-50/30 border-b border-slate-100 py-4 px-4 lg:px-6 flex-shrink-0">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg text-white shadow-md shadow-emerald-500/20">
+                    <div className="p-2 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg text-white shadow-md shadow-emerald-500/20 shrink-0">
                       <FileText className="w-5 h-5" />
                     </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold text-slate-900">
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg font-bold text-slate-900 truncate">
                         {selectedRecord.pin || "No PIN"}
                       </CardTitle>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
                         Approved by {selectedRecord.approver_name} • {formatDate(selectedRecord.approved_at)}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Tabs defaultValue={activeTab} value={activeTab} onValueChange={val => {
                       setActiveTab(val as 'faas' | 'unirrig');
                       setPdfError(false);
                     }} className="w-auto">
-                      <TabsList className="grid w-[180px] grid-cols-2 bg-slate-100 p-1 rounded-lg">
+                      <TabsList className="grid w-[140px] lg:w-[180px] grid-cols-2 bg-slate-100 p-1 rounded-lg">
                         <TabsTrigger
                           value="faas"
-                          className="rounded-md text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm"
+                          className="rounded-md text-[10px] lg:text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm"
                         >
                           FAAS
                         </TabsTrigger>
                         <TabsTrigger
                           value="unirrig"
-                          className="rounded-md text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm"
+                          className="rounded-md text-[10px] lg:text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm"
                         >
                           TDC
                         </TabsTrigger>
                       </TabsList>
                     </Tabs>
-                    <Button
-                      size="sm"
-                      onClick={handleCancelAction}
-                      disabled={cancelling}
-                      variant="outline"
-                      className="gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg h-9"
-                    >
-                      {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                      Cancel Approval
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleDownloadExcel}
-                      disabled={cancelling}
-                      variant="outline"
-                      className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-lg h-9 shadow-sm"
-                    >
-                      <FileSpreadsheet className="w-4 h-4" />
-                      Download Excel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handlePrint}
-                      disabled={!getPdfUrl || cancelling}
-                      className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-lg shadow-emerald-500/30 rounded-lg h-9"
-                    >
-                      <Printer className="w-4 h-4" />
-                      Print
-                    </Button>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleCancelAction}
+                        disabled={cancelling}
+                        variant="outline"
+                        className="gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg h-9"
+                      >
+                        {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                        <span className="hidden xl:inline">Cancel Approval</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleDownloadExcel}
+                        disabled={cancelling}
+                        variant="outline"
+                        className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-lg h-9 shadow-sm"
+                      >
+                        <FileSpreadsheet className="w-4 h-4" />
+                        <span className="hidden xl:inline">Excel</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handlePrint}
+                        disabled={!getPdfUrl || cancelling || releasing}
+                        className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-lg shadow-emerald-500/30 rounded-lg h-9"
+                      >
+                        <Printer className="w-4 h-4" />
+                        <span className="hidden xl:inline">Print</span>
+                      </Button>
+
+                      <div className="hidden lg:block w-px h-6 bg-slate-200 mx-1" />
+
+                      <Button
+                        size="sm"
+                        onClick={handleReleaseRecord}
+                        disabled={cancelling || releasing}
+                        className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-700 hover:to-indigo-600 text-white shadow-lg shadow-blue-500/30 rounded-lg h-9"
+                      >
+                        {releasing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
+                        <span>Release Record</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>

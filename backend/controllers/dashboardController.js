@@ -28,15 +28,46 @@ class DashboardController {
       // Get pagination parameters from query string
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
+      const search = req.query.search || "";
       const offset = (page - 1) * limit;
 
-      // Get total count for pagination
+      let whereClause = "WHERE f.hidden = 0 AND f.parent_id IS NULL";
+      let countWhereClause = "WHERE hidden = 0 AND parent_id IS NULL";
+      let queryParams = [];
+      let countParams = [];
+
+      if (search) {
+        const searchCondition = ` AND (
+          f.pin LIKE ? OR 
+          f.arf_no LIKE ? OR 
+          f.owner_name LIKE ? OR 
+          f.property_location LIKE ?
+        )`;
+        whereClause += searchCondition;
+
+        const countCondition = ` AND (
+          pin LIKE ? OR 
+          arf_no LIKE ? OR 
+          owner_name LIKE ? OR 
+          property_location LIKE ?
+        )`;
+        countWhereClause += countCondition;
+
+        const searchPattern = `%${search}%`;
+        queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        countParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
+      }
+
+      // Get total count for pagination with search filter
       const [countResult] = await pool.query(`
         SELECT COUNT(*) as total
         FROM faas_records
-        WHERE hidden = 0 AND parent_id IS NULL
-      `);
+        ${countWhereClause}
+      `, countParams);
       const totalRecords = countResult[0].total;
+
+      // Add limit and offset to queryParams
+      queryParams.push(limit, offset);
 
       // Get paginated records
       const [records] = await pool.query(
@@ -59,10 +90,10 @@ class DashboardController {
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id 
         LEFT JOIN users uu ON f.updated_by = uu.id
-        WHERE f.hidden = 0 AND f.parent_id IS NULL
-        ORDER BY f.created_at DESC
+        ${whereClause}
+        ORDER BY COALESCE(f.updated_at, f.created_at) DESC
         LIMIT ? OFFSET ?`,
-        [limit, offset]
+        queryParams
       );
 
       // Return paginated response
@@ -134,7 +165,7 @@ class DashboardController {
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.parent_id = ? AND f.hidden = 0
-        ORDER BY f.created_at DESC
+        ORDER BY COALESCE(f.updated_at, f.created_at) DESC
       `, [parentId]);
 
       res.json(entries);

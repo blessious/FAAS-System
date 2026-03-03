@@ -672,6 +672,9 @@ class FAASExcelGenerator:
                     words = self.number_to_words(total_rounded)
                     self.safe_write_cell(sheet2, 'D59', words)
 
+                # Owner/Administrator Field (Matches FAAS A51 logic)
+                self.safe_write_cell(sheet2, 'K39', record.get('owner_administrator') or record.get('owner_name', ''))
+
                 # CTC Information
                 self.safe_write_cell(sheet2, 'G43', record.get('ctc_no', ''))
                 self.safe_write_cell(sheet2, 'D44', record.get('ctc_issued_at', ''))
@@ -719,12 +722,12 @@ class FAASExcelGenerator:
                 prev_impr2 = self.safe_float(record.get('previous_av_improvements2'))
                 
                 if prev_land2:
-                    self.safe_write_cell(sheet2, 'E71', f"L={prev_land2:,.2f}")
+                    self.safe_write_cell(sheet2, 'E71', f"L = {prev_land2:,.2f}")
                 if prev_impr2:
-                    self.safe_write_cell(sheet2, 'I71', f"I={prev_impr2:,.2f}")
+                    self.safe_write_cell(sheet2, 'I71', f"I = {prev_impr2:,.2f}")
                 if prev_land2 or prev_impr2:
                     total2 = self.mround(prev_land2 + prev_impr2, 10)
-                    self.safe_write_cell(sheet2, 'L71', f"T={total2:,.2f}")
+                    self.safe_write_cell(sheet2, 'L71', f"T = {total2:,.2f}")
 
             owner_raw = record.get('owner_name', 'Unknown')
             owner_name_safe = self.clean_filename(owner_raw)

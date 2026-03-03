@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { FileEdit, Loader2, Plus, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileEdit, Loader2, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,33 +30,41 @@ export default function Drafts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const filteredDrafts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return drafts;
 
-    return drafts.filter((r) => {
-      const created = new Date(r.created_at);
-      const createdText = Number.isNaN(created.getTime())
-        ? String(r.created_at ?? "")
-        : created.toLocaleDateString();
+    return drafts.filter((record) => {
+      const date = new Date(record.updated_at || record.created_at);
+      const formattedDate = date.toLocaleDateString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }).toLowerCase();
 
-      const haystack = [
-        r.id,
-        r.arf_no,
-        r.owner_name,
-        r.property_location,
-        r.encoder_name,
-        r.updater_name,
-        createdText,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(q);
+      return (record.pin?.toLowerCase() || "").includes(q) ||
+        (record.arf_no?.toLowerCase() || "").includes(q) ||
+        (record.owner_name?.toLowerCase() || "").includes(q) ||
+        (record.property_location?.toLowerCase() || "").includes(q) ||
+        (record.encoder_name?.toLowerCase() || "").includes(q) ||
+        (record.updater_name?.toLowerCase() || "").includes(q) ||
+        formattedDate.includes(q);
     });
   }, [drafts, searchQuery]);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredDrafts.length / itemsPerPage);
+  const paginatedDrafts = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredDrafts.slice(start, start + itemsPerPage);
+  }, [filteredDrafts, currentPage]);
 
   useEffect(() => {
     fetchDrafts();
@@ -202,7 +210,47 @@ export default function Drafts() {
               </div>
             ) : (
               <div className="space-y-4">
-                <RecentRecordsTable records={filteredDrafts} onDelete={handleDeleteDraft} />
+                <RecentRecordsTable records={paginatedDrafts} onDelete={handleDeleteDraft} />
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-5 px-2">
+                    <div className="text-sm text-slate-500 font-medium">
+                      Showing <span className="text-slate-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to{" "}
+                      <span className="text-slate-900">
+                        {Math.min(currentPage * itemsPerPage, filteredDrafts.length)}
+                      </span>{" "}
+                      of <span className="text-slate-900">{filteredDrafts.length}</span> records
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="h-9 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all font-semibold"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1.5 px-3">
+                        <span className="text-sm font-bold text-blue-600">{currentPage}</span>
+                        <span className="text-sm font-medium text-slate-400">/</span>
+                        <span className="text-sm font-medium text-slate-500">{totalPages}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="h-9 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all font-semibold"
+                      >
+                        Next
+                        <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

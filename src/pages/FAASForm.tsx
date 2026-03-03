@@ -1248,47 +1248,45 @@ export default function FAASForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header - Compact */}
-      <div className="sticky top-0 z-40 bg-white border-b border-slate-100 px-4 lg:px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm px-4 lg:px-8 py-2.5">
+        <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate(-1)}
-              className="rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 h-9 w-9"
+              className="rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 h-9 w-9 flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center shadow-sm",
+                "w-9 h-9 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0",
                 isEditMode ? "bg-blue-600" : "bg-slate-600"
               )}>
                 {isEditMode ? (
-                  <FileText className="w-4 h-4 text-white" />
+                  <FileText className="w-4.5 h-4.5 text-white" />
                 ) : (
-                  <Eye className="w-4 h-4 text-white" />
+                  <Eye className="w-4.5 h-4.5 text-white" />
                 )}
               </div>
               <div>
-                <h1 className="text-sx font-bold text-slate-900">
+                <h1 className="text-sm font-bold text-slate-900 leading-tight">
                   {!isEditing ? "New FAAS Record" :
                     isEditMode ? "Edit FAAS Record" : "View FAAS Record"}
                 </h1>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-slate-500">
-                    Real Property Field Appraisal and Assessment Sheet
-                  </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs text-slate-500">RPFAAS — Land, Plants & Trees</p>
                   {getStatusBadge()}
                   {isEditing && !isEditMode && (
-                    <Badge variant="outline" className="ml-1 px-2 py-0.5 bg-slate-100 text-slate-700 border-slate-200 text-[10px]">
+                    <Badge variant="outline" className="px-1.5 py-0 bg-slate-100 text-slate-600 border-slate-200 text-[10px]">
                       View Only
                     </Badge>
                   )}
                   {formData.encoder_name && (
-                    <div className="hidden md:flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-200">
+                    <div className="hidden md:flex items-center gap-1.5 pl-2 border-l border-slate-200">
                       <Avatar className="w-5 h-5 border border-slate-200">
                         {formData.encoder_profile_picture ? (
                           <AvatarImage
@@ -1435,36 +1433,36 @@ export default function FAASForm() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="p-4 lg:p-6">
-        {/* Form Header with Municipality Info - Compact */}
-        <Card className="border-slate-100 shadow-sm overflow-hidden mb-4">
-          <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white px-4 py-3">
-            <div className="flex items-center justify-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+      <div className="p-4 lg:p-6 max-w-screen-2xl mx-auto">
+        {/* Form Header with Municipality Info */}
+        <Card className="border-slate-200 shadow-md overflow-hidden mb-5">
+          <CardHeader className="border-b border-blue-100 bg-gradient-to-r from-blue-700 to-blue-500 px-6 py-4">
+            <div className="flex items-center justify-center gap-5">
+              <div className="w-12 h-12 rounded-lg bg-white/90 flex items-center justify-center shadow-md flex-shrink-0">
                 <img
                   src="/templates/boaclogo.png"
                   alt="Boac Logo"
-                  className="w-8 h-8 object-contain"
+                  className="w-10 h-10 object-contain"
                 />
               </div>
               <div className="flex-shrink-0 text-center">
-                <h2 className="font-bold text-base text-slate-900">MUNICIPALITY OF BOAC</h2>
-                <p className="text-xs font-semibold text-slate-600">OFFICE OF THE MUNICIPAL ASSESSOR</p>
+                <h2 className="font-extrabold text-lg text-white tracking-wide">MUNICIPALITY OF BOAC</h2>
+                <p className="text-xs font-semibold text-blue-100 uppercase tracking-widest">Office of the Municipal Assessor</p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+              <div className="w-12 h-12 rounded-lg bg-white/90 flex items-center justify-center shadow-md flex-shrink-0">
                 <img
                   src="/templates/bagongpilipinas.png"
                   alt="Bagong Pilipinas"
-                  className="w-8 h-8 object-contain"
+                  className="w-10 h-10 object-contain"
                 />
               </div>
             </div>
-            <CardTitle className="text-center mt-3 text-sm font-bold text-slate-900">
-              REAL PROPERTY FIELD APPRAISAL AND ASSESSMENT SHEET - LAND PLANTS & TREES
+            <CardTitle className="text-center mt-2 text-sm font-bold text-white/90 tracking-wide">
+              REAL PROPERTY FIELD APPRAISAL AND ASSESSMENT SHEET — LAND, PLANTS & TREES
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="p-4">
+          <CardContent className="p-5">
             {recordStatus === 'rejected' && (
               <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
                 <div className="relative overflow-hidden rounded-2xl border-2 border-rose-200 bg-rose-50 p-5 shadow-sm">
@@ -1510,378 +1508,367 @@ export default function FAASForm() {
               }}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-5 bg-slate-200 p-1 rounded-xl text-xs h-auto">
+              <TabsList className="grid w-full grid-cols-5 bg-slate-100 border border-slate-200 p-1.5 rounded-xl h-auto gap-2.5">
                 <TabsTrigger
                   value="basic"
-                  className="w-full rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-semibold py-2.5 px-1 transition-all duration-200 hover:bg-slate-300 hover:text-slate-800"
+                  className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-bold py-3 px-2 transition-all duration-200 hover:bg-slate-200 hover:text-slate-800 text-sm flex items-center justify-center gap-2"
                 >
-                  Basic Info
+                  <span className="text-lg leading-none">①</span>
+                  <span className="hidden sm:inline">Basic Info</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="property"
-                  className="w-full rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-semibold py-2.5 px-1 transition-all duration-200 hover:bg-slate-300 hover:text-slate-800"
+                  className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-bold py-3 px-2 transition-all duration-200 hover:bg-slate-200 hover:text-slate-800 text-sm flex items-center justify-center gap-2"
                 >
-                  Property Boundaries
+                  <span className="text-lg leading-none">②</span>
+                  <span className="hidden sm:inline">Property</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="appraisal"
-                  className="w-full rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-semibold py-2.5 px-1 transition-all duration-200 hover:bg-slate-300 hover:text-slate-800"
+                  className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-bold py-3 px-2 transition-all duration-200 hover:bg-slate-200 hover:text-slate-800 text-sm flex items-center justify-center gap-2"
                 >
-                  Land Appraisal
+                  <span className="text-lg leading-none">③</span>
+                  <span className="hidden sm:inline">Appraisal</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="assessment"
-                  className="w-full rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-semibold py-2.5 px-1 transition-all duration-200 hover:bg-slate-300 hover:text-slate-800"
+                  className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-bold py-3 px-2 transition-all duration-200 hover:bg-slate-200 hover:text-slate-800 text-sm flex items-center justify-center gap-2"
                 >
-                  Assessment
+                  <span className="text-lg leading-none">④</span>
+                  <span className="hidden sm:inline">Assessment</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="previous"
-                  className="w-full rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-semibold py-2.5 px-1 transition-all duration-200 hover:bg-slate-300 hover:text-slate-800"
+                  className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 font-bold py-3 px-2 transition-all duration-200 hover:bg-slate-200 hover:text-slate-800 text-sm flex items-center justify-center gap-2"
                 >
-                  Previous
+                  <span className="text-lg leading-none">⑤</span>
+                  <span className="hidden sm:inline">Previous</span>
                 </TabsTrigger>
               </TabsList>
 
-              {/* Basic Information Tab - Compact */}
-              <TabsContent value="basic" className="mt-4">
-                <div className="bg-white rounded-lg border border-slate-100 p-4">
-                  <div className="mb-4">
-                    <h3 className="text-base font-bold text-slate-900 mb-1">Basic Information</h3>
-                    <p className="text-xs text-slate-500">Enter essential details of property and owner</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Row 1: ARF No, PIN, OCT/TCT No, Survey No */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="flex flex-col">
-                        <Label htmlFor="arf_no" className="text-sm font-semibold text-slate-700 mb-1.5 h-5">
-                          ARF No.
-                        </Label>
-                        <Input
-                          id="arf_no"
-                          value={formData.arf_no}
-                          onChange={(e) => handleInputChange("arf_no", e.target.value)}
-                          placeholder="e.g., 2024-001"
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                          disabled={!isEditable}
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <Label htmlFor="pin" className="text-sm font-semibold text-slate-700 flex items-center gap-0.5 mb-1.5 h-5">
-                          PIN <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="pin"
-                          value={formData.pin}
-                          onChange={(e) => handleInputChange("pin", e.target.value)}
-                          placeholder="Enter PIN"
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                          disabled={!isEditable}
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <Label htmlFor="oct_tct_no" className="text-sm font-semibold text-slate-700 flex items-center gap-0.5 mb-1.5 h-5">
-                          OCT/TCT No. <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="oct_tct_no"
-                          value={formData.oct_tct_no}
-                          onChange={(e) => handleInputChange("oct_tct_no", e.target.value)}
-                          placeholder="Enter OCT/TCT No."
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                          disabled={!isEditable}
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <Label htmlFor="cln" className="text-sm font-semibold text-slate-700 mb-1.5 h-5">Survey No.</Label>
-                        <Input
-                          id="cln"
-                          value={formData.cln}
-                          onChange={(e) => handleInputChange("cln", e.target.value)}
-                          placeholder="Optional"
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                          disabled={!isEditable}
-                        />
+              {/* Basic Information Tab */}
+              <TabsContent value="basic" className="mt-5">
+                <div className="space-y-5">
+                  {/* Record Identifiers */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-blue-50 border-b border-blue-100 px-5 py-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <h3 className="text-sm font-bold text-blue-800">Record Identifiers</h3>
+                    </div>
+                    <div className="p-5">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="arf_no" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">ARF No.</Label>
+                          <Input
+                            id="arf_no"
+                            value={formData.arf_no}
+                            onChange={(e) => handleInputChange("arf_no", e.target.value)}
+                            placeholder="e.g., 2024-001"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm font-medium"
+                            disabled={!isEditable}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="pin" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                            PIN <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="pin"
+                            value={formData.pin}
+                            onChange={(e) => handleInputChange("pin", e.target.value)}
+                            placeholder="Enter PIN"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm font-medium"
+                            disabled={!isEditable}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="oct_tct_no" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                            OCT/TCT No. <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="oct_tct_no"
+                            value={formData.oct_tct_no}
+                            onChange={(e) => handleInputChange("oct_tct_no", e.target.value)}
+                            placeholder="Enter OCT/TCT No."
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm font-medium"
+                            disabled={!isEditable}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="cln" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Survey No.</Label>
+                          <Input
+                            id="cln"
+                            value={formData.cln}
+                            onChange={(e) => handleInputChange("cln", e.target.value)}
+                            placeholder="Optional"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm font-medium"
+                            disabled={!isEditable}
+                          />
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Row 2: Owner and Address */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="owner_name" className="text-sm font-semibold text-slate-700 flex items-center gap-0.5">
-                        Owner <span className="text-red-500">*</span>
-                      </Label>
-                      <div className="flex items-center gap-2">
+                  {/* Owner Information */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-emerald-50 border-b border-emerald-100 px-5 py-3 flex items-center gap-2">
+                      <User className="w-4 h-4 text-emerald-600" />
+                      <h3 className="text-sm font-bold text-emerald-800">Owner Information</h3>
+                    </div>
+                    <div className="p-5 space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="owner_name" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                          Owner's Full Name <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           id="owner_name"
                           value={formData.owner_name}
                           onChange={(e) => handleInputChange("owner_name", e.target.value)}
                           placeholder="Full name of property owner"
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm flex-1"
-                          disabled={!isEditable}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="owner_address" className="text-sm font-semibold text-slate-700 flex items-center gap-0.5 mb-1.5 h-5">
-                        Owner's Address <span className="text-red-500">*</span>
-                      </Label>
-                      <Textarea
-                        id="owner_address"
-                        value={formData.owner_address}
-                        onChange={(e) => handleInputChange("owner_address", e.target.value)}
-                        placeholder="Complete address of the property owner"
-                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 min-h-[70px] rounded-lg bg-white text-sm"
-                        disabled={!isEditable}
-                      />
-                    </div>
-
-                  </div>
-                </div>
-                {/* Administrator Information Section */}
-                <div className="space-y-4 mt-4 pt-4 border-t border-slate-200">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center">
-                      <User className="w-3.5 h-3.5 text-blue-600" />
-                    </div>
-                    <h4 className="text-sx font-semibold text-slate-900">Administrator Information</h4>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="administrator_name" className="text-sm font-semibold text-slate-700">
-                        Administrator Name
-                      </Label>
-                      <Input
-                        id="administrator_name"
-                        value={formData.administrator_name}
-                        onChange={(e) => handleInputChange("administrator_name", e.target.value)}
-                        placeholder="Name of administrator (if any)"
-                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                        disabled={!isEditable}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="administrator_address" className="text-sm font-semibold text-slate-700">
-                        Administrator Address
-                      </Label>
-                      <Input
-                        id="administrator_address"
-                        value={formData.administrator_address}
-                        onChange={(e) => handleInputChange("administrator_address", e.target.value)}
-                        placeholder="Address of administrator"
-                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                        disabled={!isEditable}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5 mt-2">
-                    <Label htmlFor="owner_administrator" className="text-sm font-semibold text-slate-700">
-                      Owner/Administrator <span className="text-red-500 text-[10px] italic font-normal ml-1">(Signatory)</span>
-                    </Label>
-                    <Input
-                      id="owner_administrator"
-                      value={formData.owner_administrator}
-                      onChange={(e) => handleInputChange("owner_administrator", e.target.value)}
-                      placeholder="Name of Owner or Administrator for signature"
-                      className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                      disabled={!isEditable}
-                    />
-                  </div>
-                </div>
-
-                {/* CTC/ID No. Section */}
-                <div className="space-y-4 mt-6 pt-4 border-t border-slate-200">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center">
-                      <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                    </div>
-                    <h4 className="text-sx font-semibold text-slate-900">CTC/ID No.</h4>
-                  </div>
-
-                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                    <div className="text-xs text-slate-600 italic mb-4 leading-relaxed bg-white/50 p-3 rounded-lg border border-slate-100 shadow-sm">
-                      {recordStatus === 'approved' && approvalDate ? (
-                        <p>
-                          Subscribed and sworn to before me this <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).getDate()}</span> day of <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).toLocaleDateString('en-US', { month: 'long' })}</span> 20 <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).getFullYear().toString().substring(2)}</span> the person taking oath presenting Residence Certificate No. below.
-                        </p>
-                      ) : (
-                        <p>
-                          Subscribed and sworn to before me this __________ day of _______________________ 20 ______ the person taking oath presenting Residence Certificate No. below <span className="text-blue-500 font-medium">(This will be automated upon approval)</span>.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="ctc_no" className="text-sm font-semibold text-slate-700">
-                          Residence Certificate No.
-                        </Label>
-                        <Input
-                          id="ctc_no"
-                          value={formData.ctc_no}
-                          onChange={(e) => handleInputChange("ctc_no", e.target.value)}
-                          placeholder="Enter CTC/ID No."
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm font-medium"
                           disabled={!isEditable}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="ctc_issued_on" className="text-sm font-semibold text-slate-700">
-                          Issued on
+                        <Label htmlFor="owner_address" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                          Owner's Address <span className="text-red-500">*</span>
                         </Label>
-                        <Input
-                          id="ctc_issued_on"
-                          type="date"
-                          value={formData.ctc_issued_on}
-                          onChange={(e) => handleInputChange("ctc_issued_on", e.target.value)}
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                        <Textarea
+                          id="owner_address"
+                          value={formData.owner_address}
+                          onChange={(e) => handleInputChange("owner_address", e.target.value)}
+                          placeholder="Complete address of the property owner"
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 min-h-[70px] rounded-lg bg-white text-sm"
                           disabled={!isEditable}
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Administrator Information */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-violet-50 border-b border-violet-100 px-5 py-3 flex items-center gap-2">
+                      <User className="w-4 h-4 text-violet-600" />
+                      <h3 className="text-sm font-bold text-violet-800">Administrator Information</h3>
+                      <span className="ml-auto text-[11px] text-violet-400 font-medium italic">Optional</span>
+                    </div>
+                    <div className="p-5 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="administrator_name" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Administrator Name</Label>
+                          <Input
+                            id="administrator_name"
+                            value={formData.administrator_name}
+                            onChange={(e) => handleInputChange("administrator_name", e.target.value)}
+                            placeholder="Name of administrator (if any)"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
+                            disabled={!isEditable}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="administrator_address" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Administrator Address</Label>
+                          <Input
+                            id="administrator_address"
+                            value={formData.administrator_address}
+                            onChange={(e) => handleInputChange("administrator_address", e.target.value)}
+                            placeholder="Address of administrator"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
+                            disabled={!isEditable}
+                          />
+                        </div>
+                      </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="ctc_issued_at" className="text-sm font-semibold text-slate-700">
-                          Issued at
+                        <Label htmlFor="owner_administrator" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                          Owner / Administrator <span className="text-red-400 text-[10px] italic font-normal">(Signatory)</span>
                         </Label>
                         <Input
-                          id="ctc_issued_at"
-                          value={formData.ctc_issued_at}
-                          onChange={(e) => handleInputChange("ctc_issued_at", e.target.value)}
-                          placeholder="Enter location"
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                          id="owner_administrator"
+                          value={formData.owner_administrator}
+                          onChange={(e) => handleInputChange("owner_administrator", e.target.value)}
+                          placeholder="Name of Owner or Administrator for signature"
+                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
                           disabled={!isEditable}
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CTC / ID Section */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-amber-50 border-b border-amber-100 px-5 py-3 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-amber-600" />
+                      <h3 className="text-sm font-bold text-amber-800">Residence Certificate / CTC</h3>
+                    </div>
+                    <div className="p-5">
+                      <div className="text-xs text-slate-500 italic mb-4 bg-amber-50 border border-amber-100 p-3 rounded-lg leading-relaxed">
+                        {recordStatus === 'approved' && approvalDate ? (
+                          <p>
+                            Subscribed and sworn to before me this <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).getDate()}</span> day of <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).toLocaleDateString('en-US', { month: 'long' })}</span> 20 <span className="font-bold text-blue-700 underline decoration-blue-300 underline-offset-2 px-1">{new Date(approvalDate).getFullYear().toString().substring(2)}</span> the person taking oath presenting Residence Certificate No. below.
+                          </p>
+                        ) : (
+                          <p>
+                            Subscribed and sworn to before me this __________ day of _______________________ 20 ______ the person taking oath presenting Residence Certificate No. below <span className="text-blue-500 font-medium not-italic">(This will be automated upon approval)</span>.
+                          </p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="ctc_no" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Residence Certificate No.</Label>
+                          <Input
+                            id="ctc_no"
+                            value={formData.ctc_no}
+                            onChange={(e) => handleInputChange("ctc_no", e.target.value)}
+                            placeholder="Enter CTC/ID No."
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
+                            disabled={!isEditable}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="ctc_issued_on" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Issued On</Label>
+                          <Input
+                            id="ctc_issued_on"
+                            type="date"
+                            value={formData.ctc_issued_on}
+                            onChange={(e) => handleInputChange("ctc_issued_on", e.target.value)}
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
+                            disabled={!isEditable}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="ctc_issued_at" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Issued At</Label>
+                          <Input
+                            id="ctc_issued_at"
+                            value={formData.ctc_issued_at}
+                            onChange={(e) => handleInputChange("ctc_issued_at", e.target.value)}
+                            placeholder="Enter location"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
+                            disabled={!isEditable}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
-              {/* Property Details Tab - Compact */}
-              <TabsContent value="property" className="mt-4">
-                <div className="bg-white rounded-lg border border-slate-100 p-4">
-                  <div className="mb-4">
-                    <h3 className="text-base font-bold text-slate-900 mb-1">Property Details</h3>
-                    <p className="text-xs text-slate-500">Enter location and boundaries of the property</p>
-                  </div>
-
-                  <div className="space-y-6">
-                    {/* Property Location Section */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center">
-                          <MapPin className="w-3.5 h-3.5 text-blue-600" />
+              {/* Property Details Tab */}
+              <TabsContent value="property" className="mt-5">
+                <div className="space-y-5">
+                  {/* Property Location */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-blue-50 border-b border-blue-100 px-5 py-3 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-blue-600" />
+                      <h3 className="text-sm font-bold text-blue-800">Property Location</h3>
+                    </div>
+                    <div className="p-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="property_location" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                            No. / Street / Location
+                          </Label>
+                          <Input
+                            id="property_location"
+                            value={formData.property_location}
+                            onChange={(e) => handleInputChange("property_location", e.target.value)}
+                            placeholder="Street/Barangay"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
+                            disabled={!isEditable}
+                          />
                         </div>
-                        <h4 className="text-sm font-semibold text-slate-900">Property Location</h4>
-                      </div>
-
-                      <div className="grid gap-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="property_location" className="text-sm font-semibold text-slate-700">
-                              No. Street / Location
-                            </Label>
-                            <Input
-                              id="property_location"
-                              value={formData.property_location}
-                              onChange={(e) => handleInputChange("property_location", e.target.value)}
-                              placeholder="Street/Barangay"
-                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                              disabled={!isEditable}
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="property_barangay" className="text-sm font-semibold text-slate-700 flex items-center gap-0.5">
-                              Barangay <span className="text-red-500">*</span>
-                            </Label>
-                            <Input
-                              id="property_barangay"
-                              value={formData.property_barangay}
-                              onChange={(e) => handleInputChange("property_barangay", e.target.value)}
-                              placeholder="Barangay name"
-                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
-                              disabled={!isEditable}
-                            />
-                          </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="property_barangay" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                            Barangay <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="property_barangay"
+                            value={formData.property_barangay}
+                            onChange={(e) => handleInputChange("property_barangay", e.target.value)}
+                            placeholder="Barangay name"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
+                            disabled={!isEditable}
+                          />
                         </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="property_municipality" className="text-sm font-semibold text-slate-700">Municipality</Label>
-                            <Input
-                              id="property_municipality"
-                              value="BOAC"
-                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-slate-50 text-slate-600 text-sm"
-                              disabled
-                              readOnly
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="property_province" className="text-sm font-semibold text-slate-700">Province/City</Label>
-                            <Input
-                              id="property_province"
-                              value="MARINDUQUE"
-                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-slate-50 text-slate-600 text-sm"
-                              disabled
-                              readOnly
-                            />
-                          </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="property_municipality" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Municipality</Label>
+                          <Input
+                            id="property_municipality"
+                            value="BOAC"
+                            className="border-slate-200 h-10 rounded-lg bg-slate-100 text-slate-500 text-sm font-medium"
+                            disabled
+                            readOnly
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="property_province" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Province / City</Label>
+                          <Input
+                            id="property_province"
+                            value="MARINDUQUE"
+                            className="border-slate-200 h-10 rounded-lg bg-slate-100 text-slate-500 text-sm font-medium"
+                            disabled
+                            readOnly
+                          />
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Property Boundaries Section */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center">
-                          <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                        </div>
-                        <h4 className="text-sm font-semibold text-slate-900">Property Boundaries</h4>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Property Boundaries */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-teal-50 border-b border-teal-100 px-5 py-3 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-teal-600" />
+                      <h3 className="text-sm font-bold text-teal-800">Property Boundaries</h3>
+                    </div>
+                    <div className="p-5">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="north_boundary" className="text-sm font-semibold text-slate-700">North</Label>
+                          <Label htmlFor="north_boundary" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">N</span> North
+                          </Label>
                           <Input
                             id="north_boundary"
                             value={formData.north_boundary}
                             onChange={(e) => handleInputChange("north_boundary", e.target.value)}
                             placeholder="North boundary"
-                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
                             disabled={!isEditable}
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="south_boundary" className="text-sm font-semibold text-slate-700">South</Label>
+                          <Label htmlFor="south_boundary" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold">S</span> South
+                          </Label>
                           <Input
                             id="south_boundary"
                             value={formData.south_boundary}
                             onChange={(e) => handleInputChange("south_boundary", e.target.value)}
                             placeholder="South boundary"
-                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
                             disabled={!isEditable}
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="east_boundary" className="text-sm font-semibold text-slate-700">East</Label>
+                          <Label htmlFor="east_boundary" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">E</span> East
+                          </Label>
                           <Input
                             id="east_boundary"
                             value={formData.east_boundary}
                             onChange={(e) => handleInputChange("east_boundary", e.target.value)}
                             placeholder="East boundary"
-                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
                             disabled={!isEditable}
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="west_boundary" className="text-sm font-semibold text-slate-700">West</Label>
+                          <Label htmlFor="west_boundary" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold">W</span> West
+                          </Label>
                           <Input
                             id="west_boundary"
                             value={formData.west_boundary}
                             onChange={(e) => handleInputChange("west_boundary", e.target.value)}
                             placeholder="West boundary"
-                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 rounded-lg bg-white text-sm"
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 rounded-lg bg-white text-sm"
                             disabled={!isEditable}
                           />
                         </div>
@@ -1891,81 +1878,75 @@ export default function FAASForm() {
                 </div>
               </TabsContent>
 
-              {/* Land Appraisal Tab - Compact */}
-              <TabsContent value="appraisal" className="mt-4">
-                <div className="bg-white rounded-lg border border-slate-100 p-4">
-                  <div className="mb-4">
-                    <h3 className="text-base font-bold text-slate-900 mb-1">Land Appraisal</h3>
-                    <p className="text-xs text-slate-500">Enter land classification and improvement details</p>
-                  </div>
-
-                  <div className="space-y-6">
-                    {/* Land Appraisal Section */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-slate-900">Land Appraisal Details</h4>
+              {/* Land Appraisal Tab */}
+              <TabsContent value="appraisal" className="mt-5">
+                <div className="space-y-5">
+                  {/* Land Appraisal Section */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-green-50 border-b border-green-100 px-5 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-green-600" />
+                        <h3 className="text-sm font-bold text-green-800">Land Appraisal Details</h3>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="space-y-1.5 text-left max-w-[160px]">
-                          <Label htmlFor="rw_row" className="text-sm font-semibold text-slate-700">
-                            RW/ROW
-                          </Label>
-                          <Select
-                            value={formData.rw_row || "NONE"}
-                            onValueChange={(value) => handleInputChange("rw_row", value === "NONE" ? "" : value)}
-                            disabled={!isEditable}
-                          >
-                            <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm">
-                              <SelectValue placeholder="Select RW/ROW" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="NONE">-- None --</SelectItem>
-                              <SelectItem value="RW">RW</SelectItem>
-                              <SelectItem value="ROW">ROW</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">RW/ROW</Label>
+                        <Select
+                          value={formData.rw_row || "NONE"}
+                          onValueChange={(value) => handleInputChange("rw_row", value === "NONE" ? "" : value)}
+                          disabled={!isEditable}
+                        >
+                          <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm w-32">
+                            <SelectValue placeholder="Select RW/ROW" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NONE">-- None --</SelectItem>
+                            <SelectItem value="RW">RW</SelectItem>
+                            <SelectItem value="ROW">ROW</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-
-                      <div className="overflow-hidden rounded-lg border border-slate-200">
+                    </div>
+                    <div className="p-0">
+                      <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead className="bg-slate-50">
-                            <tr>
-                              <th className="text-left p-2 text-xs font-semibold text-slate-600">Classification</th>
-                              <th className="text-left p-2 text-xs font-semibold text-slate-600">Sub-Class</th>
-                              <th className="text-left p-2 text-xs font-semibold text-slate-600">Area</th>
+                          <thead>
+                            <tr className="bg-green-100 text-green-900">
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide w-8">#</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Classification</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Sub-Class</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Area</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {[0, 1, 2, 3].map((index) => (
-                              <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="p-2">
+                              <tr key={index} className={cn("transition-colors", index % 2 === 0 ? "bg-white" : "bg-slate-50/70", "hover:bg-blue-50/40")}>
+                                <td className="px-4 py-3">
+                                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">{index + 1}</span>
+                                </td>
+                                <td className="px-4 py-3">
                                   <Select
                                     value={formData.landAppraisals[index]?.classification || "NONE"}
                                     onValueChange={(value) => handleRowInputChange("landAppraisals", index, "classification", value === "NONE" ? "" : value)}
                                     disabled={!isEditable}
                                   >
-                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm">
+                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm">
                                       <SelectValue placeholder="Select classification" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="NONE">-- None --</SelectItem>
                                       {landClassificationOptions.map((option) => (
-                                        <SelectItem key={option} value={option}>
-                                          {option}
-                                        </SelectItem>
+                                        <SelectItem key={option} value={option}>{option}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
                                 </td>
-                                <td className="p-2">
+                                <td className="px-4 py-3">
                                   <Select
                                     value={formData.landAppraisals[index]?.sub_class || "NONE"}
                                     onValueChange={(value) => handleRowInputChange("landAppraisals", index, "sub_class", value === "NONE" ? "" : value)}
                                     disabled={!isEditable || !formData.landAppraisals[index]?.classification}
                                   >
-                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm">
+                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm">
                                       <SelectValue placeholder={
                                         formData.landAppraisals[index]?.classification
                                           ? "Select sub-class"
@@ -1975,20 +1956,18 @@ export default function FAASForm() {
                                     <SelectContent>
                                       <SelectItem value="NONE">-- None --</SelectItem>
                                       {getSubClassOptions(formData.landAppraisals[index]?.classification).map((option) => (
-                                        <SelectItem key={option} value={option}>
-                                          {option}
-                                        </SelectItem>
+                                        <SelectItem key={option} value={option}>{option}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
                                 </td>
-                                <td className="p-2">
+                                <td className="px-4 py-3">
                                   <Input
                                     value={formData.landAppraisals[index]?.area}
                                     onChange={(e) => handleRowInputChange("landAppraisals", index, "area", e.target.value)}
-                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                                     type="number"
-                                    placeholder="Area"
+                                    placeholder="Area (sqm)"
                                     disabled={!isEditable}
                                   />
                                 </td>
@@ -1998,48 +1977,52 @@ export default function FAASForm() {
                         </table>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Other Improvements Section */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-slate-900">Other Improvements</h4>
-                      </div>
-
-                      <div className="overflow-hidden rounded-lg border border-slate-200">
+                  {/* Other Improvements Section */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-orange-50 border-b border-orange-100 px-5 py-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-orange-600" />
+                      <h3 className="text-sm font-bold text-orange-800">Other Improvements</h3>
+                    </div>
+                    <div className="p-0">
+                      <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead className="bg-slate-50">
-                            <tr>
-                              <th className="text-left p-2 text-xs font-semibold text-slate-600">Product Class</th>
-                              <th className="text-left p-2 text-xs font-semibold text-slate-600">Number</th>
+                          <thead>
+                            <tr className="bg-orange-100 text-orange-900">
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide w-8">#</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Product Class</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Number / Qty</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {[0, 1, 2, 3].map((index) => (
-                              <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="p-2">
+                              <tr key={index} className={cn("transition-colors", index % 2 === 0 ? "bg-white" : "bg-slate-50/70", "hover:bg-orange-50/40")}>
+                                <td className="px-4 py-3">
+                                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">{index + 1}</span>
+                                </td>
+                                <td className="px-4 py-3">
                                   <Select
                                     value={formData.improvements[index]?.product_class || "NONE"}
                                     onValueChange={(value) => handleRowInputChange("improvements", index, "product_class", value === "NONE" ? "" : value)}
                                     disabled={!isEditable}
                                   >
-                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm">
+                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm">
                                       <SelectValue placeholder="Select product class" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="NONE">-- None --</SelectItem>
                                       {productClassOptions.map((option) => (
-                                        <SelectItem key={option} value={option}>
-                                          {option}
-                                        </SelectItem>
+                                        <SelectItem key={option} value={option}>{option}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
                                 </td>
-                                <td className="p-2">
+                                <td className="px-4 py-3">
                                   <Input
                                     value={formData.improvements[index]?.improvement_qty}
                                     onChange={(e) => handleRowInputChange("improvements", index, "improvement_qty", e.target.value)}
-                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                                     type="number"
                                     placeholder="Qty"
                                     disabled={!isEditable}
@@ -2055,45 +2038,46 @@ export default function FAASForm() {
                 </div>
               </TabsContent>
 
-              {/* Assessment Tab - Compact */}
-              <TabsContent value="assessment" className="mt-4">
-                <div className="bg-white rounded-lg border border-slate-100 p-4">
-                  <div className="mb-4">
-                    <h3 className="text-base font-bold text-slate-900 mb-1">Assessment</h3>
-                    <p className="text-xs text-slate-500">Enter market value adjustments and property assessment details</p>
-                  </div>
-
-                  <div className="space-y-6">
-                    {/* Market Value Section */}
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-slate-900">Market Value Adjustments</h4>
-
-                      <div className="overflow-hidden rounded-lg border border-slate-200">
+              {/* Assessment Tab */}
+              <TabsContent value="assessment" className="mt-5">
+                <div className="space-y-5">
+                  {/* Market Value Adjustments */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-cyan-50 border-b border-cyan-100 px-5 py-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-cyan-600" />
+                      <h3 className="text-sm font-bold text-cyan-800">Market Value Adjustments</h3>
+                    </div>
+                    <div className="p-0">
+                      <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead className="bg-slate-50">
-                            <tr>
-                              <th className="text-left p-2 text-xs font-semibold text-slate-600">Adj. Factor</th>
-                              <th className="text-left p-2 text-xs font-semibold text-slate-600">% Adjustment</th>
+                          <thead>
+                            <tr className="bg-cyan-100 text-cyan-900">
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide w-8">#</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Adj. Factor</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">% Adjustment</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {[0, 1, 2, 3].map((index) => (
-                              <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="p-2">
+                              <tr key={index} className={cn("transition-colors", index % 2 === 0 ? "bg-white" : "bg-slate-50/70", "hover:bg-cyan-50/40")}>
+                                <td className="px-4 py-3">
+                                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">{index + 1}</span>
+                                </td>
+                                <td className="px-4 py-3">
                                   <Input
                                     value={formData.marketValues[index]?.adj_factor}
                                     onChange={(e) => handleRowInputChange("marketValues", index, "adj_factor", e.target.value)}
-                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                                     type="text"
                                     placeholder="#, #, #"
                                     disabled={!isEditable}
                                   />
                                 </td>
-                                <td className="p-2">
+                                <td className="px-4 py-3">
                                   <Input
                                     value={formData.marketValues[index]?.percent_adjustment}
                                     onChange={(e) => handleRowInputChange("marketValues", index, "percent_adjustment", e.target.value)}
-                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                                     type="number"
                                     placeholder="%"
                                     disabled={!isEditable}
@@ -2105,68 +2089,70 @@ export default function FAASForm() {
                         </table>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Property Assessment Section */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-slate-900">Property Assessment</h4>
-                      </div>
-
-                      <div className="overflow-hidden rounded-lg border-2 border-slate-200">
+                  {/* Property Assessment */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-blue-50 border-b border-blue-100 px-5 py-3 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-blue-600" />
+                      <h3 className="text-sm font-bold text-blue-800">Property Assessment</h3>
+                    </div>
+                    <div className="p-0">
+                      <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead className="bg-blue-50">
-                            <tr>
-                              <th className="text-left p-2 text-xs font-bold text-slate-700">Kind</th>
-                              <th className="text-left p-2 text-xs font-bold text-slate-700">Actual Use</th>
-                              <th className="text-left p-2 text-xs font-bold text-slate-700">Assessment Level (%)</th>
+                          <thead>
+                            <tr className="bg-blue-100 text-blue-900">
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide w-8">#</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Kind</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Actual Use</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide">Assessment Level (%)</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {[0, 1, 2, 3].map((index) => (
-                              <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="p-2">
+                              <tr key={index} className={cn("transition-colors", index % 2 === 0 ? "bg-white" : "bg-blue-50/30", "hover:bg-blue-50/60")}>
+                                <td className="px-4 py-3">
+                                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">{index + 1}</span>
+                                </td>
+                                <td className="px-4 py-3">
                                   <Select
                                     value={formData.propertyAssessments[index]?.kind || "NONE"}
                                     onValueChange={(value) => handleRowInputChange("propertyAssessments", index, "kind", value === "NONE" ? "" : value)}
                                     disabled={!isEditable}
                                   >
-                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm">
+                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm">
                                       <SelectValue placeholder="Select kind" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="NONE">-- None --</SelectItem>
                                       {kindOptions.map((option) => (
-                                        <SelectItem key={option} value={option}>
-                                          {option}
-                                        </SelectItem>
+                                        <SelectItem key={option} value={option}>{option}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
                                 </td>
-                                <td className="p-2">
+                                <td className="px-4 py-3">
                                   <Select
                                     value={formData.propertyAssessments[index]?.actual_use || "NONE"}
                                     onValueChange={(value) => handleRowInputChange("propertyAssessments", index, "actual_use", value === "NONE" ? "" : value)}
                                     disabled={!isEditable}
                                   >
-                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm">
+                                    <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm">
                                       <SelectValue placeholder="Select actual use" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="NONE">-- None --</SelectItem>
                                       {actualUseOptions.map((option) => (
-                                        <SelectItem key={option} value={option}>
-                                          {option}
-                                        </SelectItem>
+                                        <SelectItem key={option} value={option}>{option}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
                                 </td>
-                                <td className="p-2">
+                                <td className="px-4 py-3">
                                   <Input
                                     value={formData.propertyAssessments[index]?.assessment_level}
                                     onChange={(e) => handleRowInputChange("propertyAssessments", index, "assessment_level", e.target.value)}
-                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                    className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                                     type="number"
                                     placeholder="%"
                                     disabled={!isEditable}
@@ -2182,39 +2168,33 @@ export default function FAASForm() {
                 </div>
               </TabsContent>
 
-              {/* Previous Assessment Tab - Compact */}
-              <TabsContent value="previous" className="mt-4">
-                <div className="bg-white rounded-lg border border-slate-100 p-4">
-                  <div className="mb-4">
-                    <h3 className="text-base font-bold text-slate-900 mb-1">Previous Assessment</h3>
-                    <p className="text-xs text-slate-500">Enter previous assessment details and memoranda</p>
-                  </div>
-
-                  <div className="space-y-6">
-                    {/* Record of Superseded Assessment */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center">
-                          <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                        </div>
-                        <h4 className="text-sm font-semibold text-slate-900">Record of Superseded Assessment</h4>
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div className="space-y-3 bg-slate-50 rounded-lg p-4">
+              {/* Previous Assessment Tab */}
+              <TabsContent value="previous" className="mt-5">
+                <div className="space-y-5">
+                  {/* Record of Superseded Assessment */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-indigo-50 border-b border-indigo-100 px-5 py-3 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-indigo-600" />
+                      <h3 className="text-sm font-bold text-indigo-800">Record of Superseded Assessment</h3>
+                    </div>
+                    <div className="p-5">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        {/* Left Column */}
+                        <div className="bg-slate-50 rounded-lg p-4 space-y-4 border border-slate-100">
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Entry 1</p>
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                              <Label className="text-sm font-semibold text-slate-700">Previous T.D. No.:</Label>
+                              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Previous T.D. No.</Label>
                               <Input
                                 value={formData.previous_td_no}
                                 onChange={(e) => handleInputChange("previous_td_no", e.target.value)}
-                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                                 placeholder="Previous TD"
                                 disabled={!isEditable}
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <Label htmlFor="effectivity_year" className="text-sm font-semibold text-slate-700">Effectivity:</Label>
+                              <Label htmlFor="effectivity_year" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Effectivity Year</Label>
                               <Input
                                 type="number"
                                 id="effectivity_year"
@@ -2223,29 +2203,29 @@ export default function FAASForm() {
                                 value={formData.effectivity_year}
                                 onChange={(e) => handleInputChange("effectivity_year", e.target.value)}
                                 placeholder="YYYY"
-                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                                 disabled={!isEditable}
                               />
                             </div>
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700">Previous Owner:</Label>
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Previous Owner</Label>
                             <Input
                               value={formData.previous_owner}
                               onChange={(e) => handleInputChange("previous_owner", e.target.value)}
-                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
-                              placeholder="Previous owner"
+                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
+                              placeholder="Previous owner name"
                               disabled={!isEditable}
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label htmlFor="taxability" className="text-sm font-semibold text-slate-700">Taxability:</Label>
+                            <Label htmlFor="taxability" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Taxability</Label>
                             <Select
                               value={formData.taxability}
                               onValueChange={(value) => handleInputChange("taxability", value)}
                               disabled={!isEditable}
                             >
-                              <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm">
+                              <SelectTrigger className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm">
                                 <SelectValue placeholder="Select taxability" />
                               </SelectTrigger>
                               <SelectContent>
@@ -2256,9 +2236,11 @@ export default function FAASForm() {
                           </div>
                         </div>
 
-                        <div className="space-y-3 bg-slate-50 rounded-lg p-4">
+                        {/* Right Column — AV values */}
+                        <div className="bg-slate-50 rounded-lg p-4 space-y-4 border border-slate-100">
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Assessed Values — Entry 1</p>
                           <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700">Previous AV - Land:</Label>
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Previous AV — Land</Label>
                             <Input
                               value={formatNumberWithCommas(formData.previous_av_land)}
                               onChange={(e) => {
@@ -2266,14 +2248,14 @@ export default function FAASForm() {
                                 if ((val.match(/\./g) || []).length > 1) return;
                                 handleInputChange("previous_av_land", parseCommaValue(val));
                               }}
-                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                               placeholder="Previous land AV"
                               type="text"
                               disabled={!isEditable}
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700">Previous AV - Improvements:</Label>
+                            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Previous AV — Improvements</Label>
                             <Input
                               value={formatNumberWithCommas(formData.previous_av_improvements)}
                               onChange={(e) => {
@@ -2281,127 +2263,122 @@ export default function FAASForm() {
                                 if ((val.match(/\./g) || []).length > 1) return;
                                 handleInputChange("previous_av_improvements", parseCommaValue(val));
                               }}
-                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
+                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
                               placeholder="Previous improvements AV"
                               type="text"
                               disabled={!isEditable}
                             />
                           </div>
 
-                          <div className="pt-4 mt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
-                            <div className="space-y-1.5">
-                              <Label className="text-sm font-semibold text-slate-700">Previous T.D. No. 2:</Label>
-                              <Input
-                                value={formData.previous_td_no2}
-                                onChange={(e) => handleInputChange("previous_td_no2", e.target.value)}
-                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
-                                placeholder="Previous TD 2"
-                                disabled={!isEditable}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-sm font-semibold text-slate-700">Previous AV - Land 2:</Label>
-                              <Input
-                                value={formatNumberWithCommas(formData.previous_av_land2)}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/[^0-9.,-]/g, "");
-                                  if ((val.match(/\./g) || []).length > 1) return;
-                                  handleInputChange("previous_av_land2", parseCommaValue(val));
-                                }}
-                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
-                                placeholder="Previous land AV 2"
-                                type="text"
-                                disabled={!isEditable}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-sm font-semibold text-slate-700">Previous Owner 2:</Label>
-                              <Input
-                                value={formData.previous_owner2}
-                                onChange={(e) => handleInputChange("previous_owner2", e.target.value)}
-                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
-                                placeholder="Previous owner 2"
-                                disabled={!isEditable}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-sm font-semibold text-slate-700">Previous AV - Improvements 2:</Label>
-                              <Input
-                                value={formatNumberWithCommas(formData.previous_av_improvements2)}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/[^0-9.,-]/g, "");
-                                  if ((val.match(/\./g) || []).length > 1) return;
-                                  handleInputChange("previous_av_improvements2", parseCommaValue(val));
-                                }}
-                                className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white text-sm"
-                                placeholder="Previous improvements AV 2"
-                                type="text"
-                                disabled={!isEditable}
-                              />
+                          <div className="pt-3 mt-1 border-t border-slate-200 space-y-4">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Entry 2</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Previous T.D. No. 2</Label>
+                                <Input
+                                  value={formData.previous_td_no2}
+                                  onChange={(e) => handleInputChange("previous_td_no2", e.target.value)}
+                                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
+                                  placeholder="Previous TD 2"
+                                  disabled={!isEditable}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Previous AV — Land 2</Label>
+                                <Input
+                                  value={formatNumberWithCommas(formData.previous_av_land2)}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9.,-]/g, "");
+                                    if ((val.match(/\./g) || []).length > 1) return;
+                                    handleInputChange("previous_av_land2", parseCommaValue(val));
+                                  }}
+                                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
+                                  placeholder="Previous land AV 2"
+                                  type="text"
+                                  disabled={!isEditable}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Previous Owner 2</Label>
+                                <Input
+                                  value={formData.previous_owner2}
+                                  onChange={(e) => handleInputChange("previous_owner2", e.target.value)}
+                                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
+                                  placeholder="Previous owner 2"
+                                  disabled={!isEditable}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Previous AV — Improvements 2</Label>
+                                <Input
+                                  value={formatNumberWithCommas(formData.previous_av_improvements2)}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9.,-]/g, "");
+                                    if ((val.match(/\./g) || []).length > 1) return;
+                                    handleInputChange("previous_av_improvements2", parseCommaValue(val));
+                                  }}
+                                  className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-9 bg-white text-sm"
+                                  placeholder="Previous improvements AV 2"
+                                  type="text"
+                                  disabled={!isEditable}
+                                />
+                              </div>
                             </div>
                           </div>
-
-
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* MEMORANDA Section */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center">
-                          <FileText className="w-3.5 h-3.5 text-blue-600" />
+                  {/* Memoranda Section */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-rose-50 border-b border-rose-100 px-5 py-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-rose-600" />
+                      <h3 className="text-sm font-bold text-rose-800">Memoranda</h3>
+                    </div>
+                    <div className="p-5 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="memoranda_code" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Memoranda Code</Label>
+                          <Input
+                            id="memoranda_code"
+                            value={formData.memoranda_code}
+                            onChange={(e) => handleInputChange("memoranda_code", e.target.value)}
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-10 bg-white uppercase text-sm"
+                            disabled={!isEditable}
+                          />
                         </div>
-                        <h4 className="text-sm font-semibold text-slate-900">Memoranda</h4>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="memoranda_paragraph" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Memoranda Paragraph</Label>
+                          <textarea
+                            id="memoranda_paragraph"
+                            value={formData.memoranda_paragraph || ''}
+                            onChange={(e) => handleInputChange("memoranda_paragraph", e.target.value)}
+                            className="w-full border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 p-2.5 text-sm rounded-lg bg-white min-h-[80px] outline-none"
+                            disabled={!isEditable}
+                            rows={3}
+                          />
+                        </div>
                       </div>
 
-                      <div className="bg-slate-50 rounded-lg p-4 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="memoranda_code" className="text-sm font-semibold text-slate-700">Memoranda Code:</Label>
-                            <Input
-                              id="memoranda_code"
-                              value={formData.memoranda_code}
-                              onChange={(e) => handleInputChange("memoranda_code", e.target.value)}
-                              className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 h-8 bg-white uppercase text-sm"
-                              disabled={!isEditable}
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <Label htmlFor="memoranda_paragraph" className="text-sm font-semibold text-slate-700">Memoranda Paragraph:</Label>
-                            <textarea
-                              id="memoranda_paragraph"
-                              value={formData.memoranda_paragraph || ''}
-                              onChange={(e) => handleInputChange("memoranda_paragraph", e.target.value)}
-                              className="w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 p-2 text-xs rounded-md bg-white min-h-[80px]"
-                              disabled={!isEditable}
-                              rows={3}
-                            />
-                          </div>
+                      {/* Submit for Approval Button */}
+                      {isEditable && (
+                        <div className="pt-4 border-t border-slate-200 flex justify-center">
+                          <Button
+                            onClick={handleSubmit}
+                            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-5 text-sm font-bold rounded-xl shadow-lg shadow-emerald-100"
+                            disabled={submitting}
+                            size="lg"
+                          >
+                            {submitting ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Send className="w-4 h-4" />
+                            )}
+                            {submitting ? "Submitting..." : "Submit for Approval"}
+                          </Button>
                         </div>
-
-                        {/* Submit for Approval Button - Only show in edit mode */}
-                        {isEditable && (
-                          <div className="pt-4 border-t border-slate-200">
-                            <div className="text-center">
-                              <Button
-                                onClick={handleSubmit}
-                                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 text-sm font-semibold rounded-lg shadow-md shadow-emerald-100"
-                                disabled={submitting}
-                                size="lg"
-                              >
-                                {submitting ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Send className="w-4 h-4" />
-                                )}
-                                {submitting ? "Submitting..." : "Submit for Approval"}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2409,33 +2386,35 @@ export default function FAASForm() {
 
 
 
-              {/* Navigation Buttons - Compact */}
-              <div className="flex items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-100">
+              {/* Navigation Buttons */}
+              <div className="flex items-center justify-between gap-3 pt-5 mt-5 border-t border-slate-200">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={goToPreviousTab}
                   disabled={isFirstTab}
-                  className="gap-1 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-50 h-9 text-sm"
+                  className="gap-2 rounded-xl border-slate-300 text-slate-600 hover:bg-slate-50 h-10 px-5 text-sm font-semibold disabled:opacity-40"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft className="w-4 h-4" />
                   Previous
                 </Button>
 
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     {tabOrder.map((tab, index) => (
                       <div
                         key={tab}
                         className={cn(
-                          "w-1.5 h-1.5 rounded-full transition-colors",
-                          currentTabIndex === index ? "bg-blue-600" : "bg-slate-300"
+                          "rounded-full transition-all duration-200",
+                          currentTabIndex === index
+                            ? "w-6 h-2.5 bg-blue-600"
+                            : "w-2.5 h-2.5 bg-slate-300"
                         )}
                       />
                     ))}
                   </div>
-                  <span className="text-xs font-medium text-slate-500">
-                    Step {currentTabIndex + 1} of {tabOrder.length}
+                  <span className="text-xs font-semibold text-slate-500 ml-1">
+                    {currentTabIndex + 1} / {tabOrder.length}
                   </span>
                 </div>
 
@@ -2443,10 +2422,10 @@ export default function FAASForm() {
                   type="button"
                   onClick={goToNextTab}
                   disabled={isLastTab}
-                  className="gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white h-9 text-sm"
+                  className="gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white h-10 px-5 text-sm font-semibold disabled:opacity-40"
                 >
                   Next
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             </Tabs>

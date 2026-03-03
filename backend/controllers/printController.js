@@ -561,6 +561,7 @@ class PrintController {
       LEFT JOIN users ua ON f.approver_id = ua.id
       WHERE f.status = 'approved'
         AND f.hidden = 0
+        AND f.released_at IS NULL
       ORDER BY f.approval_date DESC
     `);
 
@@ -582,6 +583,104 @@ class PrintController {
         success: false,
         error: 'Failed to fetch approved records',
         details: error.message
+      });
+    }
+  }
+
+  async releaseRecord(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      if (!id) {
+        return res.status(400).json({ success: false, error: 'Record ID is required' });
+      }
+
+      console.log(`📦 Releasing record ${id} by user ${userId}`);
+
+      const pool = getConnection();
+
+      // Update the record with release info
+      const [result] = await pool.execute(`
+        UPDATE faas_records 
+        SET 
+          released_at = NOW(),
+          released_by = ?,
+          updated_at = NOW()
+        WHERE id = ? AND status = 'approved' AND released_at IS NULL
+      `, [userId, id]);
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Record not found, not approved, or already released'
+        });
+      }
+
+      // Log activity
+      await pool.execute(`
+        INSERT INTO activity_log (user_id, action, table_name, record_id, description)
+        VALUES (?, 'RELEASE', 'faas_records', ?, 'Marked record as released/printed')
+      `, [userId, id]);
+
+      res.json({
+        success: true,
+        message: 'Record marked as released successfully'
+      });
+
+    } catch (error) {
+      console.error('❌ Release record error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to release record'
+      });
+    }
+  }
+
+  async getReleasedRecords(req, res) {
+    try {
+      console.log('📜 Getting released records history...');
+
+      const pool = getConnection();
+      const [records] = await pool.execute(`
+        SELECT 
+          f.id,
+          f.arf_no,
+          f.pin,
+          f.owner_name,
+          f.property_location,
+          f.classification,
+          f.market_value,
+          f.assessed_value,
+          f.created_at,
+          f.approval_date as approved_at,
+          f.released_at,
+          f.excel_file_path,
+          f.unirrig_excel_file_path,
+          f.pdf_preview_path,
+          f.unirrig_pdf_preview_path,
+          ue.full_name as encoder_name,
+          ue.profile_picture as encoder_profile_picture,
+          ua.full_name as approver_name,
+          ur.full_name as released_by_name,
+          f.status
+        FROM faas_records f
+        LEFT JOIN users ue ON f.encoder_id = ue.id
+        LEFT JOIN users ua ON f.approver_id = ua.id
+        LEFT JOIN users ur ON f.released_by = ur.id
+        WHERE f.status = 'approved'
+          AND f.hidden = 0
+          AND f.released_at IS NOT NULL
+        ORDER BY f.released_at DESC
+      `);
+
+      res.json(records);
+
+    } catch (error) {
+      console.error('❌ Get released records error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch released records history'
       });
     }
   }

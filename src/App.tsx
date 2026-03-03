@@ -12,6 +12,7 @@ import FAASForm from "./pages/FAASForm";
 import Approvals from "./pages/Approvals";
 import Drafts from "./pages/Drafts";
 import PrintPreview from "./pages/PrintPreview";
+import ReleasedRecords from "./pages/ReleasedRecords";
 import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
@@ -42,13 +43,14 @@ const App = () => (
                 <Route path="/faas/new" element={<FAASForm />} />
                 <Route path="/faas/:id/edit" element={<FAASForm />} />
               </Route>
-              <Route element={<RoleGuard allowedRoles={["approver", "administrator"]} />}>
+              <Route element={<RoleGuard allowedRoles={["approver", "administrator", "encoder"]} />}>
                 <Route path="/approvals" element={<Approvals />} />
               </Route>
               <Route element={<RoleGuard allowedRoles={["administrator"]} />}>
                 <Route path="/users" element={<Users />} />
               </Route>
               <Route path="/print" element={<PrintPreview />} />
+              <Route path="/released" element={<ReleasedRecords />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
