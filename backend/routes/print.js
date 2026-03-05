@@ -10,6 +10,8 @@ router.get('/files/pdf/*', printController.servePdfFile);
 router.use(authenticate);
 
 router.post('/generate-faas', printController.generateFAASExcel);
+router.post('/generate-plain', printController.generatePlainPrint);
+router.post('/generate-precision', printController.generatePrecisionPrint);
 router.get('/download/:folder/:filename', printController.downloadFile);
 router.get('/download/:filename', printController.downloadFile); // Fallback for root files
 router.get('/files/:recordId', printController.getGeneratedFiles);
@@ -17,4 +19,8 @@ router.get('/approved', printController.getApprovedRecords);
 router.put('/release/:id', printController.releaseRecord);
 router.get('/released-history', printController.getReleasedRecords);
 
-module.exports = router;  // ✅ CommonJS export
+// Calibration routes
+router.get('/calibration', printController.getCalibration);
+router.post('/calibration', printController.updateCalibration);
+
+module.exports = router;

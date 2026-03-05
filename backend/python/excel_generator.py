@@ -380,7 +380,32 @@ class FAASExcelGenerator:
             print(f" {error_msg}")
             return None, error_msg
 
-    def generate_unirrig_excel(self, record_id, timestamp=None, save_path=None):
+    def strip_formatting(self, workbook):
+        """Remove all borders, fills, and background colors while keeping data and merged cells."""
+        from openpyxl.styles import Border, Side, PatternFill
+        
+        no_border = Border(left=Side(style=None), 
+                          right=Side(style=None), 
+                          top=Side(style=None), 
+                          bottom=Side(style=None))
+        no_fill = PatternFill(fill_type=None)
+        
+        for sheet in workbook.worksheets:
+            # Turn off gridlines
+            sheet.sheet_view.showGridLines = False
+            
+            for row in sheet.iter_rows():
+                for cell in row:
+                    # Remove border
+                    cell.border = no_border
+                    # Remove fill (background color)
+                    cell.fill = no_fill
+                    # Ensure font isn't white (some templates use white text on dark background)
+                    if hasattr(cell.font, 'color') and cell.font.color and cell.font.color.rgb == 'FFFFFFFF':
+                        from openpyxl.styles import Font
+                        cell.font = Font(color='00000000')
+
+    def generate_unirrig_excel(self, record_id, timestamp=None, save_path=None, plain=False):
         try:
             record = self.get_unirrig_record(record_id)
             if not record:
@@ -391,6 +416,10 @@ class FAASExcelGenerator:
                 return None, f"Template not found at {template_path}"
 
             workbook = load_workbook(template_path)
+            
+            if plain:
+                self.strip_formatting(workbook)
+
             sheet = workbook['Sheet1']  # always use Sheet1 by name
 
             # Set page margins for Sheet1
@@ -762,6 +791,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--record-id', type=int, required=True)
     parser.add_argument('--type', type=str, choices=['faas', 'unirrig', 'both'], default='faas')
+    parser.add_argument('--plain', action='store_true', help='Generate plain version without tables/borders')
     args = parser.parse_args()
     generator = FAASExcelGenerator()
 
@@ -770,13 +800,18 @@ def main():
         print(json.dumps(result if result else {"success": False, "error": error}))
         sys.exit(0 if result else 1)
     elif args.type == 'unirrig':
-        result, error = generator.generate_unirrig_excel(args.record_id)
+        result, error = generator.generate_unirrig_excel(args.record_id, plain=args.plain)
         print(json.dumps(result if result else {"success": False, "error": error}))
         sys.exit(0 if result else 1)
     elif args.type == 'both':
         shared_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         faas_result, faas_error = generator.generate_faas_excel(args.record_id, timestamp=shared_timestamp)
-        unirrig_result, unirrig_error = generator.generate_unirrig_excel(args.record_id, timestamp=shared_timestamp)
+        # For 'both', we generate regular unirrig, but keep logic flexible
+        unirrig_result, unirrig_error = generator.generate_unirrig_excel(args.record_id, timestamp=shared_timestamp, plain=args.plain)
+        
+        # If plain was requested and it's 'both', the unirrig will be plain.
+        # But usually 'both' is for standard regeneration.
+        
         is_faas_success = bool(faas_result)
         output = {
             "success": is_faas_success,

@@ -7,7 +7,7 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 60000,
 });
 
 // Request interceptor
@@ -189,6 +189,12 @@ export const printAPI = {
   generateFAASExcel: (recordId: string | number): Promise<any> =>
     api.post('/print/generate-faas', { recordId }),
 
+  generatePlainPrint: (recordId: string | number): Promise<any> =>
+    api.post('/print/generate-plain', { recordId }),
+
+  generatePrecisionPrint: (recordId: string | number): Promise<any> =>
+    api.post('/print/generate-precision', { recordId }),
+
   getGeneratedFiles: (recordId: string | number): Promise<any> =>
     api.get(`/print/files/${recordId}`),
 
@@ -203,6 +209,12 @@ export const printAPI = {
 
   getReleasedHistory: (): Promise<any[]> =>
     api.get('/print/released-history'),
+
+  getCalibration: (recordId?: string | number): Promise<any> =>
+    api.get('/print/calibration', { params: { recordId } }),
+
+  updateCalibration: (mapping: any, recordId?: string | number): Promise<any> =>
+    api.post('/print/calibration', { mapping, recordId }),
 };
 
 export const dashboardAPI = {

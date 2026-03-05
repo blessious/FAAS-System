@@ -5,12 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Printer, CheckCircle, User, MapPin, Loader2, FileText, FileSpreadsheet, Eye, AlertTriangle, ChevronLeft, ChevronRight, Clock, RotateCcw, Search, X, CheckCheck } from "lucide-react";
+import { Printer, CheckCircle, User, MapPin, Loader2, FileText, FileSpreadsheet, Eye, AlertTriangle, ChevronLeft, ChevronRight, Clock, RotateCcw, Search, X, CheckCheck, Gauge } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { printAPI, approvalAPI } from "@/services/api";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { CalibrationModal } from "@/components/print/CalibrationModal";
 
 
 interface ApprovedRecord {
@@ -32,18 +33,24 @@ interface ApprovedRecord {
   unirrig_excel_file_path?: string;
   pdf_preview_path?: string;
   unirrig_pdf_preview_path?: string;
+  unirrig_plain_excel_path?: string;
+  unirrig_plain_pdf_path?: string;
+  unirrig_precision_pdf_path?: string;
 }
 
 // Extracts the subpath for the API route
 const extractFilename = (filePath: string): string => {
   if (!filePath) return '';
   const normalizedPath = filePath.replace(/\\/g, '/');
-  const match = normalizedPath.match(/(FAAS|UNIRRIG)\/generated-pdf\/.+/i);
-  if (match) {
-    return match[0].replace(/^\/+/, '');
+
+  // Try to find the part after /generated/
+  const genIndex = normalizedPath.toLowerCase().indexOf('/generated/');
+  if (genIndex !== -1) {
+    return normalizedPath.substring(genIndex + 11); // 11 is length of "/generated/"
   }
+
   const parts = normalizedPath.split('/');
-  return parts.slice(-3).join('/');
+  return parts.slice(-2).join('/');
 };
 
 const extractExcelFilename = (filePath: string): string => {
@@ -100,6 +107,11 @@ export default function PrintPreview() {
   const [pdfError, setPdfError] = useState(false);
   const [blockIframe, setBlockIframe] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [generatingPlain, setGeneratingPlain] = useState(false);
+  const [showPlain, setShowPlain] = useState(false);
+  const [generatingPrecision, setGeneratingPrecision] = useState(false);
+  const [showPrecision, setShowPrecision] = useState(false);
+  const [showCalibration, setShowCalibration] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -168,15 +180,106 @@ export default function PrintPreview() {
     if (activeTab === 'faas') {
       pdfPath = selectedRecord.pdf_preview_path || '';
     } else {
-      pdfPath = selectedRecord.unirrig_pdf_preview_path || '';
+      // Use precision if toggled, then plain, then original
+      if (showPrecision) {
+        pdfPath = selectedRecord.unirrig_precision_pdf_path || '';
+      } else if (showPlain) {
+        pdfPath = selectedRecord.unirrig_plain_pdf_path || '';
+      } else {
+        pdfPath = selectedRecord.unirrig_pdf_preview_path || '';
+      }
     }
 
     if (!pdfPath) return '';
 
     const filename = extractFilename(pdfPath);
     const baseUrl = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:3001`;
-    return filename ? `${baseUrl}/api/print/files/pdf/${filename}` : '';
-  }, [selectedRecord, activeTab]);
+    // Add a timestamp as a cache-buster to force the iframe/browser to reload the PDF
+    const timestamp = new Date().getTime();
+    return filename ? `${baseUrl}/api/print/files/pdf/${filename}?t=${timestamp}` : '';
+  }, [selectedRecord, activeTab, showPlain, showPrecision]);
+
+  const handleGeneratePrecision = async () => {
+    if (!selectedRecord) return;
+
+    try {
+      setGeneratingPrecision(true);
+      toast({
+        title: "Generating Precision Version",
+        description: "Placing text at exact coordinates for pre-printed boxes...",
+      });
+
+      const response = await printAPI.generatePrecisionPrint(selectedRecord.id);
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Precision version is ready. Check the alignment on your form.",
+        });
+
+        const updatedRecord = {
+          ...selectedRecord,
+          unirrig_precision_pdf_path: response.data.pdfPath
+        };
+        setSelectedRecord(updatedRecord);
+        setApprovedRecords(prev => prev.map(r => r.id === selectedRecord.id ? updatedRecord : r));
+        setShowPrecision(true);
+        setShowPlain(false);
+      }
+    } catch (error: any) {
+      console.error('Error generating precision print:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.error || "Failed to generate precision version",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPrecision(false);
+    }
+  };
+
+  const handleGeneratePlain = async () => {
+    if (!selectedRecord) return;
+
+    try {
+      setGeneratingPlain(true);
+      toast({
+        title: "Generating Plain Version",
+        description: "Removing tables and formatting for pre-printed forms...",
+      });
+
+      const response = await printAPI.generatePlainPrint(selectedRecord.id);
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Plain version is ready for printing.",
+        });
+
+        // Update local state for the selected record
+        const updatedRecord = {
+          ...selectedRecord,
+          unirrig_plain_excel_path: response.data.excelPath,
+          unirrig_plain_pdf_path: response.data.pdfPath
+        };
+        setSelectedRecord(updatedRecord);
+
+        // Also update in the list
+        setApprovedRecords(prev => prev.map(r => r.id === selectedRecord.id ? updatedRecord : r));
+
+        setShowPlain(true);
+      }
+    } catch (error: any) {
+      console.error('Error generating plain print:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.error || "Failed to generate plain version",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPlain(false);
+    }
+  };
 
   // Print the PDF
   const handlePrint = () => {
@@ -247,6 +350,8 @@ export default function PrintPreview() {
   // Handle record selection
   const handleSelectRecord = (record: ApprovedRecord) => {
     setSelectedRecord(record);
+    setShowPlain(false);
+    setShowPrecision(false);
     setPdfError(false);
     setBlockIframe(false);
     setPreviewLoading(true);
@@ -578,8 +683,67 @@ export default function PrintPreview() {
                         className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-lg shadow-emerald-500/30 rounded-lg h-9"
                       >
                         <Printer className="w-4 h-4" />
-                        <span className="hidden xl:inline">Print</span>
+                        <span className="hidden xl:inline">Print {showPlain ? "Plain" : ""}</span>
                       </Button>
+
+                      {activeTab === 'unirrig' && (
+                        <Button
+                          size="sm"
+                          variant={showPlain ? "secondary" : "outline"}
+                          onClick={() => {
+                            if (!selectedRecord?.unirrig_plain_pdf_path) {
+                              handleGeneratePlain();
+                            } else {
+                              setShowPlain(!showPlain);
+                              setShowPrecision(false);
+                            }
+                          }}
+                          disabled={generatingPlain || generatingPrecision}
+                          className={cn(
+                            "gap-2 rounded-lg h-9",
+                            showPlain ? "bg-amber-100 text-amber-700 border-amber-200" : "border-slate-200 text-slate-600"
+                          )}
+                        >
+                          {generatingPlain ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 text-amber-500" />}
+                          <span>{showPlain ? "Show Original" : "Plain Data"}</span>
+                        </Button>
+                      )}
+
+                      {activeTab === 'unirrig' && (
+                        <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-slate-200 ml-1">
+                          <Button
+                            size="sm"
+                            variant={showPrecision ? "secondary" : "outline"}
+                            onClick={() => {
+                              if (!selectedRecord?.unirrig_precision_pdf_path) {
+                                handleGeneratePrecision();
+                              } else {
+                                setShowPrecision(!showPrecision);
+                                setShowPlain(false);
+                              }
+                            }}
+                            disabled={generatingPrecision || generatingPlain}
+                            className={cn(
+                              "gap-2 rounded-lg h-9",
+                              showPrecision ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "border-slate-200 text-slate-600 bg-white"
+                            )}
+                          >
+                            {generatingPrecision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 text-emerald-500" />}
+                            <span>{showPrecision ? "Show Original" : "Precision (Shoot)"}</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowCalibration(true)}
+                            disabled={generatingPrecision || generatingPlain}
+                            className="gap-2 rounded-lg h-9 border-slate-200 text-slate-600 bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
+                          >
+                            <Gauge className="w-4 h-4 text-emerald-600" />
+                            <span>Calibrate</span>
+                          </Button>
+                        </div>
+                      )}
 
                       <div className="hidden lg:block w-px h-6 bg-slate-200 mx-1" />
 
@@ -755,6 +919,25 @@ export default function PrintPreview() {
           )}
         </div>
       </div>
-    </div>
+      <CalibrationModal
+        open={showCalibration}
+        onOpenChange={setShowCalibration}
+        recordId={selectedRecord?.id}
+        onCalibrated={() => {
+          if (selectedRecord) {
+            // New flow: Clear the path and hide the preview so user must click Shoot again
+            const updatedRecord = { ...selectedRecord, unirrig_precision_pdf_path: undefined };
+            setSelectedRecord(updatedRecord);
+            setApprovedRecords(prev => prev.map(r => r.id === selectedRecord.id ? updatedRecord : r));
+            setShowPrecision(false);
+
+            toast({
+              title: "Calibration Saved",
+              description: "Previous PDF deleted. Click 'Precision (Shoot)' to generate the new aligned version.",
+            });
+          }
+        }}
+      />
+    </div >
   );
 }

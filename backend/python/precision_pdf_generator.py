@@ -1,0 +1,210 @@
+import os
+import sys
+import json
+import argparse
+from reportlab.lib.units import cm, inch
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from openpyxl import load_workbook
+
+# 🎯 MASTER TEMPLATE - Default coordinates (CM from Bottom-Left)
+TEMPLATE_MAPPING = {
+    'Sheet1!J3':  {'x': 16.0, 'y': 26.5, 'label': 'PIN'},
+    'Sheet1!A7':  {'x': 2.5,  'y': 24.5, 'label': 'Memoranda'},
+    'Sheet1!B11': {'x': 4.0,  'y': 23.3, 'label': 'Owner'},
+    'Sheet1!B13': {'x': 4.3,  'y': 22.75, 'label': 'Admin'},
+    'Sheet1!H11': {'x': 12.0, 'y': 23.3, 'label': 'Owner Addr'},
+    'Sheet1!H13': {'x': 12.0, 'y': 22.65, 'label': 'Admin Addr'},
+    'Sheet1!C17': {'x': 7.0,  'y': 21.5, 'label': 'Street'},
+    'Sheet1!G17': {'x': 10.5, 'y': 21.5, 'label': 'Barangay'},
+    'Sheet1!I17': {'x': 16.0, 'y': 21.5, 'label': 'Municipality'},
+    'Sheet1!C19': {'x': 5.5,  'y': 20.7, 'label': 'Title'},
+    'Sheet1!H19': {'x': 11.8, 'y': 20.6, 'label': 'Lot No'},
+    'Sheet1!K19': {'x': 18.0, 'y': 20.65, 'label': 'K19'},
+    'Sheet1!K20': {'x': 18.0, 'y': 20.2, 'label': 'K20'},
+    'Sheet1!B21': {'x': 4.0,  'y': 20.5, 'label': 'North'},
+    'Sheet1!B22': {'x': 4.0,  'y': 19.4, 'label': 'East'},
+    'Sheet1!I21': {'x': 12.3, 'y': 19.75, 'label': 'South'},
+    'Sheet1!I22': {'x': 12.3, 'y': 19.4, 'label': 'West'},
+    'Sheet1!E28': {'x': 9.6,  'y': 16.8,  'label': 'Land 1: Kind'},
+    'Sheet1!G28': {'x': 11.6, 'y': 16.8,  'label': 'Land 1: Area'},
+    'Sheet1!H28': {'x': 14.0, 'y': 16.8,  'label': 'Land 1: Class'},
+    'Sheet1!I28': {'x': 15.5, 'y': 16.8,  'label': 'Land 1: UV'},
+    'Sheet1!J28': {'x': 17.6, 'y': 16.8,  'label': 'Land 1: MV'},
+    'Sheet1!E33': {'x': 8.2,  'y': 15.95, 'label': 'Land 3: Kind'},
+    'Sheet1!G33': {'x': 11.0, 'y': 15.45, 'label': 'Land 3: Area'},
+    'Sheet1!H33': {'x': 13.0, 'y': 14.95, 'label': 'Land 3: Class'},
+    'Sheet1!I33': {'x': 15.1, 'y': 14.35, 'label': 'Land 3: UV'},
+    'Sheet1!J33': {'x': 17.5, 'y': 13.85, 'label': 'Land 3: MV'},
+    'Sheet1!E35': {'x': 8.5,  'y': 13.35, 'label': 'Land 4: Kind'},
+    'Sheet1!G35': {'x': 11.0, 'y': 12.85, 'label': 'Land 4: Area'},
+    'Sheet1!H35': {'x': 13.0, 'y': 12.35, 'label': 'Land 4: Class'},
+    'Sheet1!I35': {'x': 15.0, 'y': 11.85, 'label': 'Land 4: UV'},
+    'Sheet1!J35': {'x': 17.5, 'y': 11.35, 'label': 'Land 4: MV'},
+    'Sheet1!J36': {'x': 17.8, 'y': 13.75, 'label': 'Total MV Land'},
+    'Sheet1!H42': {'x': 12.7, 'y': 11.8,  'label': 'Plant: Kind'},
+    'Sheet1!I42': {'x': 15.0, 'y': 11.8,  'label': 'Plant: Area'},
+    'Sheet1!J42': {'x': 17.0, 'y': 11.8,  'label': 'Plant: UV'},
+    'Sheet1!K42': {'x': 18.2, 'y': 11.8,  'label': 'Plant: MV'},
+    'Sheet1!K53': {'x': 18.4, 'y': 7.8,   'label': 'Total MV Plants'},
+    'Sheet1!G44': {'x': 11.0, 'y': 11.4,  'label': 'Plant Adj 1 %'},
+    'Sheet1!G47': {'x': 11.0, 'y': 10.6,  'label': 'Plant Adj 2 %'},
+    'Sheet1!G49': {'x': 11.0, 'y': 9.7,   'label': 'Plant Adj 3 %'},
+    'Sheet1!G52': {'x': 11.0, 'y': 9.3,   'label': 'Plant Adj 4 %'},
+    'Sheet1!E58': {'x': 8.7,  'y': 5.2,   'label': 'Land II: Kind'},
+    'Sheet1!G58': {'x': 11.3, 'y': 5.2,   'label': 'Land II: Area'},
+    'Sheet1!H58': {'x': 13.7, 'y': 5.2,   'label': 'Land II: Class'},
+    'Sheet1!H59': {'x': 13.7, 'y': 4.5,   'label': 'Land II: UV'},
+    'Sheet1!J58': {'x': 17.6, 'y': 5.1,   'label': 'Land II: MV'},
+    # Additional table rows from mapping if present
+    'Sheet1!E29': {'x': 8.8, 'y': 16.35, 'label': 'Land 2: Kind'},
+    'Sheet1!G29': {'x': 11.5,'y': 16.35, 'label': 'Land 2: Area'},
+    'Sheet1!H29': {'x': 13.5,'y': 16.3,  'label': 'Land 2: Class'},
+    'Sheet1!I29': {'x': 15.5,'y': 16.3,  'label': 'Land 2: UV'},
+    'Sheet1!J29': {'x': 17.6,'y': 16.3,  'label': 'Land 2: MV'},
+    'Sheet1!E30': {'x': 8.8, 'y': 15.95, 'label': 'Land 3 alternative'}, 
+    'Sheet1!G30': {'x': 11.5,'y': 15.95, 'label': 'Land 3 alternative Area'},
+}
+
+class PrecisionPDFGenerator:
+    def __init__(self, mapping_file=None):
+        self.font_name = "Helvetica-Bold"
+        self._register_font()
+        self.mapping = TEMPLATE_MAPPING.copy()
+        
+        if mapping_file:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            fpath = mapping_file if os.path.isabs(mapping_file) else os.path.join(script_dir, mapping_file)
+            if os.path.exists(fpath):
+                try:
+                    with open(fpath, 'r') as f:
+                        self.mapping.update(json.load(f))
+                except: pass
+
+        self.paper_size = (8 * inch, 11 * inch)
+
+    def _register_font(self):
+        font_path = r"C:\Windows\Fonts\bahnschrift.ttf"
+        if os.path.exists(font_path):
+            try:
+                name = "Bahnschrift-Bold"
+                pdfmetrics.registerFont(TTFont(name, font_path))
+                self.font_name = name
+            except: pass
+
+    def generate(self, excel_path, output_path=None):
+        if not os.path.exists(excel_path):
+            return {"success": False, "error": "Excel missing"}
+        
+        if not output_path:
+            out_dir = os.path.join(os.path.dirname(__file__), "generated", "PRECISION")
+            os.makedirs(out_dir, exist_ok=True)
+            output_path = os.path.join(out_dir, f"Precision_{os.path.basename(excel_path).replace('.xlsx', '.pdf')}")
+
+        try:
+            wb = load_workbook(excel_path, data_only=True)
+            c = canvas.Canvas(output_path, pagesize=self.paper_size)
+            
+            fields_processed = 0
+            for key, coord in self.mapping.items():
+                try:
+                    sn, addr = key.split('!')
+                    if sn not in wb.sheetnames:
+                        sn_lower = sn.lower()
+                        real_sn = next((s for s in wb.sheetnames if s.lower() == sn_lower), None)
+                        if real_sn: sn = real_sn
+                        else: continue
+                    
+                    # Normal Cell Reading
+                    val = wb[sn][addr].value
+                    if val is None or str(val).strip() == "": continue
+                    
+                    text = str(val)
+                    # Percentage conversion for specific G cells
+                    if addr in ['G44', 'G47', 'G49', 'G52']:
+                        try:
+                            num_val = float(val)
+                            text = f"{num_val * 100:.0f}%" if num_val <= 1.0 else f"{num_val:.0f}%"
+                        except: pass
+                    # 🚀 No decimal places for plant Area (I42)
+                    elif addr == 'I42':
+                        try: text = f"{int(float(val))}"
+                        except: pass
+                    # 🚀 2 decimal places for Currency/Calculated MV (I, J, K columns)
+                    elif any(col in addr for col in ['I', 'J', 'K']):
+                        try: text = f"{float(val):,.2f}"
+                        except: pass
+                    
+                    # 🚀 Fix for J36: Calculate Total MV manually if Excel version is blank
+                    if addr == 'J28': # We trigger this during the loop across J cells
+                        total_mv = 0.0
+                        for row_idx in range(28, 36):
+                            cell_val = wb[sn][f'J{row_idx}'].value
+                            try: total_mv += float(cell_val or 0)
+                            except: pass
+                        # Set manual text for J36 if it was missing
+                        if 'Sheet1!J36' in self.mapping:
+                            x_j36, y_j36 = self.mapping['Sheet1!J36']['x'] * cm, self.mapping['Sheet1!J36']['y'] * cm
+                            c.saveState()
+                            c.translate(x_j36, y_j36)
+                            t_j = c.beginText(0, 0)
+                            t_j.setFont(self.font_name, 10.5)
+                            t_j.setTextRenderMode(2)
+                            c.setLineWidth(0.3)
+                            t_j.setHorizScale(75)
+                            t_j.textLine(f"{total_mv:,.2f}")
+                            c.drawText(t_j)
+                            c.restoreState()
+                    
+                    x, y = coord['x'] * cm, coord['y'] * cm
+                    # 🚀 Dynamic Y for North Boundary (B21)
+                    if key == 'Sheet1!B21':
+                        if len(text) >= 50: 
+                            y -= 0.5 * cm
+                        else:
+                            y = 19.40 * cm
+
+                    c.saveState()
+                    # Apply transformation to the canvas
+                    c.translate(x, y)
+                    c.scale(0.75, 1.0)
+                    
+                    # Use a text object for bold rendering
+                    t = c.beginText(0, 0) # Positioned at 0,0 because of translate
+                    t.setFont(self.font_name, 10.5)
+                    t.setFillColorRGB(0, 0, 0)
+                    t.setTextRenderMode(2) # Fill + Stroke
+                    c.setLineWidth(0.35)
+                    c.setStrokeColorRGB(0, 0, 0)
+                    
+                    if "Total" in str(coord.get('label','')):
+                        # For Centered, we use standard canvas
+                        c.setFont(self.font_name, 10.5)
+                        c.drawCentredString(0, 0, text)
+                    else:
+                        t.textOut(text)
+                        c.drawText(t)
+                        
+                    c.restoreState()
+                    fields_processed += 1
+                except Exception as e:
+                    sys.stderr.write(f"DEBUG: Error drawing {key}: {e}\n")
+                    continue
+
+            c.save()
+            return {
+                "success": True, 
+                "fields_count": fields_processed,
+                "file_path": output_path, 
+                "file_name": os.path.basename(output_path)
+            }
+        except Exception as ex:
+            return {"success": False, "error": str(ex)}
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument('--excel-path', required=True)
+    p.add_argument('--mapping-file')
+    a = p.parse_args()
+    print(json.dumps(PrecisionPDFGenerator(a.mapping_file).generate(a.excel_path)))

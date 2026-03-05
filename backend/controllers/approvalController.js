@@ -400,6 +400,14 @@ class ApprovalController {
       }
 
       console.log(`🔄 Cancelling action for record ${id} by user ${userId}`);
+
+      // Clear all generated files (including precision PDF) so they are regenerated on next approval
+      try {
+        await printController.clearGeneratedFiles(id);
+      } catch (cleanError) {
+        console.error('⚠️ Cleanup error during cancelAction:', cleanError.message);
+      }
+
       await pool.execute(`
         UPDATE faas_records 
         SET 

@@ -47,11 +47,236 @@ class PrintController {
   }
   // Add this method inside the PrintController class
 
+  async generatePlainPrint(req, res) {
+    try {
+      console.log('=== GENERATE PLAIN PRINT REQUEST ===');
+      const { recordId } = req.body;
+
+      if (!recordId) {
+        return res.status(400).json({ success: false, error: 'Record ID is required' });
+      }
+
+      const pool = getConnection();
+      const [records] = await pool.execute(
+        'SELECT id, arf_no, owner_name, unirrig_plain_excel_path, unirrig_plain_pdf_path FROM faas_records WHERE id = ?',
+        [recordId]
+      );
+
+      if (records.length === 0) {
+        return res.status(404).json({ success: false, error: 'Record not found' });
+      }
+
+      const record = records[0];
+      const pythonDir = path.resolve(__dirname, '../python');
+      const pythonScript = path.join(pythonDir, 'excel_generator.py');
+
+      // Command for plain UNIRRIG
+      const command = `cd "${pythonDir}" && python excel_generator.py --record-id ${recordId} --type unirrig --plain`;
+      console.log(`🚀 Plain Command: ${command}`);
+
+      exec(command, { cwd: pythonDir }, async (error, stdout, stderr) => {
+        if (error) {
+          console.error('❌ Python error:', stderr || error.message);
+          return res.status(500).json({ success: false, error: 'Failed to generate plain Excel' });
+        }
+
+        try {
+          let jsonData = null;
+          const lines = stdout.split('\n');
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('{') && trimmedLine.endsWith('}')) {
+              jsonData = JSON.parse(trimmedLine);
+              break;
+            }
+          }
+
+          if (jsonData && jsonData.success && jsonData.file_path) {
+            const excelPath = jsonData.file_path;
+
+            // Now generate PDF for it
+            const pdfDir = path.join(path.dirname(excelPath), 'generated-pdf');
+            const pdfFilename = path.basename(excelPath).replace('.xlsx', '.pdf');
+            const pdfPath = path.join(pdfDir, pdfFilename);
+
+            if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+
+            const pdfCommand = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${excelPath}" --pdf-path "${pdfPath}"`;
+            console.log(`📄 Plain PDF Command: ${pdfCommand}`);
+
+            exec(pdfCommand, { cwd: pythonDir }, async (pdfError, pdfStdout, pdfStderr) => {
+              if (pdfError) {
+                console.error('❌ PDF error:', pdfStderr || pdfError.message);
+                // Still save the excel even if PDF failed
+              }
+
+              // Update DB
+              await pool.execute(
+                'UPDATE faas_records SET unirrig_plain_excel_path = ?, unirrig_plain_pdf_path = ? WHERE id = ?',
+                [excelPath, fs.existsSync(pdfPath) ? pdfPath : null, recordId]
+              );
+
+              return res.json({
+                success: true,
+                message: 'Plain print files generated',
+                data: {
+                  excelPath: excelPath,
+                  pdfPath: pdfPath,
+                  excelUrl: `/api/print/download/UNIRRIG/${path.basename(excelPath)}`,
+                  pdfUrl: `/api/print/files/pdf/UNIRRIG/generated-pdf/${path.basename(pdfPath)}`
+                }
+              });
+            });
+          } else {
+            throw new Error('Python did not return valid result');
+          }
+        } catch (e) {
+          console.error('❌ Error processing plain print:', e);
+          res.status(500).json({ success: false, error: 'Failed to process files' });
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Generate plain print error:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+
+  async generatePrecisionPrint(req, res) {
+    try {
+      const { recordId } = req.body;
+      if (!recordId) return res.status(400).json({ success: false, error: 'Record ID is required' });
+
+      const pool = getConnection();
+      const [records] = await pool.execute(
+        'SELECT unirrig_excel_file_path FROM faas_records WHERE id = ?',
+        [recordId]
+      );
+
+      if (!records || records.length === 0 || !records[0].unirrig_excel_file_path) {
+        return res.status(404).json({ success: false, error: 'Excel file path not found in database' });
+      }
+
+      const excelPath = records[0].unirrig_excel_file_path;
+      const pythonDir = path.resolve(__dirname, '../python');
+
+      // Check if a record-specific mapping exists
+      const specificMappingPath = path.resolve(pythonDir, `precision_mapping_${recordId}.json`);
+      let command = `python precision_pdf_generator.py --excel-path "${excelPath}"`;
+
+      if (fs.existsSync(specificMappingPath)) {
+        command += ` --mapping-file "precision_mapping_${recordId}.json"`;
+      }
+
+      console.log(`🚀 Precision Print Command: ${command}`);
+
+      exec(command, { cwd: pythonDir, timeout: 60000, maxBuffer: 1024 * 1024 * 10 }, async (error, stdout, stderr) => {
+        if (error) {
+          console.error('❌ Precision Error:', error.message);
+          return res.status(500).json({ success: false, error: 'PDF generation failed or timed out' });
+        }
+
+        try {
+          const jsonMatch = stdout.match(/\{"success":.*\}/);
+          if (!jsonMatch) throw new Error('Invalid Python output');
+
+          const jsonData = JSON.parse(jsonMatch[0]);
+
+          if (jsonData.success) {
+            const pool = getConnection();
+            await pool.execute(
+              'UPDATE faas_records SET unirrig_precision_pdf_path = ? WHERE id = ?',
+              [jsonData.file_path, recordId]
+            );
+
+            return res.json({
+              success: true,
+              data: {
+                pdfPath: jsonData.file_path,
+                pdfUrl: `/api/print/files/pdf/PRECISION/${jsonData.file_name}`
+              }
+            });
+          }
+          res.status(400).json({ success: false, error: jsonData.error });
+        } catch (e) {
+          console.error('❌ Parsing Error:', e, 'Raw:', stdout);
+          res.status(500).json({ success: false, error: 'Failed to process precision file output' });
+        }
+      });
+    } catch (error) {
+      console.error('❌ Precision print error:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+
+  async getCalibration(req, res) {
+    try {
+      const { recordId } = req.query;
+      const pythonDir = path.resolve(__dirname, '../python');
+
+      // 1. Always start with the Master Template
+      let fullMapping = {};
+      const configPath = path.resolve(pythonDir, 'precision_mapping.json');
+      if (fs.existsSync(configPath)) {
+        fullMapping = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      }
+
+      // 2. Overwrite with record-specific data if it exists
+      if (recordId) {
+        const specificPath = path.resolve(pythonDir, `precision_mapping_${recordId}.json`);
+        if (fs.existsSync(specificPath)) {
+          const specificData = JSON.parse(fs.readFileSync(specificPath, 'utf8'));
+          // Merge specific values into the master map
+          fullMapping = { ...fullMapping, ...specificData };
+        }
+      }
+
+      res.json(fullMapping);
+    } catch (error) {
+      console.error('Error reading calibration:', error);
+      res.status(500).json({ success: false, error: 'Failed to load calibration' });
+    }
+  }
+
+  async updateCalibration(req, res) {
+    try {
+      const { mapping, recordId } = req.body;
+      if (!mapping) return res.status(400).json({ success: false, error: 'Mapping data required' });
+
+      // Save as record-specific calibration if recordId is provided
+      const pythonDir = path.resolve(__dirname, '../python');
+      const filename = recordId ? `precision_mapping_${recordId}.json` : 'precision_mapping.json';
+      const configPath = path.resolve(pythonDir, filename);
+
+      fs.writeFileSync(configPath, JSON.stringify(mapping, null, 4));
+
+      // NEW FLOW: If we are calibrating a specific record, DELETE its existing Precision PDF
+      if (recordId) {
+        const pool = getConnection();
+        const [rows] = await pool.execute('SELECT unirrig_precision_pdf_path FROM faas_records WHERE id = ?', [recordId]);
+
+        if (rows.length > 0 && rows[0].unirrig_precision_pdf_path) {
+          const oldPdfPath = rows[0].unirrig_precision_pdf_path;
+          if (fs.existsSync(oldPdfPath)) {
+            try { fs.unlinkSync(oldPdfPath); } catch (e) { console.error('Failed to delete old precision pdf:', e); }
+          }
+          // Clear current path in DB so UI shows it's gone
+          await pool.execute('UPDATE faas_records SET unirrig_precision_pdf_path = NULL WHERE id = ?', [recordId]);
+        }
+      }
+
+      res.json({ success: true, message: 'Calibration saved. Previous PDF deleted.' });
+    } catch (error) {
+      console.error('Error updating calibration:', error);
+      res.status(500).json({ success: false, error: 'Failed to update calibration' });
+    }
+  }
+
   async clearGeneratedFiles(recordId) {
     try {
       const pool = getConnection();
       const [records] = await pool.execute(
-        'SELECT excel_file_path, unirrig_excel_file_path, pdf_preview_path, unirrig_pdf_preview_path FROM faas_records WHERE id = ?',
+        'SELECT excel_file_path, unirrig_excel_file_path, pdf_preview_path, unirrig_pdf_preview_path, unirrig_plain_excel_path, unirrig_plain_pdf_path, unirrig_precision_pdf_path FROM faas_records WHERE id = ?',
         [recordId]
       );
 
@@ -63,14 +288,17 @@ class PrintController {
         record.excel_file_path,
         record.unirrig_excel_file_path,
         record.pdf_preview_path,
-        record.unirrig_pdf_preview_path
+        record.unirrig_pdf_preview_path,
+        record.unirrig_plain_excel_path,
+        record.unirrig_plain_pdf_path,
+        record.unirrig_precision_pdf_path
       ];
 
       filesToDelete.forEach(filePath => {
         if (filePath && fs.existsSync(filePath)) {
           try {
             fs.unlinkSync(filePath);
-            console.log(`🗑️ Deleted on edit: ${filePath}`);
+            console.log(`🗑️ Deleted on cleanup: ${filePath}`);
           } catch (e) {
             console.error(`⚠️ Could not delete file: ${filePath} — ${e.message}`);
           }
@@ -81,7 +309,9 @@ class PrintController {
       await pool.execute(
         `UPDATE faas_records 
         SET excel_file_path = NULL, unirrig_excel_file_path = NULL, 
-            pdf_preview_path = NULL, unirrig_pdf_preview_path = NULL 
+            pdf_preview_path = NULL, unirrig_pdf_preview_path = NULL,
+            unirrig_plain_excel_path = NULL, unirrig_plain_pdf_path = NULL,
+            unirrig_precision_pdf_path = NULL
         WHERE id = ?`,
         [recordId]
       );
@@ -105,7 +335,7 @@ class PrintController {
 
       const pool = getConnection();
       const [records] = await pool.execute(
-        'SELECT id, arf_no, owner_name, excel_file_path, unirrig_excel_file_path, pdf_preview_path, unirrig_pdf_preview_path FROM faas_records WHERE id = ? AND hidden = 0',
+        'SELECT id, arf_no, owner_name, excel_file_path, unirrig_excel_file_path, pdf_preview_path, unirrig_pdf_preview_path, unirrig_plain_excel_path, unirrig_plain_pdf_path, unirrig_precision_pdf_path FROM faas_records WHERE id = ? AND hidden = 0',
         [recordId]
       );
       if (records.length === 0) {
@@ -175,7 +405,10 @@ class PrintController {
               record.excel_file_path,
               record.unirrig_excel_file_path,
               record.pdf_preview_path,
-              record.unirrig_pdf_preview_path
+              record.unirrig_pdf_preview_path,
+              record.unirrig_plain_excel_path,
+              record.unirrig_plain_pdf_path,
+              record.unirrig_precision_pdf_path
             ];
 
             oldFiles.forEach(oldPath => {
@@ -552,6 +785,9 @@ class PrintController {
         f.unirrig_excel_file_path,
         f.pdf_preview_path,
         f.unirrig_pdf_preview_path,
+        f.unirrig_plain_excel_path,
+        f.unirrig_plain_pdf_path,
+        f.unirrig_precision_pdf_path,
         ue.full_name as encoder_name,
         ue.profile_picture as encoder_profile_picture,
         ua.full_name as approver_name,
