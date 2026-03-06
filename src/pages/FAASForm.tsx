@@ -10,9 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Send, ArrowLeft, FileSpreadsheet, Loader2, X, ShieldCheck, User, MapPin, Calendar, FileText, ChevronRight, ChevronLeft, Eye, Edit, Trash2, XCircle, AlertCircle } from "lucide-react";
+import { Save, Send, ArrowLeft, FileSpreadsheet, Loader2, X, ShieldCheck, User, MapPin, Calendar, FileText, ChevronRight, ChevronLeft, Eye, Edit, Trash2, XCircle, AlertCircle, Download, CheckCircle2, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { faasAPI } from "@/services/api";
+import { faasAPI, printAPI } from "@/services/api";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import {
@@ -25,6 +25,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // Helper to format number string with commas for display
 const formatNumberWithCommas = (value: string | number | undefined | null) => {
@@ -355,6 +363,162 @@ export default function FAASForm() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [creatingLinked, setCreatingLinked] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [generatedFiles, setGeneratedFiles] = useState<any>(null);
+
+  const getFormDataForAPI = () => {
+    return {
+      arf_no: formData.arf_no || null,
+      pin: formData.pin || null,
+      oct_tct_no: formData.oct_tct_no || null,
+      cln: formData.cln || null,
+      owner_name: formData.owner_name,
+      owner_address: formData.owner_address || null,
+      owner_barangay: formData.owner_barangay || null,
+      owner_municipality: formData.owner_municipality || null,
+      owner_province: formData.owner_province || null,
+      administrator_name: formData.administrator_name || null,
+      administrator_address: formData.administrator_address || null,
+      owner_administrator: formData.owner_administrator || null,
+      property_location: formData.property_location || null,
+      property_barangay: formData.property_barangay || null,
+      property_municipality: formData.property_municipality || null,
+      property_province: formData.property_province || null,
+      north_boundary: formData.north_boundary || null,
+      south_boundary: formData.south_boundary || null,
+      east_boundary: formData.east_boundary || null,
+      west_boundary: formData.west_boundary || null,
+      rw_row: formData.rw_row || null,
+      ctc_no: formData.ctc_no || null,
+      ctc_issued_on: formData.ctc_issued_on || null,
+      ctc_issued_at: formData.ctc_issued_at || null,
+
+      classification: formData.landAppraisals[0]?.classification || null,
+      sub_class: formData.landAppraisals[0]?.sub_class || null,
+      area: formData.landAppraisals[0]?.area.trim() !== ''
+        ? parseFloat(formData.landAppraisals[0].area)
+        : null,
+      unit_value_land: formData.landAppraisals[0]?.unit_value_land.trim() !== ''
+        ? parseFloat(formData.landAppraisals[0].unit_value_land)
+        : null,
+      market_value: formData.landAppraisals[0]?.market_value.trim() !== ''
+        ? parseFloat(formData.landAppraisals[0].market_value)
+        : null,
+
+      product_class: formData.improvements[0]?.product_class || null,
+      improvement_qty: formData.improvements[0]?.improvement_qty.trim() !== ''
+        ? parseInt(formData.improvements[0].improvement_qty)
+        : null,
+      unit_value_improvement: formData.improvements[0]?.unit_value_improvement.trim() !== ''
+        ? parseFloat(formData.improvements[0].unit_value_improvement)
+        : null,
+      market_value_improvement: formData.improvements[0]?.market_value_improvement.trim() !== ''
+        ? parseFloat(formData.improvements[0].market_value_improvement)
+        : null,
+
+      land_appraisals_json: JSON.stringify(formData.landAppraisals),
+      improvements_json: JSON.stringify(formData.improvements),
+      market_values_json: JSON.stringify(formData.marketValues),
+      assessments_json: JSON.stringify(formData.propertyAssessments),
+
+      assessed_value: formData.assessed_value.trim() !== ''
+        ? parseFloat(formData.assessed_value)
+        : null,
+
+      effectivity_year: (formData.effectivity_year?.toString() || "").trim() !== ''
+        ? formData.effectivity_year.toString()
+        : null,
+      taxability: formData.taxability || null,
+      tax_rate: formData.tax_rate.trim() !== ''
+        ? parseFloat(formData.tax_rate)
+        : null,
+
+      land_appraisal_total: formData.land_appraisal_total.trim() !== ''
+        ? parseFloat(formData.land_appraisal_total)
+        : null,
+      improvements_total: formData.improvements_total.trim() !== ''
+        ? parseFloat(formData.improvements_total)
+        : null,
+      adjustment_total: formData.adjustment_total.trim() !== ''
+        ? parseFloat(formData.adjustment_total)
+        : null,
+      assessment_total: formData.assessment_total.trim() !== ''
+        ? parseFloat(formData.assessment_total)
+        : null,
+
+      previous_td_no: formData.previous_td_no || null,
+      previous_owner: formData.previous_owner || null,
+      previous_av_land: formData.previous_av_land.trim() !== ''
+        ? parseFloat(formData.previous_av_land)
+        : null,
+      previous_av_improvements: formData.previous_av_improvements.trim() !== ''
+        ? parseFloat(formData.previous_av_improvements)
+        : null,
+
+      previous_td_no2: formData.previous_td_no2 || null,
+      previous_owner2: formData.previous_owner2 || null,
+      previous_av_land2: formData.previous_av_land2.trim() !== ''
+        ? parseFloat(formData.previous_av_land2)
+        : null,
+      previous_av_improvements2: formData.previous_av_improvements2.trim() !== ''
+        ? parseFloat(formData.previous_av_improvements2)
+        : null,
+
+      memoranda: formData.memoranda || null,
+      memoranda_code: formData.memoranda_code || null,
+      memoranda_paragraph: formData.memoranda_paragraph || null,
+    };
+  };
+
+  const performSave = async (skipValidation = false) => {
+    if (!skipValidation) {
+      const requiredFields = [
+        { field: 'pin', label: 'PIN' },
+        { field: 'owner_name', label: 'Owner Name' },
+        { field: 'owner_address', label: 'Owner Address' },
+        { field: 'property_barangay', label: 'Property Barangay' }
+      ];
+
+      const missingFields = requiredFields.filter(f => !formData[f.field as keyof FAASFormData]?.toString().trim());
+
+      if (missingFields.length > 0) {
+        toast({
+          title: "Required Fields Missing",
+          description: `Please fill in: ${missingFields.map(f => f.label).join(', ')}`,
+          variant: "destructive",
+        });
+        return null;
+      }
+    }
+
+    const requestData = getFormDataForAPI();
+    let response;
+
+    if (isEditing) {
+      if (recordStatus === 'draft') {
+        response = await faasAPI.saveAsDraft(id!, requestData);
+      } else if (recordStatus === 'approved') {
+        response = await faasAPI.createLinkedEntry(id!, requestData);
+      } else if (isAdmin || recordStatus === 'for_approval' || (recordStatus === 'rejected' && isEncoder)) {
+        response = await faasAPI.updateRecord(id!, requestData);
+      } else {
+        return null;
+      }
+    } else {
+      response = await faasAPI.createDraft(requestData);
+    }
+
+    if (response.success) {
+      if (!isEditing && response.data?.id) {
+        // We can't easily wait for navigate to complete and pick up new ID in one go
+        // But for the purpose of preview, we need the ID.
+        return response.data.id;
+      }
+      return id || response.data?.id;
+    }
+    return null;
+  };
 
   const showErrorToast = (error: any, defaultTitle: string = "Action Failed") => {
     console.error(`Error during ${defaultTitle}:`, error);
@@ -699,175 +863,19 @@ export default function FAASForm() {
 
     try {
       setSaving(true);
+      const savedId = await performSave(true);
 
-      const requiredFields = [
-        { field: 'pin', label: 'PIN' },
-        { field: 'oct_tct_no', label: 'OCT/TCT No.' },
-        { field: 'owner_name', label: 'Owner Name' },
-        { field: 'owner_address', label: 'Owner Address' },
-        { field: 'property_barangay', label: 'Property Barangay' }
-      ];
-
-      const missingFields = requiredFields.filter(f => !formData[f.field as keyof FAASFormData]?.toString().trim());
-
-      if (missingFields.length > 0) {
+      if (savedId) {
         toast({
-          title: "Required Fields Missing",
-          description: `Please fill in: ${missingFields.map(f => f.label).join(', ')}`,
-          variant: "destructive",
+          title: recordStatus === "draft" ? "Draft Saved" : "Record Saved",
+          description: recordStatus === "draft"
+            ? "Your FAAS record has been saved as a draft."
+            : "Your changes have been saved.",
         });
-        setSaving(false);
-        return;
-      }
-
-      const requestData = {
-        arf_no: formData.arf_no || null,
-        pin: formData.pin || null,
-        oct_tct_no: formData.oct_tct_no || null,
-        cln: formData.cln || null,
-        owner_name: formData.owner_name,
-        owner_address: formData.owner_address || null,
-        owner_barangay: formData.owner_barangay || null,
-        owner_municipality: formData.owner_municipality || null,
-        owner_province: formData.owner_province || null,
-        administrator_name: formData.administrator_name || null,
-        administrator_address: formData.administrator_address || null,
-        owner_administrator: formData.owner_administrator || null,
-        property_location: formData.property_location || null,
-        property_barangay: formData.property_barangay || null,
-        property_municipality: formData.property_municipality || null,
-        property_province: formData.property_province || null,
-        north_boundary: formData.north_boundary || null,
-        south_boundary: formData.south_boundary || null,
-        east_boundary: formData.east_boundary || null,
-        west_boundary: formData.west_boundary || null,
-        rw_row: formData.rw_row || null,
-        ctc_no: formData.ctc_no || null,
-        ctc_issued_on: formData.ctc_issued_on || null,
-        ctc_issued_at: formData.ctc_issued_at || null,
-
-        classification: formData.landAppraisals[0]?.classification || null,
-        sub_class: formData.landAppraisals[0]?.sub_class || null,
-        area: formData.landAppraisals[0]?.area.trim() !== ''
-          ? parseFloat(formData.landAppraisals[0].area)
-          : null,
-        unit_value_land: formData.landAppraisals[0]?.unit_value_land.trim() !== ''
-          ? parseFloat(formData.landAppraisals[0].unit_value_land)
-          : null,
-        market_value: formData.landAppraisals[0]?.market_value.trim() !== ''
-          ? parseFloat(formData.landAppraisals[0].market_value)
-          : null,
-
-        product_class: formData.improvements[0]?.product_class || null,
-        improvement_qty: formData.improvements[0]?.improvement_qty.trim() !== ''
-          ? parseInt(formData.improvements[0].improvement_qty)
-          : null,
-        unit_value_improvement: formData.improvements[0]?.unit_value_improvement.trim() !== ''
-          ? parseFloat(formData.improvements[0].unit_value_improvement)
-          : null,
-        market_value_improvement: formData.improvements[0]?.market_value_improvement.trim() !== ''
-          ? parseFloat(formData.improvements[0].market_value_improvement)
-          : null,
-
-        land_appraisals_json: JSON.stringify(formData.landAppraisals),
-        improvements_json: JSON.stringify(formData.improvements),
-        market_values_json: JSON.stringify(formData.marketValues),
-        assessments_json: JSON.stringify(formData.propertyAssessments),
-
-        assessed_value: formData.assessed_value.trim() !== ''
-          ? parseFloat(formData.assessed_value)
-          : null,
-
-        effectivity_year: (formData.effectivity_year?.toString() || "").trim() !== ''
-          ? formData.effectivity_year.toString()
-          : null,
-        taxability: formData.taxability || null,
-        tax_rate: formData.tax_rate.trim() !== ''
-          ? parseFloat(formData.tax_rate)
-          : null,
-
-        land_appraisal_total: formData.land_appraisal_total.trim() !== ''
-          ? parseFloat(formData.land_appraisal_total)
-          : null,
-        improvements_total: formData.improvements_total.trim() !== ''
-          ? parseFloat(formData.improvements_total)
-          : null,
-        adjustment_total: formData.adjustment_total.trim() !== ''
-          ? parseFloat(formData.adjustment_total)
-          : null,
-        assessment_total: formData.assessment_total.trim() !== ''
-          ? parseFloat(formData.assessment_total)
-          : null,
-
-        previous_td_no: formData.previous_td_no || null,
-        previous_owner: formData.previous_owner || null,
-        previous_av_land: formData.previous_av_land.trim() !== ''
-          ? parseFloat(formData.previous_av_land)
-          : null,
-        previous_av_improvements: formData.previous_av_improvements.trim() !== ''
-          ? parseFloat(formData.previous_av_improvements)
-          : null,
-
-        previous_td_no2: formData.previous_td_no2 || null,
-        previous_owner2: formData.previous_owner2 || null,
-        previous_av_land2: formData.previous_av_land2.trim() !== ''
-          ? parseFloat(formData.previous_av_land2)
-          : null,
-        previous_av_improvements2: formData.previous_av_improvements2.trim() !== ''
-          ? parseFloat(formData.previous_av_improvements2)
-          : null,
-
-
-        memoranda: formData.memoranda || null,
-        memoranda_code: formData.memoranda_code || null,
-        memoranda_paragraph: formData.memoranda_paragraph || null,
-      };
-
-      let response;
-
-      if (isEditing) {
-        if (recordStatus === 'draft') {
-          response = await faasAPI.saveAsDraft(id!, requestData);
-        } else if (recordStatus === 'approved') {
-          // If approved, saving as draft means creating a new linked entry (revision)
-          response = await faasAPI.createLinkedEntry(id!, requestData);
-        } else if (isAdmin || recordStatus === 'for_approval' || (recordStatus === 'rejected' && isEncoder)) {
-          response = await faasAPI.updateRecord(id!, requestData);
-        } else {
-          toast({
-            title: "Cannot Save",
-            description: "This record cannot be saved in its current status.",
-            variant: "destructive",
-          });
-          setSaving(false);
-          return;
-        }
-      } else {
-        // Standard new record draft
-        response = await faasAPI.createDraft(requestData);
-      }
-
-      if (response.success) {
-        const becameDraft = response.status === "draft" && recordStatus === "for_approval";
-        if (becameDraft) {
-          setRecordStatus("draft");
-          toast({
-            title: "Saved as Draft",
-            description: "Record withdrawn from pending and saved as draft.",
-          });
-        } else {
-          toast({
-            title: recordStatus === "draft" ? "Draft Saved" : "Record Saved",
-            description: recordStatus === "draft"
-              ? "Your FAAS record has been saved as a draft."
-              : "Your changes have been saved.",
-          });
-        }
-        if (!isEditing && response.data?.id) {
-          navigate(`/faas/${response.data.id}`, { state: { mode: 'view' } });
+        if (!isEditing && savedId) {
+          navigate(`/faas/${savedId}`, { state: { mode: 'view' } });
         }
       }
-
     } catch (error: any) {
       showErrorToast(error, "Save Failed");
     } finally {
@@ -880,92 +888,13 @@ export default function FAASForm() {
 
     try {
       setCreatingLinked(true);
-
-      const requiredFields = [
-        { field: 'pin', label: 'PIN' },
-        { field: 'oct_tct_no', label: 'OCT/TCT No.' },
-        { field: 'owner_name', label: 'Owner Name' },
-        { field: 'owner_address', label: 'Owner Address' },
-        { field: 'property_barangay', label: 'Property Barangay' }
-      ];
-
-      const missingFields = requiredFields.filter(f => !formData[f.field as keyof FAASFormData]?.toString().trim());
-
-      if (missingFields.length > 0) {
-        toast({
-          title: "Required Fields Missing",
-          description: `Please fill in: ${missingFields.map(f => f.label).join(', ')}`,
-          variant: "destructive",
-        });
-        setCreatingLinked(false);
-        return;
-      }
-
-      const requestData = {
-        arf_no: formData.arf_no || null,
-        pin: formData.pin || null,
-        oct_tct_no: formData.oct_tct_no || null,
-        cln: formData.cln || null,
-        owner_name: formData.owner_name,
-        owner_address: formData.owner_address || null,
-        owner_barangay: formData.owner_barangay || null,
-        owner_municipality: formData.owner_municipality || null,
-        owner_province: formData.owner_province || null,
-        administrator_name: formData.administrator_name || null,
-        administrator_address: formData.administrator_address || null,
-        owner_administrator: formData.owner_administrator || null,
-        property_location: formData.property_location || null,
-        property_barangay: formData.property_barangay || null,
-        property_municipality: formData.property_municipality || null,
-        property_province: formData.property_province || null,
-        north_boundary: formData.north_boundary || null,
-        south_boundary: formData.south_boundary || null,
-        east_boundary: formData.east_boundary || null,
-        west_boundary: formData.west_boundary || null,
-        rw_row: formData.rw_row || null,
-        ctc_no: formData.ctc_no || null,
-        ctc_issued_on: formData.ctc_issued_on || null,
-        ctc_issued_at: formData.ctc_issued_at || null,
-
-        land_appraisals_json: JSON.stringify(formData.landAppraisals),
-        improvements_json: JSON.stringify(formData.improvements),
-        market_values_json: JSON.stringify(formData.marketValues),
-        assessments_json: JSON.stringify(formData.propertyAssessments),
-
-        assessed_value: formData.assessed_value.trim() !== '' ? parseFloat(formData.assessed_value) : null,
-        effectivity_year: (formData.effectivity_year?.toString() || "").trim() !== '' ? formData.effectivity_year.toString() : null,
-        taxability: formData.taxability || null,
-        tax_rate: formData.tax_rate.trim() !== '' ? parseFloat(formData.tax_rate) : null,
-
-        land_appraisal_total: formData.land_appraisal_total.trim() !== '' ? parseFloat(formData.land_appraisal_total) : null,
-        improvements_total: formData.improvements_total.trim() !== '' ? parseFloat(formData.improvements_total) : null,
-        adjustment_total: formData.adjustment_total.trim() !== '' ? parseFloat(formData.adjustment_total) : null,
-        assessment_total: formData.assessment_total.trim() !== '' ? parseFloat(formData.assessment_total) : null,
-
-        previous_td_no: formData.previous_td_no || null,
-        previous_owner: formData.previous_owner || null,
-        previous_av_land: formData.previous_av_land.trim() !== '' ? parseFloat(formData.previous_av_land) : null,
-        previous_av_improvements: formData.previous_av_improvements.trim() !== '' ? parseFloat(formData.previous_av_improvements) : null,
-
-        previous_td_no2: formData.previous_td_no2 || null,
-        previous_owner2: formData.previous_owner2 || null,
-        previous_av_land2: formData.previous_av_land2.trim() !== '' ? parseFloat(formData.previous_av_land2) : null,
-        previous_av_improvements2: formData.previous_av_improvements2.trim() !== '' ? parseFloat(formData.previous_av_improvements2) : null,
-
-        memoranda: formData.memoranda || null,
-        memoranda_code: formData.memoranda_code || null,
-        memoranda_paragraph: formData.memoranda_paragraph || null,
-      };
-
-      const response = await faasAPI.createLinkedEntry(id, requestData);
-
-      if (response.success) {
+      const savedId = await performSave();
+      if (savedId && savedId !== id) {
         toast({
           title: "Linked Entry Created",
           description: "New revision has been saved as a linked entry (draft).",
         });
-        // Navigate to the newly created record
-        navigate(`/faas/${response.data.id}/edit`, { state: { mode: 'edit' } });
+        navigate(`/faas/${savedId}/edit`, { state: { mode: 'edit' } });
       }
     } catch (error: any) {
       showErrorToast(error, "Failed to create linked entry");
@@ -979,10 +908,8 @@ export default function FAASForm() {
 
     try {
       setSubmitting(true);
-
       const requiredFields = [
         { field: 'pin', label: 'PIN' },
-        { field: 'oct_tct_no', label: 'OCT/TCT No.' },
         { field: 'owner_name', label: 'Owner Name' },
         { field: 'owner_address', label: 'Owner Address' },
         { field: 'property_barangay', label: 'Property Barangay' }
@@ -1000,202 +927,116 @@ export default function FAASForm() {
         return;
       }
 
-      const requestData = {
-        arf_no: formData.arf_no || null,
-        pin: formData.pin || null,
-        oct_tct_no: formData.oct_tct_no || null,
-        cln: formData.cln || null,
-        owner_name: formData.owner_name,
-        owner_address: formData.owner_address || null,
-        owner_barangay: formData.owner_barangay || null,
-        owner_municipality: formData.owner_municipality || null,
-        owner_province: formData.owner_province || null,
-        administrator_name: formData.administrator_name || null,
-        administrator_address: formData.administrator_address || null,
-        owner_administrator: formData.owner_administrator || null,
-        property_location: formData.property_location || null,
-        property_barangay: formData.property_barangay || null,
-        property_municipality: formData.property_municipality || null,
-        property_province: formData.property_province || null,
-        north_boundary: formData.north_boundary || null,
-        south_boundary: formData.south_boundary || null,
-        east_boundary: formData.east_boundary || null,
-        west_boundary: formData.west_boundary || null,
-        rw_row: formData.rw_row || null,
-        ctc_no: formData.ctc_no || null,
-        ctc_issued_on: formData.ctc_issued_on || null,
-        ctc_issued_at: formData.ctc_issued_at || null,
-
-        classification: formData.landAppraisals[0]?.classification || null,
-        sub_class: formData.landAppraisals[0]?.sub_class || null,
-        area: formData.landAppraisals[0]?.area.trim() !== ''
-          ? parseFloat(formData.landAppraisals[0].area)
-          : null,
-        unit_value_land: formData.landAppraisals[0]?.unit_value_land.trim() !== ''
-          ? parseFloat(formData.landAppraisals[0].unit_value_land)
-          : null,
-        market_value: formData.landAppraisals[0]?.market_value.trim() !== ''
-          ? parseFloat(formData.landAppraisals[0].market_value)
-          : null,
-
-        product_class: formData.improvements[0]?.product_class || null,
-        improvement_qty: formData.improvements[0]?.improvement_qty.trim() !== ''
-          ? parseInt(formData.improvements[0].improvement_qty)
-          : null,
-        unit_value_improvement: formData.improvements[0]?.unit_value_improvement.trim() !== ''
-          ? parseFloat(formData.improvements[0].unit_value_improvement)
-          : null,
-        market_value_improvement: formData.improvements[0]?.market_value_improvement.trim() !== ''
-          ? parseFloat(formData.improvements[0].market_value_improvement)
-          : null,
-
-        land_appraisals_json: JSON.stringify(formData.landAppraisals),
-        improvements_json: JSON.stringify(formData.improvements),
-        market_values_json: JSON.stringify(formData.marketValues),
-        assessments_json: JSON.stringify(formData.propertyAssessments),
-
-        assessed_value: formData.assessed_value.trim() !== ''
-          ? parseFloat(formData.assessed_value)
-          : null,
-
-        effectivity_year: (formData.effectivity_year?.toString() || "").trim() !== ''
-          ? formData.effectivity_year.toString()
-          : null,
-        taxability: formData.taxability || null,
-        tax_rate: formData.tax_rate.trim() !== ''
-          ? parseFloat(formData.tax_rate)
-          : null,
-
-        land_appraisal_total: formData.land_appraisal_total.trim() !== ''
-          ? parseFloat(formData.land_appraisal_total)
-          : null,
-        improvements_total: formData.improvements_total.trim() !== ''
-          ? parseFloat(formData.improvements_total)
-          : null,
-        adjustment_total: formData.adjustment_total.trim() !== ''
-          ? parseFloat(formData.adjustment_total)
-          : null,
-        assessment_total: formData.assessment_total.trim() !== ''
-          ? parseFloat(formData.assessment_total)
-          : null,
-
-        previous_td_no: formData.previous_td_no || null,
-        previous_owner: formData.previous_owner || null,
-        previous_av_land: formData.previous_av_land.trim() !== ''
-          ? parseFloat(formData.previous_av_land)
-          : null,
-        previous_av_improvements: formData.previous_av_improvements.trim() !== ''
-          ? parseFloat(formData.previous_av_improvements)
-          : null,
-
-        previous_td_no2: formData.previous_td_no2 || null,
-        previous_owner2: formData.previous_owner2 || null,
-        previous_av_land2: formData.previous_av_land2.trim() !== ''
-          ? parseFloat(formData.previous_av_land2)
-          : null,
-        previous_av_improvements2: formData.previous_av_improvements2.trim() !== ''
-          ? parseFloat(formData.previous_av_improvements2)
-          : null,
-
-        memoranda: formData.memoranda || null,
-        memoranda_code: formData.memoranda_code || null,
-        memoranda_paragraph: formData.memoranda_paragraph || null,
-      };
+      const requestData = getFormDataForAPI();
 
       if (!id) {
-        toast({
-          title: "Creating Record",
-          description: "Creating FAAS record and generating Excel file...",
-        });
-
         const createResponse = await faasAPI.createRecord(requestData);
-
         if (createResponse.success && createResponse.data?.id) {
-          toast({
-            title: "Submitting for Approval",
-            description: "Your FAAS record is being submitted and Excel is being generated...",
-          });
-
           const submitResponse = await faasAPI.submitForApproval(createResponse.data.id);
-
-          if (submitResponse.success) {
-            if (submitResponse.excelGenerated) {
-              toast({
-                title: "✅ Submitted Successfully",
-                description: "FAAS record submitted for approval and Excel file generated.",
-              });
-            } else {
-              toast({
-                title: "⚠️ Submitted with Warning",
-                description: "Record submitted but Excel generation may have failed.",
-                variant: "destructive",
-              });
-            }
-            navigate("/dashboard");
-          }
-        }
-      } else if (isAdmin || recordStatus === 'draft' || recordStatus === 'for_approval' || (recordStatus === 'rejected' && isEncoder)) {
-        toast({
-          title: "Submitting for Approval",
-          description: "Your FAAS record is being submitted and Excel is being generated...",
-        });
-
-        const updateResponse = await faasAPI.updateRecord(id, requestData);
-
-        if (updateResponse.success) {
-          const submitResponse = await faasAPI.submitForApproval(id);
-
           if (submitResponse.success) {
             toast({
               title: "✅ Submitted Successfully",
-              description: submitResponse.excelGenerated
-                ? "FAAS record submitted for approval and Excel file generated."
-                : "Record submitted successfully (Excel generation warning).",
-            });
-            navigate("/dashboard");
-          }
-        }
-      } else if (recordStatus === 'approved') {
-        toast({
-          title: "Creating Revision",
-          description: "Creating a new linked revision and submitting for approval...",
-        });
-
-        // Create linked entry first
-        const createResponse = await faasAPI.createLinkedEntry(id!, requestData);
-
-        if (createResponse.success && createResponse.data?.id) {
-          const newId = createResponse.data.id;
-          const submitResponse = await faasAPI.submitForApproval(newId);
-
-          if (submitResponse.success) {
-            toast({
-              title: "✅ Revision Submitted",
-              description: "New revision has been created and submitted for approval.",
+              description: "FAAS record submitted for approval.",
             });
             navigate("/dashboard");
           }
         }
       } else {
-        toast({
-          title: "Cannot Submit",
-          description: "This record cannot be submitted. Please check the status.",
-          variant: "destructive",
-        });
-        setSubmitting(false);
+        const updateResponse = await faasAPI.updateRecord(id, requestData);
+        if (updateResponse.success) {
+          const submitResponse = await faasAPI.submitForApproval(id);
+          if (submitResponse.success) {
+            toast({
+              title: "✅ Submitted Successfully",
+              description: "FAAS record submitted for approval.",
+            });
+            navigate("/dashboard");
+          }
+        }
       }
-
     } catch (error: any) {
       showErrorToast(error, "Submission Failed");
       setSubmitting(false);
     }
   };
 
-  const handleGenerateExcel = () => {
-    toast({
-      title: "Excel Generated",
-      description: "The FAAS Excel file has been generated successfully.",
-    });
+  // Check for preview files in state (after redirect from new record save)
+  useEffect(() => {
+    if (location.state?.showGeneratedPreview && location.state?.generatedFiles) {
+      setGeneratedFiles(location.state.generatedFiles);
+      setShowPreviewDialog(true);
+      // Clean up state so it doesn't reappear on reload
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
+
+  const handleGenerateExcel = async () => {
+    try {
+      setPreviewing(true);
+      let currentId = id;
+
+      if (isEditable || !isEditing) {
+        toast({
+          title: "Saving Draft",
+          description: "Saving current data before generating preview...",
+        });
+        const savedId = await performSave();
+        if (!savedId) {
+          setPreviewing(false);
+          return;
+        }
+        currentId = savedId;
+      }
+
+      if (!currentId) {
+        toast({
+          title: "Error",
+          description: "Could not identify record ID",
+          variant: "destructive",
+        });
+        setPreviewing(false);
+        return;
+      }
+
+      toast({
+        title: "Generating Preview",
+        description: "Please wait while we generate the Excel files...",
+      });
+
+      const response = await printAPI.generateFAASExcel(currentId);
+
+      if (response.success && response.data) {
+        // If it was a new record, navigate to the edit page and show the dialog there
+        if (!id && currentId) {
+          navigate(`/faas/${currentId}/edit`, {
+            state: {
+              mode: 'edit',
+              showGeneratedPreview: true,
+              generatedFiles: response.data
+            },
+            replace: true
+          });
+          return;
+        }
+
+        setGeneratedFiles(response.data);
+        setShowPreviewDialog(true);
+        toast({
+          title: "✅ Files Ready",
+          description: "Excel files have been generated for preview.",
+        });
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: response.error || "Failed to generate Excel files",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      showErrorToast(error, "Preview Failed");
+    } finally {
+      setPreviewing(false);
+    }
   };
 
   const getStatusBadge = () => {
@@ -1309,39 +1150,46 @@ export default function FAASForm() {
           </div>
 
           <div className="flex items-center gap-1">
-            {recordStatus === 'approved' && (
-              <Button
-                variant="outline"
-                onClick={handleGenerateExcel}
-                size="sm"
-                className="gap-1 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-50 h-9 px-3"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Generate Excel</span>
-              </Button>
-            )}
-
             {/* View mode actions */}
-            {isEditing && !isEditMode && (isAdmin || isEncoder) && (
+            {isEditing && !isEditMode && (
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setShowDeleteDialog(true)}
+                  onClick={handleGenerateExcel}
                   size="sm"
-                  className="gap-1 rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 h-9 px-3"
+                  className="gap-1 rounded-lg border-emerald-200 text-emerald-600 hover:bg-emerald-50 h-9 px-3"
+                  disabled={previewing}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Delete</span>
+                  {previewing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{previewing ? "Previewing..." : "Preview Excel"}</span>
                 </Button>
-                <Button
-                  variant="default"
-                  onClick={() => setIsEditMode(true)}
-                  size="sm"
-                  className="gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white h-9 px-3"
-                >
-                  <Edit className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Edit Record</span>
-                </Button>
+
+                {(isAdmin || isEncoder) && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowDeleteDialog(true)}
+                      size="sm"
+                      className="gap-1 rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 h-9 px-3"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Delete</span>
+                    </Button>
+                    <Button
+                      variant="default"
+                      onClick={() => setIsEditMode(true)}
+                      size="sm"
+                      className="gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white h-9 px-3"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Edit Record</span>
+                    </Button>
+                  </>
+                )}
               </div>
             )}
 
@@ -1361,8 +1209,9 @@ export default function FAASForm() {
                   className="gap-1 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-50 h-9 px-3"
                 >
                   <X className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{isEditing ? "Cancel" : "Cancel"}</span>
+                  <span className="hidden sm:inline">Cancel</span>
                 </Button>
+
                 <Button
                   variant="outline"
                   onClick={handleSaveDraft}
@@ -1376,6 +1225,21 @@ export default function FAASForm() {
                     <Save className="w-3.5 h-3.5" />
                   )}
                   <span className="hidden sm:inline">{saving ? "Saving..." : "Save Draft"}</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleGenerateExcel}
+                  size="sm"
+                  className="gap-1 rounded-lg border-emerald-200 text-emerald-600 hover:bg-emerald-50 h-9 px-3"
+                  disabled={previewing}
+                >
+                  {previewing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{previewing ? "Previewing..." : "Preview Excel"}</span>
                 </Button>
 
                 {isEditing && (
@@ -1394,6 +1258,21 @@ export default function FAASForm() {
                     <span className="hidden sm:inline">{creatingLinked ? "Creating..." : "Add Linked Entry"}</span>
                   </Button>
                 )}
+
+                <Button
+                  variant="default"
+                  onClick={handleSubmit}
+                  size="sm"
+                  className="gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white h-9 px-3"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{submitting ? "Submitting..." : "Submit for Approval"}</span>
+                </Button>
               </>
             )}
           </div>
@@ -1432,6 +1311,121 @@ export default function FAASForm() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="sm:max-w-[600px] rounded-2xl border-2 border-slate-100 bg-white shadow-2xl p-0 overflow-hidden">
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 px-6 py-8 text-white relative">
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+              <FileSpreadsheet className="w-32 h-32" />
+            </div>
+            <DialogHeader>
+              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-4 border border-white/30 shadow-lg">
+                <CheckCircle2 className="w-6 h-6 text-white" />
+              </div>
+              <DialogTitle className="text-2xl font-bold tracking-tight">Excel Preview Ready</DialogTitle>
+              <DialogDescription className="text-blue-100 font-medium">
+                The Excel files for {formData.owner_name} have been generated. You can now download and review them before submission.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Available Files</p>
+
+            <div className="grid grid-cols-1 gap-3">
+              {generatedFiles?.faas && (
+                <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-blue-400 hover:shadow-md">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white flex-shrink-0">
+                        <FileSpreadsheet className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-slate-900 leading-tight">FAAS Excel</h4>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {generatedFiles.faas.pdfUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-lg border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white h-9 gap-1.5 font-bold transition-all"
+                          onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${generatedFiles.faas.pdfUrl}`, '_blank')}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Preview PDF
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-lg border-slate-200 hover:bg-slate-100 h-9 gap-1.5 font-bold transition-all"
+                        onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${generatedFiles.faas.downloadUrl}`, '_blank')}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {generatedFiles?.unirrig && (
+                <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-orange-400 hover:shadow-md">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-orange-600 transition-colors group-hover:bg-orange-600 group-hover:text-white flex-shrink-0">
+                        <FileSpreadsheet className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-slate-900 leading-tight">TDC Excel</h4>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {generatedFiles.unirrig.pdfUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-lg border-orange-200 text-orange-600 hover:bg-orange-600 hover:text-white h-9 gap-1.5 font-bold transition-all"
+                          onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${generatedFiles.unirrig.pdfUrl}`, '_blank')}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Preview PDF
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-lg border-slate-200 hover:bg-slate-100 h-9 gap-1.5 font-bold transition-all"
+                        onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${generatedFiles.unirrig.downloadUrl}`, '_blank')}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-amber-50 rounded-lg p-3 border border-amber-100 flex gap-2.5">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] leading-normal text-amber-700 font-medium">
+                <span className="font-bold">Note:</span> These files are temporary previews. Re-generating will replace them with the latest form data.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="px-6 py-4 bg-slate-50 border-t border-slate-100">
+            <Button
+              className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 shadow-lg shadow-slate-200"
+              onClick={() => setShowPreviewDialog(false)}
+            >
+              Done Previewing
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="p-4 lg:p-6 max-w-screen-2xl mx-auto">
         {/* Form Header with Municipality Info */}
@@ -1583,7 +1577,7 @@ export default function FAASForm() {
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="oct_tct_no" className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
-                            OCT/TCT No. <span className="text-red-500">*</span>
+                            OCT/TCT No.
                           </Label>
                           <Input
                             id="oct_tct_no"
@@ -2432,6 +2426,6 @@ export default function FAASForm() {
           </CardContent>
         </Card>
       </div>
-    </div >
+    </div>
   );
 }

@@ -339,7 +339,7 @@ class PrintController {
 
       const pool = getConnection();
       const [records] = await pool.execute(
-        'SELECT id, arf_no, owner_name, excel_file_path, unirrig_excel_file_path, pdf_preview_path, unirrig_pdf_preview_path, unirrig_plain_excel_path, unirrig_plain_pdf_path, unirrig_precision_pdf_path FROM faas_records WHERE id = ? AND hidden = 0',
+        'SELECT id, arf_no, owner_name, excel_file_path, unirrig_excel_file_path, pdf_preview_path, unirrig_pdf_preview_path FROM faas_records WHERE id = ? AND hidden = 0',
         [recordId]
       );
       if (records.length === 0) {
@@ -352,7 +352,25 @@ class PrintController {
       const record = records[0];
       console.log(`📊 Generating Excel for: ${record.arf_no}`);
 
-      // Paths
+      // Auto-cleanup: Delete previous preview files if they exist to save space
+      const filesToDelete = [
+        record.excel_file_path,
+        record.unirrig_excel_file_path,
+        record.pdf_preview_path,
+        record.unirrig_pdf_preview_path
+      ];
+
+      filesToDelete.forEach(filePath => {
+        if (filePath && fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+            console.log(`🧹 Deleted old preview file: ${path.basename(filePath)}`);
+          } catch (err) {
+            console.warn(`⚠️ Could not delete old preview file ${filePath}:`, err.message);
+          }
+        }
+      });
+
       const pythonDir = path.resolve(__dirname, '../python');
       const pythonScript = path.join(pythonDir, 'excel_generator.py');
 
@@ -363,18 +381,14 @@ class PrintController {
         });
       }
 
-      // ✅ CHANGED: Use ../python/generated as output path
       const generatedDir = path.join(pythonDir, 'generated');
       if (!fs.existsSync(generatedDir)) {
         fs.mkdirSync(generatedDir, { recursive: true });
       }
 
-      // Build command
-      // Note: we don't pass the outputPath here because the Python script generates its own with timestamp
       const command = `cd "${pythonDir}" && python excel_generator.py --record-id ${recordId} --type both`;
       console.log(`🚀 Command: ${command}`);
 
-      // Execute Python
       exec(command, { cwd: pythonDir }, async (error, stdout, stderr) => {
         console.log('🐍 Python output:', stdout);
 
@@ -388,7 +402,6 @@ class PrintController {
         }
 
         try {
-          // Parse JSON from Python output
           let jsonData = null;
           const lines = stdout.split('\n');
           for (const line of lines) {
@@ -404,122 +417,68 @@ class PrintController {
           }
 
           if (jsonData && (jsonData.success || (jsonData.faas && jsonData.faas.success))) {
-            // Delete old files now that we have success (prevents locking issues but keeps old ones if new one fails)
-            const oldFiles = [
-              record.excel_file_path,
-              record.unirrig_excel_file_path,
-              record.pdf_preview_path,
-              record.unirrig_pdf_preview_path,
-              record.unirrig_plain_excel_path,
-              record.unirrig_plain_pdf_path,
-              record.unirrig_precision_pdf_path
-            ];
-
-            oldFiles.forEach(oldPath => {
-              if (oldPath && fs.existsSync(oldPath)) {
-                try {
-                  // Only delete if the path is different from the new one
-                  const newPaths = [
-                    jsonData.faas ? jsonData.faas.file_path : null,
-                    jsonData.unirrig ? jsonData.unirrig.file_path : null
-                  ];
-                  if (!newPaths.includes(oldPath)) {
-                    fs.unlinkSync(oldPath);
-                    console.log(`🗑️ Deleted replaced file: ${oldPath}`);
-                  }
-                } catch (e) {
-                  console.error(`⚠️ Cleanup error: ${e.message}`);
-                }
-              }
-            });
-
-            // Save file paths to DB
             const faasPath = jsonData.faas ? jsonData.faas.file_path : null;
             const unirrigPath = jsonData.unirrig ? jsonData.unirrig.file_path : null;
 
-            // ✅ Fix
-            const databaseUpdateParams = [faasPath, unirrigPath, recordId];
+            // Generate PDFs for preview
+            const pdfFiles = [];
+            const generatePdf = (excelPath, type) => {
+              if (!excelPath || !fs.existsSync(excelPath)) return Promise.resolve(null);
 
+              const pdfDir = path.join(path.dirname(excelPath), 'generated-pdf');
+              if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+
+              const pdfFilename = path.basename(excelPath).replace('.xlsx', '.pdf');
+              const pdfPath = path.join(pdfDir, pdfFilename);
+
+              const pdfCommand = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${excelPath}" --pdf-path "${pdfPath}"`;
+              console.log(`📄 Generating PDF Preview [${type}]: ${pdfCommand}`);
+
+              return new Promise((resolve) => {
+                exec(pdfCommand, { cwd: pythonDir }, (pdfError, pdfStdout, pdfStderr) => {
+                  if (pdfError) {
+                    console.error(`❌ PDF error [${type}]:`, pdfStderr || pdfError.message);
+                    resolve(null);
+                  } else {
+                    resolve(fs.existsSync(pdfPath) ? pdfPath : null);
+                  }
+                });
+              });
+            };
+
+            const [faasPdfPath, unirrigPdfPath] = await Promise.all([
+              generatePdf(faasPath, 'FAAS'),
+              generatePdf(unirrigPath, 'UNIRRIG')
+            ]);
+
+            // Update DB with Excel and PDF paths
             await pool.execute(
-              'UPDATE faas_records SET excel_file_path = ?, unirrig_excel_file_path = ? WHERE id = ?',
-              databaseUpdateParams
+              'UPDATE faas_records SET excel_file_path = ?, unirrig_excel_file_path = ?, pdf_preview_path = ?, unirrig_pdf_preview_path = ? WHERE id = ?',
+              [faasPath, unirrigPath, faasPdfPath, unirrigPdfPath, recordId]
             );
-
-            if (faasPath) console.log(`✅ FAAS Excel: ${faasPath}`);
-            if (unirrigPath) console.log(`✅ UNIRRIG Excel: ${unirrigPath}`);
 
             return res.json({
               success: true,
-              message: jsonData.success ? 'Both Excel files generated successfully' : 'FAAS Excel generated (UNIRRIG may have failed)',
+              message: 'Excel and PDF previews generated successfully',
               data: {
                 faas: jsonData.faas ? {
-                  filePath: jsonData.faas.file_path,
+                  filePath: faasPath,
                   fileName: jsonData.faas.file_name,
-                  downloadUrl: `/api/print/download/${jsonData.faas.file_name}`
+                  downloadUrl: `/api/print/download/${jsonData.faas.file_name}`,
+                  pdfUrl: faasPdfPath ? `/api/print/files/pdf/FAAS/generated-pdf/${path.basename(faasPdfPath)}` : null
                 } : null,
                 unirrig: jsonData.unirrig ? {
-                  filePath: jsonData.unirrig.file_path,
+                  filePath: unirrigPath,
                   fileName: jsonData.unirrig.file_name,
-                  downloadUrl: `/api/print/download/${jsonData.unirrig.file_name}`
+                  downloadUrl: `/api/print/download/${jsonData.unirrig.file_name}`,
+                  pdfUrl: unirrigPdfPath ? `/api/print/files/pdf/UNIRRIG/generated-pdf/${path.basename(unirrigPdfPath)}` : null
                 } : null,
-                recordId: recordId,
-                arfNo: record.arf_no
-              }
-            });
-          } else if (jsonData && jsonData.success && jsonData.file_path) {
-            // Fallback: Only one file generated (legacy)
-            const filePath = jsonData.file_path;
-            const fileName = jsonData.file_name || path.basename(filePath);
-            await pool.execute(
-              'UPDATE faas_records SET excel_file_path = ? WHERE id = ?',
-              [filePath, recordId]
-            );
-            console.log(`✅ Excel generated by Python: ${filePath}`);
-            return res.json({
-              success: true,
-              message: 'Excel generated successfully',
-              data: {
-                filePath: filePath,
-                fileName: fileName,
-                downloadUrl: `/api/print/download/${fileName}`,
                 recordId: recordId,
                 arfNo: record.arf_no
               }
             });
           } else {
-            // Python didn't return JSON, check if it created a file in subfolders
-            const faasDir = path.join(generatedDir, 'FAAS');
-            const unirrigDir = path.join(generatedDir, 'UNIRRIG');
-
-            let foundFiles = [];
-            if (fs.existsSync(faasDir)) {
-              const files = fs.readdirSync(faasDir);
-              foundFiles = foundFiles.concat(files.filter(f => f.endsWith('.xlsx') && f.includes(record.arf_no)).map(f => path.join(faasDir, f)));
-            }
-
-            if (foundFiles.length > 0) {
-              const latestFile = foundFiles[foundFiles.length - 1];
-              const filePath = latestFile;
-              const fileName = path.basename(filePath);
-              await pool.execute(
-                'UPDATE faas_records SET excel_file_path = ? WHERE id = ?',
-                [filePath, recordId]
-              );
-              console.log(`✅ Found generated Excel: ${filePath}`);
-              return res.json({
-                success: true,
-                message: 'Excel generated successfully (found in subfolder)',
-                data: {
-                  filePath: filePath,
-                  fileName: fileName,
-                  downloadUrl: `/api/print/download/${fileName}`,
-                  recordId: recordId,
-                  arfNo: record.arf_no
-                }
-              });
-            } else {
-              throw new Error('Python script did not generate an Excel file in subfolders');
-            }
+            throw new Error('Python script did not return success status');
           }
         } catch (parseError) {
           console.error('❌ Parse error:', parseError);

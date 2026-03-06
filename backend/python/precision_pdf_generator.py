@@ -15,7 +15,7 @@ TEMPLATE_MAPPING = {
     'Sheet1!B11': {'x': 4.0,  'y': 23.3, 'label': 'Owner'},
     'Sheet1!B13': {'x': 4.3,  'y': 22.75, 'label': 'Admin'},
     'Sheet1!H11': {'x': 12.0, 'y': 23.3, 'label': 'Owner Addr'},
-    'Sheet1!H13': {'x': 12.0, 'y': 22.65, 'label': 'Admin Addr'},
+    'Sheet1!H13': {'x': 12.0, 'y': 22.75, 'label': 'Admin Addr'},
     'Sheet1!C17': {'x': 7.0,  'y': 21.5, 'label': 'Street'},
     'Sheet1!G17': {'x': 10.5, 'y': 21.5, 'label': 'Barangay'},
     'Sheet1!I17': {'x': 16.0, 'y': 21.5, 'label': 'Municipality'},

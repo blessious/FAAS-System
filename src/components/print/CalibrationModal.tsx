@@ -140,10 +140,8 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         // 2. Identify the current stack's baseline (the lowest Y) BEFORE we shift anything
         const originalBaselineY = Math.min(...groupKeys.map(k => mapping[k].y));
 
-        // 3. Determine shift amount (0.45cm for Boundaries, 0.55cm for others)
-        const label = mapping[baseKey]?.label || "";
-        const isBoundary = label.includes("North") || label.includes("East") || label.includes("South") || label.includes("West");
-        const shiftAmount = isBoundary ? 0.45 : 0.55;
+        // 3. Constant shift amount (0.35cm) for all fields
+        const shiftAmount = 0.35;
 
         // 4. Shift EVERY existing line in this group UP (+shiftAmount)
         groupKeys.forEach(key => {
@@ -176,10 +174,8 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         const newMapping = { ...mapping };
         delete newMapping[key];
 
-        // Shift remaining lines in the group back DOWN (-0.45cm for Boundaries, -0.55cm for others)
-        const label = newMapping[baseKey]?.label || "";
-        const isBoundary = label.includes("North") || label.includes("East") || label.includes("South") || label.includes("West");
-        const shiftAmount = isBoundary ? 0.45 : 0.55;
+        // Shift remaining lines in the group back DOWN (-0.35cm)
+        const shiftAmount = 0.35;
 
         const groupLines = Object.keys(newMapping).filter(k => k === baseKey || k.startsWith(`${baseKey}_line`));
         groupLines.forEach(k => {

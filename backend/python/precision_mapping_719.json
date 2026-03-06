@@ -5,29 +5,28 @@
         "label": "PIN (J3)"
     },
     "Sheet1!A7": {
-        "x": 2.5,
-        "y": 24.5,
+        "x": 2,
+        "y": 25,
         "label": "Memoranda Code (A7)"
     },
     "Sheet1!B11": {
         "x": 4,
-        "y": 23.3,
-        "label": "Owner Name (B11)",
-        "text": "AMAPOLA L. LUNA"
+        "y": 23.1,
+        "label": "Owner Name (B11)"
     },
     "Sheet1!B13": {
-        "x": 4.3,
-        "y": 22.75,
+        "x": 4,
+        "y": 22.65,
         "label": "Administrator Name (B13)"
     },
     "Sheet1!H11": {
         "x": 12,
-        "y": 23.3,
+        "y": 29.9,
         "label": "Owner Address (H11)"
     },
     "Sheet1!H13": {
         "x": 12,
-        "y": 22.65,
+        "y": 22.5,
         "label": "Administrator Address (H13)"
     },
     "Sheet1!C17": {
@@ -41,13 +40,13 @@
         "label": "Barangay (G17)"
     },
     "Sheet1!I17": {
-        "x": 16,
+        "x": 16.5,
         "y": 21.5,
         "label": "Municipality (I17)"
     },
     "Sheet1!C19": {
         "x": 5.5,
-        "y": 20.7,
+        "y": 20.6,
         "label": "Title No (C19)"
     },
     "Sheet1!H19": {
@@ -67,13 +66,13 @@
     },
     "Sheet1!B21": {
         "x": 4,
-        "y": 19.75,
+        "y": 20.1,
         "label": "North Boundary (B21)",
-        "text": "NW: 033,211,210,205 (8848,8838-W,8838-V,8838-Q) SPS. CHAREON A. MONTEVIRGEN & JERLYN D. MONTEVIRGEN, ET.AL."
+        "text": "SPS. CHAREON A MONTEVIRGEN & JERLYN D. MONTEVIRGEN, ET. AL"
     },
     "Sheet1!B22": {
         "x": 4,
-        "y": 19.4,
+        "y": 19.3,
         "label": "East Boundary (B22)"
     },
     "Sheet1!I21": {
@@ -83,33 +82,33 @@
     },
     "Sheet1!I22": {
         "x": 12.3,
-        "y": 19.4,
+        "y": 19.2,
         "label": "West Boundary (I22)"
     },
     "Sheet1!E28": {
-        "x": 9.6,
+        "x": 8.8,
         "y": 16.8,
-        "label": "Land 1: Kind"
+        "label": "Table R1 Class (E28)"
     },
     "Sheet1!G28": {
-        "x": 11.6,
+        "x": 11.5,
         "y": 16.8,
-        "label": "Land 1: Area"
+        "label": "Table R1 Area (G28)"
     },
     "Sheet1!H28": {
-        "x": 14,
-        "y": 16.8,
-        "label": "Land 1: Class"
+        "x": 13.5,
+        "y": 16.75,
+        "label": "Table R1 Sub (H28)"
     },
     "Sheet1!I28": {
         "x": 15.5,
-        "y": 16.8,
-        "label": "Land 1: UV"
+        "y": 16.75,
+        "label": "Table R1 Unit (I28)"
     },
     "Sheet1!J28": {
-        "x": 17.65,
-        "y": 16.8,
-        "label": "Land 1: MV"
+        "x": 17.6,
+        "y": 16.75,
+        "label": "Table R1 Market (J28)"
     },
     "Sheet1!E33": {
         "x": 8.2,
@@ -162,9 +161,9 @@
         "label": "Land 4: MV"
     },
     "Sheet1!J36": {
-        "x": 17.65,
-        "y": 13.85,
-        "label": "Total MV Land"
+        "x": 17.8,
+        "y": 13.75,
+        "label": "Total MV (J36)"
     },
     "Sheet1!H42": {
         "x": 12.7,
@@ -311,10 +310,10 @@
         "y": 15.5,
         "label": "Table R4 Market (J31)"
     },
-    "Sheet1!B11_line1772771897706": {
+    "Sheet1!B21_line1772778114912": {
         "x": 4,
-        "y": 23.35,
-        "label": "Owner Name (B11) (Next Line)",
-        "text": "CATALINA L ITURALDE"
+        "y": 19.75,
+        "label": "North Boundary (B21) (Next Line)",
+        "text": "NW: 314 (879 PT.) MARIO R. FESTIN"
     }
 }
