@@ -144,7 +144,7 @@ class PrintController {
 
   async generatePrecisionPrint(req, res) {
     try {
-      const { recordId, blank } = req.body;
+      const { recordId } = req.body;
       if (!recordId) return res.status(400).json({ success: false, error: 'Record ID is required' });
 
       const pool = getConnection();
@@ -163,7 +163,6 @@ class PrintController {
       // Priority: 1. Record-specific mapping, 2. Global Template mapping
       const specificMappingPath = path.resolve(pythonDir, `precision_mapping_${recordId}.json`);
       const templateMappingPath = path.resolve(pythonDir, `precision_mapping.json`);
-      const backgroundPdfPath = path.resolve(pythonDir, 'tax_dec.pdf');
 
       let command = `python precision_pdf_generator.py --excel-path "${excelPath}"`;
 
@@ -171,18 +170,6 @@ class PrintController {
         command += ` --mapping-file "precision_mapping_${recordId}.json"`;
       } else if (fs.existsSync(templateMappingPath)) {
         command += ` --mapping-file "precision_mapping.json"`;
-      }
-
-      // 🖼️ Background: only if it exists AND we are NOT requesting a blank version
-      if (fs.existsSync(backgroundPdfPath) && !blank) {
-        command += ' --template-pdf "tax_dec.pdf"';
-      }
-
-      // 🏷️ Output: differentiate white-paper (blank) version from preview
-      if (blank) {
-        const outDir = path.join(pythonDir, "generated", "PRECISION");
-        const outFilename = `Precision_BLANK_${path.basename(excelPath).replace('.xlsx', '.pdf')}`;
-        command += ` --output "${path.join(outDir, outFilename)}"`;
       }
 
       console.log(`🚀 Precision Print Command: ${command}`);
