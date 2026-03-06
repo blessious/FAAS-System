@@ -120,7 +120,7 @@ class FAASExcelGenerator:
             filename = filename.replace(char, '_')
         while '__' in filename:
             filename = filename.replace('__', '_')
-        return filename.strip('_')
+        return filename.strip('_')[:50]
 
     def number_to_words(self, n):
         if n == 0:

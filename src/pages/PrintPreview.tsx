@@ -36,6 +36,7 @@ interface ApprovedRecord {
   unirrig_plain_excel_path?: string;
   unirrig_plain_pdf_path?: string;
   unirrig_precision_pdf_path?: string;
+  unirrig_precision_blank_pdf_path?: string;
 }
 
 // Extracts the subpath for the API route
@@ -111,6 +112,8 @@ export default function PrintPreview() {
   const [showPlain, setShowPlain] = useState(false);
   const [generatingPrecision, setGeneratingPrecision] = useState(false);
   const [showPrecision, setShowPrecision] = useState(false);
+  const [generatingPrecisionBlank, setGeneratingPrecisionBlank] = useState(false);
+  const [showPrecisionBlank, setShowPrecisionBlank] = useState(false);
   const [showCalibration, setShowCalibration] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -180,8 +183,10 @@ export default function PrintPreview() {
     if (activeTab === 'faas') {
       pdfPath = selectedRecord.pdf_preview_path || '';
     } else {
-      // Use precision if toggled, then plain, then original
-      if (showPrecision) {
+      // Priority: Precision Blank > Precision Template > Plain > Original
+      if (showPrecisionBlank) {
+        pdfPath = selectedRecord.unirrig_precision_blank_pdf_path || '';
+      } else if (showPrecision) {
         pdfPath = selectedRecord.unirrig_precision_pdf_path || '';
       } else if (showPlain) {
         pdfPath = selectedRecord.unirrig_plain_pdf_path || '';
@@ -197,7 +202,7 @@ export default function PrintPreview() {
     // Add a timestamp as a cache-buster to force the iframe/browser to reload the PDF
     const timestamp = new Date().getTime();
     return filename ? `${baseUrl}/api/print/files/pdf/${filename}?t=${timestamp}` : '';
-  }, [selectedRecord, activeTab, showPlain, showPrecision]);
+  }, [selectedRecord, activeTab, showPlain, showPrecision, showPrecisionBlank]);
 
   const handleGeneratePrecision = async () => {
     if (!selectedRecord) return;
@@ -235,6 +240,46 @@ export default function PrintPreview() {
       });
     } finally {
       setGeneratingPrecision(false);
+    }
+  };
+
+  const handleGeneratePrecisionBlank = async () => {
+    if (!selectedRecord) return;
+
+    try {
+      setGeneratingPrecisionBlank(true);
+      toast({
+        title: "Generating Final Version",
+        description: "Preparing blank PDF for your pre-printed stationery...",
+      });
+
+      const response = await printAPI.generatePrecisionPrint(selectedRecord.id, true);
+
+      if (response.success) {
+        toast({
+          title: "Ready for Printing",
+          description: "Black version generated. This will print only the text on your form.",
+        });
+
+        const updatedRecord = {
+          ...selectedRecord,
+          unirrig_precision_blank_pdf_path: response.data.pdfPath
+        };
+        setSelectedRecord(updatedRecord);
+        setApprovedRecords(prev => prev.map(r => r.id === selectedRecord.id ? updatedRecord : r));
+        setShowPrecisionBlank(true);
+        setShowPrecision(false);
+        setShowPlain(false);
+      }
+    } catch (error: any) {
+      console.error('Error generating precision blank print:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.error || "Failed to generate blank version",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPrecisionBlank(false);
     }
   };
 
@@ -700,8 +745,10 @@ export default function PrintPreview() {
                           }}
                           disabled={generatingPlain || generatingPrecision}
                           className={cn(
-                            "gap-2 rounded-lg h-9",
-                            showPlain ? "bg-amber-100 text-amber-700 border-amber-200" : "border-slate-200 text-slate-600"
+                            "gap-2 rounded-lg h-9 transition-all duration-200",
+                            showPlain
+                              ? "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200 hover:text-amber-800"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50/80 hover:text-slate-900"
                           )}
                         >
                           {generatingPlain ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 text-amber-500" />}
@@ -720,16 +767,43 @@ export default function PrintPreview() {
                               } else {
                                 setShowPrecision(!showPrecision);
                                 setShowPlain(false);
+                                setShowPrecisionBlank(false);
                               }
                             }}
-                            disabled={generatingPrecision || generatingPlain}
+                            disabled={generatingPrecision || generatingPlain || generatingPrecisionBlank}
                             className={cn(
-                              "gap-2 rounded-lg h-9",
-                              showPrecision ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "border-slate-200 text-slate-600 bg-white"
+                              "gap-2 rounded-lg h-9 transition-all duration-200",
+                              showPrecision
+                                ? "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200 hover:text-emerald-800"
+                                : "border-slate-200 text-slate-600 bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
                             )}
                           >
                             {generatingPrecision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 text-emerald-500" />}
                             <span>{showPrecision ? "Show Original" : "Precision (Shoot)"}</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant={showPrecisionBlank ? "secondary" : "outline"}
+                            onClick={() => {
+                              if (!selectedRecord?.unirrig_precision_blank_pdf_path) {
+                                handleGeneratePrecisionBlank();
+                              } else {
+                                setShowPrecisionBlank(!showPrecisionBlank);
+                                setShowPrecision(false);
+                                setShowPlain(false);
+                              }
+                            }}
+                            disabled={generatingPrecision || generatingPlain || generatingPrecisionBlank}
+                            className={cn(
+                              "gap-2 rounded-lg h-9 transition-all duration-200",
+                              showPrecisionBlank
+                                ? "bg-slate-200 text-slate-800 border-slate-300 hover:bg-slate-300"
+                                : "border-slate-200 text-slate-600 bg-white hover:bg-slate-100 hover:text-slate-900"
+                            )}
+                          >
+                            {generatingPrecisionBlank ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 text-slate-500" />}
+                            <span>{showPrecisionBlank ? "Show Original" : "Precision (Blank)"}</span>
                           </Button>
 
                           <Button
@@ -923,6 +997,7 @@ export default function PrintPreview() {
         open={showCalibration}
         onOpenChange={setShowCalibration}
         recordId={selectedRecord?.id}
+        recordData={selectedRecord}
         onCalibrated={() => {
           if (selectedRecord) {
             // New flow: Clear the path and hide the preview so user must click Shoot again

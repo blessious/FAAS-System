@@ -11,8 +11,9 @@
     },
     "Sheet1!B11": {
         "x": 4,
-        "y": 23.3,
-        "label": "Owner Name (B11)"
+        "y": 24.4,
+        "label": "Owner Name (B11)",
+        "text": "AMAPOLA L. LUNA, CATALINA L ITURALDE, JOSE L. QUERUBIN"
     },
     "Sheet1!B13": {
         "x": 4.3,
@@ -66,8 +67,9 @@
     },
     "Sheet1!B21": {
         "x": 4,
-        "y": 20.5,
-        "label": "North Boundary (B21)"
+        "y": 19.75,
+        "label": "North Boundary (B21)",
+        "text": "NW: 033,211,210,205 (8848,8838-W,8838-V,8838-Q) SPS. CHAREON A. MONTEVIRGEN & JERLYN D. MONTEVIRGEN, ET.AL."
     },
     "Sheet1!B22": {
         "x": 4,
@@ -308,5 +310,17 @@
         "x": 17.6,
         "y": 15.5,
         "label": "Table R4 Market (J31)"
+    },
+    "Sheet1!B11_line1772764547463": {
+        "x": 4,
+        "y": 23.85,
+        "label": "Owner Name (B11) (Next Line)",
+        "text": "IRENEO B. LAGUIO, MILAGROSA L. QUERUBIN, PERFECTO A.S."
+    },
+    "Sheet1!B11_line1772764554854": {
+        "x": 4,
+        "y": 23.3,
+        "label": "Owner Name (B11) (Next Line)",
+        "text": "LAGUIO, PERFECTO LAGUIO JR. AND RUFINO A.S. LAGUIO"
     }
 }

@@ -2,11 +2,13 @@ import os
 import sys
 import json
 import argparse
+import tempfile
 from reportlab.lib.units import cm, inch
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from openpyxl import load_workbook
+from pypdf import PdfReader, PdfWriter
 
 # 🎯 MASTER TEMPLATE - Default coordinates (CM from Bottom-Left)
 TEMPLATE_MAPPING = {
@@ -93,7 +95,7 @@ class PrecisionPDFGenerator:
                 self.font_name = name
             except: pass
 
-    def generate(self, excel_path, output_path=None):
+    def generate(self, excel_path, output_path=None, template_pdf=None):
         if not os.path.exists(excel_path):
             return {"success": False, "error": "Excel missing"}
         
@@ -102,85 +104,70 @@ class PrecisionPDFGenerator:
             os.makedirs(out_dir, exist_ok=True)
             output_path = os.path.join(out_dir, f"Precision_{os.path.basename(excel_path).replace('.xlsx', '.pdf')}")
 
+        # If template is used, generate text into a temporary file first
+        target_file = output_path
+        if template_pdf and os.path.exists(template_pdf):
+            temp_handle, temp_pdf_path = tempfile.mkstemp(suffix=".pdf")
+            os.close(temp_handle)
+            target_file = temp_pdf_path
+
         try:
             wb = load_workbook(excel_path, data_only=True)
-            c = canvas.Canvas(output_path, pagesize=self.paper_size)
+            c = canvas.Canvas(target_file, pagesize=self.paper_size)
             
             fields_processed = 0
             for key, coord in self.mapping.items():
                 try:
-                    sn, addr = key.split('!')
-                    if sn not in wb.sheetnames:
-                        sn_lower = sn.lower()
-                        real_sn = next((s for s in wb.sheetnames if s.lower() == sn_lower), None)
-                        if real_sn: sn = real_sn
-                        else: continue
-                    
-                    # Normal Cell Reading
-                    val = wb[sn][addr].value
-                    if val is None or str(val).strip() == "": continue
-                    
-                    text = str(val)
-                    # Percentage conversion for specific G cells
-                    if addr in ['G44', 'G47', 'G49', 'G52']:
-                        try:
-                            num_val = float(val)
-                            text = f"{num_val * 100:.0f}%" if num_val <= 1.0 else f"{num_val:.0f}%"
-                        except: pass
-                    # 🚀 No decimal places for plant Area (I42)
-                    elif addr == 'I42':
-                        try: text = f"{int(float(val))}"
-                        except: pass
-                    # 🚀 2 decimal places for Currency/Calculated MV (I, J, K columns)
-                    elif any(col in addr for col in ['I', 'J', 'K']):
-                        try: text = f"{float(val):,.2f}"
-                        except: pass
-                    
-                    # 🚀 Fix for J36: Calculate Total MV manually if Excel version is blank
-                    if addr == 'J28': # We trigger this during the loop across J cells
-                        total_mv = 0.0
-                        for row_idx in range(28, 36):
-                            cell_val = wb[sn][f'J{row_idx}'].value
-                            try: total_mv += float(cell_val or 0)
+                    sn, addr = None, None
+                    if '!' in key:
+                        sn, addr = key.split('!')
+                        # Strip _line suffix for Excel reading
+                        if '_line' in addr:
+                            addr = addr.split('_line')[0]
+
+                    text = coord.get('text')
+                    if text is None:
+                        if not sn: continue
+                        
+                        if sn not in wb.sheetnames:
+                            sn_lower = sn.lower()
+                            real_sn = next((s for s in wb.sheetnames if s.lower() == sn_lower), None)
+                            if real_sn: sn = real_sn
+                            else: continue
+                        
+                        val = wb[sn][addr].value
+                        if val is None or str(val).strip() == "": continue
+                        
+                        text = str(val)
+                        if addr in ['G44', 'G47', 'G49', 'G52']:
+                            try:
+                                num_val = float(val)
+                                text = f"{num_val * 100:.0f}%" if num_val <= 1.0 else f"{num_val:.0f}%"
                             except: pass
-                        # Set manual text for J36 if it was missing
-                        if 'Sheet1!J36' in self.mapping:
-                            x_j36, y_j36 = self.mapping['Sheet1!J36']['x'] * cm, self.mapping['Sheet1!J36']['y'] * cm
-                            c.saveState()
-                            c.translate(x_j36, y_j36)
-                            t_j = c.beginText(0, 0)
-                            t_j.setFont(self.font_name, 10.5)
-                            t_j.setTextRenderMode(2)
-                            c.setLineWidth(0.3)
-                            t_j.setHorizScale(75)
-                            t_j.textLine(f"{total_mv:,.2f}")
-                            c.drawText(t_j)
-                            c.restoreState()
+                        elif addr == 'I42':
+                            try: text = f"{int(float(val))}"
+                            except: pass
+                        elif addr and any(col in addr for col in ['I', 'J', 'K']):
+                            try: text = f"{float(val):,.2f}"
+                            except: pass
+                    
+                    if not text or str(text).strip() == "": continue
                     
                     x, y = coord['x'] * cm, coord['y'] * cm
-                    # 🚀 Dynamic Y for North Boundary (B21)
-                    if key == 'Sheet1!B21':
-                        if len(text) >= 50: 
-                            y -= 0.5 * cm
-                        else:
-                            y = 19.40 * cm
-
                     c.saveState()
-                    # Apply transformation to the canvas
                     c.translate(x, y)
                     c.scale(0.75, 1.0)
                     
-                    # Use a text object for bold rendering
-                    t = c.beginText(0, 0) # Positioned at 0,0 because of translate
-                    t.setFont(self.font_name, 10.5)
+                    fs = coord.get('fontSize', 10.5)
+                    t = c.beginText(0, 0)
+                    t.setFont(self.font_name, fs)
                     t.setFillColorRGB(0, 0, 0)
-                    t.setTextRenderMode(2) # Fill + Stroke
+                    t.setTextRenderMode(2) 
                     c.setLineWidth(0.35)
                     c.setStrokeColorRGB(0, 0, 0)
                     
                     if "Total" in str(coord.get('label','')):
-                        # For Centered, we use standard canvas
-                        c.setFont(self.font_name, 10.5)
+                        c.setFont(self.font_name, fs)
                         c.drawCentredString(0, 0, text)
                     else:
                         t.textOut(text)
@@ -193,6 +180,33 @@ class PrecisionPDFGenerator:
                     continue
 
             c.save()
+
+            # Merge with template if requested
+            if template_pdf and os.path.exists(template_pdf):
+                try:
+                    reader_template = PdfReader(template_pdf)
+                    reader_text = PdfReader(target_file)
+                    writer = PdfWriter()
+
+                    # Merge first page
+                    page = reader_template.pages[0]
+                    if len(reader_text.pages) > 0:
+                        page.merge_page(reader_text.pages[0])
+                    
+                    writer.add_page(page)
+                    with open(output_path, "wb") as f:
+                        writer.write(f)
+                    
+                    # Cleanup temp file
+                    if target_file != output_path:
+                        try: os.remove(target_file)
+                        except: pass
+                except Exception as merge_ex:
+                    sys.stderr.write(f"ERROR merging PDF: {merge_ex}\n")
+                    # If merge fails, at least we have the text-only output_path was target_file
+                    if target_file != output_path:
+                        os.rename(target_file, output_path)
+
             return {
                 "success": True, 
                 "fields_count": fields_processed,
@@ -206,5 +220,8 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument('--excel-path', required=True)
     p.add_argument('--mapping-file')
+    p.add_argument('--template-pdf')
+    p.add_argument('--output')
     a = p.parse_args()
-    print(json.dumps(PrecisionPDFGenerator(a.mapping_file).generate(a.excel_path)))
+    gen = PrecisionPDFGenerator(a.mapping_file)
+    print(json.dumps(gen.generate(a.excel_path, output_path=a.output, template_pdf=a.template_pdf)))

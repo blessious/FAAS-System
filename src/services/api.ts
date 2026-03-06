@@ -192,8 +192,8 @@ export const printAPI = {
   generatePlainPrint: (recordId: string | number): Promise<any> =>
     api.post('/print/generate-plain', { recordId }),
 
-  generatePrecisionPrint: (recordId: string | number): Promise<any> =>
-    api.post('/print/generate-precision', { recordId }),
+  generatePrecisionPrint: (recordId: string | number, blank: boolean = false): Promise<any> =>
+    api.post('/print/generate-precision', { recordId, blank }),
 
   getGeneratedFiles: (recordId: string | number): Promise<any> =>
     api.get(`/print/files/${recordId}`),

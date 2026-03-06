@@ -144,7 +144,7 @@ class PrintController {
 
   async generatePrecisionPrint(req, res) {
     try {
-      const { recordId } = req.body;
+      const { recordId, blank } = req.body;
       if (!recordId) return res.status(400).json({ success: false, error: 'Record ID is required' });
 
       const pool = getConnection();
@@ -160,12 +160,29 @@ class PrintController {
       const excelPath = records[0].unirrig_excel_file_path;
       const pythonDir = path.resolve(__dirname, '../python');
 
-      // Check if a record-specific mapping exists
+      // Priority: 1. Record-specific mapping, 2. Global Template mapping
       const specificMappingPath = path.resolve(pythonDir, `precision_mapping_${recordId}.json`);
+      const templateMappingPath = path.resolve(pythonDir, `precision_mapping.json`);
+      const backgroundPdfPath = path.resolve(pythonDir, 'tax_dec.pdf');
+
       let command = `python precision_pdf_generator.py --excel-path "${excelPath}"`;
 
       if (fs.existsSync(specificMappingPath)) {
         command += ` --mapping-file "precision_mapping_${recordId}.json"`;
+      } else if (fs.existsSync(templateMappingPath)) {
+        command += ` --mapping-file "precision_mapping.json"`;
+      }
+
+      // 🖼️ Background: only if it exists AND we are NOT requesting a blank version
+      if (fs.existsSync(backgroundPdfPath) && !blank) {
+        command += ' --template-pdf "tax_dec.pdf"';
+      }
+
+      // 🏷️ Output: differentiate white-paper (blank) version from preview
+      if (blank) {
+        const outDir = path.join(pythonDir, "generated", "PRECISION");
+        const outFilename = `Precision_BLANK_${path.basename(excelPath).replace('.xlsx', '.pdf')}`;
+        command += ` --output "${path.join(outDir, outFilename)}"`;
       }
 
       console.log(`🚀 Precision Print Command: ${command}`);
@@ -771,6 +788,7 @@ class PrintController {
       const pool = getConnection();
       const [records] = await pool.execute(`
       SELECT 
+        f.*,
         f.id,
         f.arf_no,
         f.pin,
@@ -781,13 +799,6 @@ class PrintController {
         f.assessed_value,
         f.created_at,
         f.approval_date as approved_at,
-        f.excel_file_path,
-        f.unirrig_excel_file_path,
-        f.pdf_preview_path,
-        f.unirrig_pdf_preview_path,
-        f.unirrig_plain_excel_path,
-        f.unirrig_plain_pdf_path,
-        f.unirrig_precision_pdf_path,
         ue.full_name as encoder_name,
         ue.profile_picture as encoder_profile_picture,
         ua.full_name as approver_name,
