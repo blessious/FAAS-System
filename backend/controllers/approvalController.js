@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
 const printController = require('./printController');
+const { createNotification } = require('../utils/notifications');
 
 // Helper function for PDF generation
 async function generatePDF(recordId, excelFilePath) {
@@ -201,6 +202,17 @@ class ApprovalController {
         });
       }
 
+      // Add notification for the encoder
+      if (record && record.encoder_id) {
+        await createNotification(
+          record.encoder_id,
+          userId,
+          'RECORD_APPROVED',
+          `Your FAAS record ${record.arf_no || id} has been approved by ${req.user.fullName || req.user.username}`,
+          id
+        );
+      }
+
       res.json({
         success: true,
         message: 'Record approved successfully'
@@ -272,6 +284,17 @@ class ApprovalController {
           },
           timestamp: new Date().toISOString()
         });
+      }
+
+      // Add notification for the encoder
+      if (record && record.encoder_id) {
+        await createNotification(
+          record.encoder_id,
+          userId,
+          'RECORD_REJECTED',
+          `Your FAAS record ${record.arf_no || id} has been rejected by ${req.user.fullName || req.user.username}. Reason: ${comment}`,
+          id
+        );
       }
 
       res.json({
@@ -437,6 +460,17 @@ class ApprovalController {
           },
           timestamp: new Date().toISOString()
         });
+      }
+
+      // Add notification for the encoder
+      if (record && record.encoder_id) {
+        await createNotification(
+          record.encoder_id,
+          userId,
+          'ACTION_CANCELLED',
+          `The approval action for your record ${record.arf_no || id} was cancelled by ${req.user.fullName || req.user.username}. It is now back to pending.`,
+          id
+        );
       }
 
       res.json({

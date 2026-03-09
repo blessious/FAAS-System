@@ -3,6 +3,7 @@ const printController = require('./printController');
 const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
+const { createNotification, notifyAll, notifyRoles } = require('../utils/notifications');
 
 // Helper function for PDF generation (unchanged)
 async function generatePDF(recordId, excelFilePath) {
@@ -404,6 +405,14 @@ class FAASController {
         });
       }
 
+      // Add notification
+      await notifyAll(
+        userId,
+        'RECORD_CREATED',
+        `${req.user.fullName || req.user.username} created a new FAAS record: ${arf_no || 'Unknown'}`,
+        result.insertId
+      );
+
       res.status(201).json({
         success: true,
         message: 'FAAS record created successfully',
@@ -672,6 +681,14 @@ class FAASController {
         });
       }
 
+      // Add notification
+      await notifyAll(
+        userId,
+        'RECORD_UPDATED',
+        `${req.user.fullName || req.user.username} updated FAAS record ${record.arf_no || id}`,
+        id
+      );
+
       res.json({
         success: true,
         message: newStatus === 'draft' && record.status === 'for_approval'
@@ -847,6 +864,15 @@ class FAASController {
           timestamp: new Date().toISOString()
         });
       }
+
+      // Add notification for approvers and admins
+      await notifyRoles(
+        ['approver', 'administrator'],
+        userId,
+        'RECORD_SUBMITTED',
+        `${req.user.fullName || req.user.username} submitted FAAS record ${record.arf_no || id} for approval`,
+        id
+      );
 
       res.json({
         success: true,

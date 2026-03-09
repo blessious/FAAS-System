@@ -17,6 +17,7 @@ router.get('/download/:filename', printController.downloadFile); // Fallback for
 router.get('/files/:recordId', printController.getGeneratedFiles);
 router.get('/approved', printController.getApprovedRecords);
 router.put('/release/:id', printController.releaseRecord);
+router.put('/release/:id/cancel', printController.cancelRelease);
 router.get('/released-history', printController.getReleasedRecords);
 
 // Calibration routes

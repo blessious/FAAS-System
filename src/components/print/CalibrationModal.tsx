@@ -117,10 +117,115 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         if (l.includes("south")) return recordData.south_boundary || "";
         if (l.includes("west")) return recordData.west_boundary || "";
 
-        if (l.includes("total mv land")) return recordData.market_value || "";
-        if (l.includes("total mv plants")) return recordData.total_market_value_plants || "";
+        // 5. SHEET 2 TOTALS (L36-L39)
+        const formatVal = (v: any) => {
+            if (v === null || v === undefined || v === "") return "";
+            const num = parseFloat(String(v).replace(/,/g, ''));
+            return isNaN(num) ? "" : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
 
-        // 5. Final fallback - check recordData keys directly
+        const getNumeric = (v: any) => {
+            if (v === null || v === undefined || v === "") return 0;
+            const num = parseFloat(String(v).replace(/,/g, ''));
+            return isNaN(num) ? 0 : num;
+        };
+
+        const mround = (num: number, mult: number) => {
+            if (!num || !mult) return 0;
+            return Math.round(num / mult) * mult;
+        };
+
+        // Manual recalculation to match Excel/PDF generator exactly
+        let totalLandVal = 0;
+        landAppraisals.forEach((item: any) => {
+            totalLandVal += getNumeric(item.market_value || item.marketValue);
+        });
+
+        let totalImprVal = 0;
+        improvements.forEach((item: any) => {
+            // Improvements use 'market_value_improvement' in JSON, but sometimes 'market_value'
+            totalImprVal += getNumeric(item.market_value_improvement || item.market_value || item.marketValue);
+        });
+
+        // Use direct recordData properties as fallbacks if manual sum is 0
+        const l36_base = totalLandVal || getNumeric(recordData.land_appraisal_total || recordData.market_value);
+        const l37_base = totalImprVal || getNumeric(recordData.improvements_total || recordData.total_market_value_improvements || recordData.market_value_improvement);
+
+        // Apply Percent Adjustment if present (usually index 0 in marketValues)
+        let pctAdj = 0;
+        if (marketValues.length > 0) {
+            pctAdj = getNumeric(marketValues[0].percent_adjustment) / 100;
+        }
+
+        const l36_val = (pctAdj !== 0) ? mround(l36_base * pctAdj, 10) : l36_base;
+        const l37_val = (pctAdj !== 0) ? mround(l37_base * pctAdj, 10) : l37_base;
+        const l38_val = l36_val + l37_val;
+
+        if (k.includes("l36")) return formatVal(l36_val);
+        if (k.includes("l37")) return formatVal(l37_val);
+        if (k.includes("l38")) return formatVal(l38_val);
+        if (k.includes("l39")) return recordData.owner_administrator || recordData.owner_name || "";
+
+        if (l.includes("total land mv") || l.includes("total mv land")) return formatVal(l36_val);
+        if (l.includes("total impr mv")) return formatVal(l37_val);
+        if (l.includes("total mv plants") || l.includes("total plant mv")) return formatVal(totalImprVal);
+
+        // 6. SHEET 2 (PAGE 2) MAPPINGS
+        const getFormattedDate = (dateStr: string | null | undefined) => {
+            if (!dateStr) return null;
+            try {
+                const d = new Date(dateStr);
+                return isNaN(d.getTime()) ? null : d;
+            } catch (e) { return null; }
+        };
+
+        const apprDate = getFormattedDate(recordData.approval_date || recordData.approved_at);
+        const ctcDate = getFormattedDate(recordData.ctc_issued_on);
+
+        if (l.includes("sworn")) {
+            if (!apprDate) return "";
+            if (l.includes("day")) {
+                const day = apprDate.getDate();
+                const suffix = ["th", "st", "nd", "rd"][(day % 10 > 3 || Math.floor(day % 100 / 10) === 1) ? 0 : day % 10];
+                return `${day}${suffix}`;
+            }
+            if (l.includes("month")) return apprDate.toLocaleDateString('default', { month: 'long' });
+            if (l.includes("year")) return apprDate.getFullYear().toString().slice(-2);
+        }
+
+        if (l.includes("ctc no") || k.includes("ctc_no")) return recordData.ctc_no || "";
+        if (l.includes("ctc month")) {
+            if (!ctcDate) return "";
+            return `${ctcDate.toLocaleDateString('default', { month: 'long' })} ${ctcDate.getDate()},`;
+        }
+        if (l.includes("ctc year")) return ctcDate ? ctcDate.getFullYear().toString().slice(-2) : "";
+        if (l.includes("ctc issued at") || k.includes("ctc_issued_at")) return recordData.ctc_issued_at || "";
+
+        if (l.includes("prev td")) return recordData.previous_td_no || recordData.previous_td || "";
+        if (l.includes("eff year")) return recordData.effectivity_year || "";
+        if (l.includes("prev owner")) return recordData.previous_owner || "";
+        if (l.includes("prev land av")) return formatVal(recordData.previous_av_land);
+        if (l.includes("prev impr av")) return formatVal(recordData.previous_av_improvements);
+        if (l.includes("total prev av") || k.includes("l71")) {
+            const sum = getNumeric(recordData.previous_av_land) + getNumeric(recordData.previous_av_improvements);
+            return sum > 0 ? formatVal(sum) : "";
+        }
+        if (l.includes("words")) return recordData.total_market_value_words || "";
+
+        const assmMatch = l.match(/assm\s+(\d+)/);
+        if (assmMatch) {
+            const index = parseInt(assmMatch[1]) - 1;
+            const item = assessments[index];
+            if (item) {
+                if (l.includes("kind")) return item.actual_use_name || item.classification || "";
+                if (l.includes("use")) return item.actual_use_code || "";
+                if (l.includes("mv")) return item.market_value || "";
+                if (l.includes("lvl")) return item.assessment_level || "";
+                if (l.includes("av")) return item.assessed_value || "";
+            }
+        }
+
+        // 7. Final fallback - check recordData keys directly
         const cleanLabel = l.replace(/\s+/g, '_');
         if (recordData[cleanLabel] !== undefined) return String(recordData[cleanLabel]);
 
@@ -338,34 +443,52 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                         <div className="space-y-2">
                             <Label htmlFor="field-select" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Select Field to Adjust</Label>
                             <Select value={selectedField} onValueChange={setSelectedField}>
-                                <SelectTrigger id="field-select" className="border-slate-200 bg-slate-50/50 h-10 w-full">
-                                    <SelectValue placeholder="Choose a field" />
+                                <SelectTrigger id="field-select" className="border-slate-200 bg-slate-50/50 h-12 w-full">
+                                    <div className="flex flex-col items-start overflow-hidden">
+                                        <div className="text-[11px] font-bold text-slate-900 truncate w-full">
+                                            {selectedField ? (mapping[selectedField]?.label || selectedField).split('(')[0].trim() : "Choose a field"}
+                                        </div>
+                                        {selectedField && (
+                                            <div className="text-[9px] text-emerald-600 font-medium truncate w-full italic">
+                                                {getActualValue(selectedField, mapping[selectedField]?.label)}
+                                            </div>
+                                        )}
+                                    </div>
                                 </SelectTrigger>
                                 <SelectContent className="max-h-[80vh] w-[220px]">
                                     {(() => {
                                         const groups: { [key: string]: [string, MappingItem][] } = {
-                                            "General Details": [],
-                                            "Boundaries": [],
-                                            "Land Appraisal (I)": [],
-                                            "Plants & Trees": [],
-                                            "Land Appraisal (II)": [],
+                                            "Page 1: General": [],
+                                            "Page 1: Boundaries": [],
+                                            "Page 1: Appraisal": [],
+                                            "Page 2: Sworn/CTC": [],
+                                            "Page 2: Assessment": [],
+                                            "Page 2: Previous": [],
                                             "Others": []
                                         };
 
                                         Object.entries(mapping).forEach(([key, item]) => {
                                             const label = item.label || key;
-                                            if (label.includes("North") || label.includes("East") || label.includes("South") || label.includes("West")) {
-                                                groups["Boundaries"].push([key, item]);
-                                            } else if (label.includes("Land 1") || label.includes("Land 3") || label.includes("Land 4") || label.includes("Total MV Land")) {
-                                                groups["Land Appraisal (I)"].push([key, item]);
-                                            } else if (label.includes("Plant") || label.includes("Total MV Plants")) {
-                                                groups["Plants & Trees"].push([key, item]);
-                                            } else if (label.includes("Land II")) {
-                                                groups["Land Appraisal (II)"].push([key, item]);
-                                            } else if (["PIN", "Memoranda", "Owner", "Admin", "Street", "Barangay", "Municipality", "Title", "Lot No"].some(k => label.includes(k))) {
-                                                groups["General Details"].push([key, item]);
+                                            const sn = key.startsWith("Sheet2") ? "Page 2" : "Page 1";
+
+                                            if (sn === "Page 1") {
+                                                if (label.includes("North") || label.includes("East") || label.includes("South") || label.includes("West")) {
+                                                    groups["Page 1: Boundaries"].push([key, item]);
+                                                } else if (label.includes("Land") || label.includes("Total MV") || label.includes("Plant")) {
+                                                    groups["Page 1: Appraisal"].push([key, item]);
+                                                } else {
+                                                    groups["Page 1: General"].push([key, item]);
+                                                }
                                             } else {
-                                                groups["Others"].push([key, item]);
+                                                if (label.includes("Sworn") || label.includes("CTC")) {
+                                                    groups["Page 2: Sworn/CTC"].push([key, item]);
+                                                } else if (label.includes("Assm") || label.includes("L36") || label.includes("L37") || label.includes("L38") || label.includes("L39") || label.includes("Words")) {
+                                                    groups["Page 2: Assessment"].push([key, item]);
+                                                } else if (label.includes("Prev")) {
+                                                    groups["Page 2: Previous"].push([key, item]);
+                                                } else {
+                                                    groups["Others"].push([key, item]);
+                                                }
                                             }
                                         });
 
@@ -375,11 +498,24 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                                                     <SelectLabel className="px-2 py-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50/50 uppercase tracking-widest">
                                                         {groupName}
                                                     </SelectLabel>
-                                                    {items.map(([key, item]) => (
-                                                        <SelectItem key={key} value={key}>
-                                                            {item.label || key}
-                                                        </SelectItem>
-                                                    ))}
+                                                    {items.map(([key, item]) => {
+                                                        const displayLabel = (item.label || key).split('(')[0].trim();
+                                                        const value = getActualValue(key, item.label);
+                                                        return (
+                                                            <SelectItem key={key} value={key}>
+                                                                <div className="flex flex-col items-start py-0.5">
+                                                                    <span className="font-bold text-[11px] text-slate-900 group-hover:text-emerald-700 transition-colors">
+                                                                        {displayLabel}
+                                                                    </span>
+                                                                    {value && (
+                                                                        <span className="text-[9px] text-slate-400 font-medium truncate max-w-[180px] italic">
+                                                                            {value}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </SelectItem>
+                                                        );
+                                                    })}
                                                 </SelectGroup>
                                             )
                                         ));

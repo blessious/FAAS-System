@@ -23,6 +23,10 @@ interface ApprovedRecord {
   classification: string;
   market_value: number;
   assessed_value: number;
+  land_appraisal_total?: number;
+  improvements_total?: number;
+  total_market_value_plants?: number;
+  owner_administrator?: string;
   created_at: string;
   approved_at: string;
   approver_name: string;
@@ -36,6 +40,16 @@ interface ApprovedRecord {
   unirrig_plain_excel_path?: string;
   unirrig_plain_pdf_path?: string;
   unirrig_precision_pdf_path?: string;
+  land_appraisals_json?: string | any[];
+  improvements_json?: string | any[];
+  market_values_json?: string | any[];
+  assessments_json?: string | any[];
+  north_boundary?: string;
+  south_boundary?: string;
+  east_boundary?: string;
+  west_boundary?: string;
+  approval_date?: string;
+  ctc_issued_on?: string;
 }
 
 // Extracts the subpath for the API route
@@ -206,7 +220,7 @@ export default function PrintPreview() {
       setGeneratingPrecision(true);
       toast({
         title: "Generating Precision Version",
-        description: "Placing text at exact coordinates for pre-printed boxes...",
+        description: "Placing text at exact coordinates for both Sheet 1 and Sheet 2...",
       });
 
       const response = await printAPI.generatePrecisionPrint(selectedRecord.id);
@@ -849,52 +863,6 @@ export default function PrintPreview() {
                   )}
                 </div>
 
-                {/* Record Details Summary */}
-                <div className="mt-6 bg-gradient-to-br from-slate-50 to-emerald-50/30 rounded-xl p-5 border border-slate-100 flex-shrink-0">
-                  <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                    Record Information
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Owner Name</label>
-                      <p className="font-semibold text-slate-900 flex items-center gap-1.5 uppercase">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        {selectedRecord.owner_name}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">PIN (Property Index Number)</label>
-                      <p className="font-bold text-emerald-600">{selectedRecord.pin || "N/A"}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Encoded By</label>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Avatar className="w-6 h-6 border border-slate-200">
-                          {selectedRecord.encoder_profile_picture ? (
-                            <AvatarImage
-                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${selectedRecord.encoder_profile_picture}`}
-                              className="object-cover"
-                            />
-                          ) : null}
-                          <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
-                            {selectedRecord.encoder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <p className="font-medium text-slate-700">
-                          {selectedRecord.encoder_name}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Date Submitted</label>
-                      <p className="font-medium text-slate-700 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {formatDate(selectedRecord.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           ) : (

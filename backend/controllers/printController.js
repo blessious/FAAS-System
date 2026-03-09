@@ -2,6 +2,7 @@ const { exec } = require('child_process');
 const path = require('path');
 const { getConnection } = require('../utils/database');
 const fs = require('fs');
+const { notifyAll } = require('../utils/notifications');
 
 class PrintController {
   // Serve PDF files from any subfolder under generated
@@ -826,6 +827,56 @@ class PrintController {
       res.status(500).json({
         success: false,
         error: 'Failed to release record'
+      });
+    }
+  }
+
+  async cancelRelease(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      if (!id) {
+        return res.status(400).json({ success: false, error: 'Record ID is required' });
+      }
+
+      console.log(`↩️ Cancelling release for record ${id} by user ${userId}`);
+
+      const pool = getConnection();
+
+      // Update the record: clear release info
+      const [result] = await pool.execute(`
+        UPDATE faas_records 
+        SET 
+          released_at = NULL,
+          released_by = NULL,
+          updated_at = NOW()
+        WHERE id = ? AND status = 'approved' AND released_at IS NOT NULL
+      `, [id]);
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Record not found or is not currently released'
+        });
+      }
+
+      // Log activity
+      await pool.execute(`
+        INSERT INTO activity_log (user_id, action, table_name, record_id, description)
+        VALUES (?, 'CANCEL_RELEASE', 'faas_records', ?, 'Cancelled release of record (reverted to print preview)')
+      `, [userId, id]);
+
+      res.json({
+        success: true,
+        message: 'Release cancelled successfully. Record is now back in Print Preview.'
+      });
+
+    } catch (error) {
+      console.error('❌ Cancel release error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to cancel release'
       });
     }
   }

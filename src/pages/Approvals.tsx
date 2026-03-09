@@ -382,53 +382,6 @@ const PreviewPanel = ({
           </div>
         </div>
 
-        {/* Record Details */}
-        <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-xl p-5 mb-6 border border-slate-100">
-          <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
-            Record Information
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Owner Name</label>
-              <p className="font-semibold text-slate-900 flex items-center gap-1.5 uppercase">
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                {selectedRecord.owner_name}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">PIN (Property Index Number)</label>
-              <p className="font-bold text-blue-600">{selectedRecord.pin || "N/A"}</p>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Encoded By</label>
-              <div className="flex items-center gap-2 mt-0.5">
-                <Avatar className="w-6 h-6 border border-slate-200">
-                  {(selectedRecord.updater_profile_picture || selectedRecord.encoder_profile_picture) ? (
-                    <AvatarImage
-                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${selectedRecord.updater_profile_picture || selectedRecord.encoder_profile_picture}`}
-                      className="object-cover"
-                    />
-                  ) : null}
-                  <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
-                    {(selectedRecord.updater_name || selectedRecord.encoder_name || '??').split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <p className="font-medium text-slate-700">
-                  {selectedRecord.updater_name || selectedRecord.encoder_name}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Date Submitted</label>
-              <p className="font-medium text-slate-700 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                {formatDate(selectedRecord.updated_at || selectedRecord.created_at)}
-              </p>
-            </div>
-          </div>
-        </div>
-
         <Separator className="my-4 bg-slate-200" />
 
         {/* Action Buttons */}

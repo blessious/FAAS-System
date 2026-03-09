@@ -65,6 +65,41 @@ TEMPLATE_MAPPING = {
     'Sheet1!J29': {'x': 17.6,'y': 16.3,  'label': 'Land 2: MV'},
     'Sheet1!E30': {'x': 8.8, 'y': 15.95, 'label': 'Land 3 alternative'}, 
     'Sheet1!G30': {'x': 11.5,'y': 15.95, 'label': 'Land 3 alternative Area'},
+    'Sheet2!L36': {'x': 14.1, 'y': 14.1, 'label': 'Total Land MV'},
+    'Sheet2!L37': {'x': 14.1, 'y': 14.3, 'label': 'Total Impr MV'},
+    'Sheet2!L38': {'x': 14.1, 'y': 14.7, 'label': 'L38'},
+    'Sheet2!E42': {'x': 9.2,  'y': 11.4, 'label': 'Sworn Day'},
+    'Sheet2!G42': {'x': 11.9, 'y': 11.4, 'label': 'Sworn Month'},
+    'Sheet2!I42': {'x': 16.2, 'y': 11.4, 'label': 'Sworn Year'},
+    'Sheet2!G43': {'x': 11.3, 'y': 11.0, 'label': 'CTC No'},
+    'Sheet2!J43': {'x': 15.9, 'y': 11.0, 'label': 'CTC Month'},
+    'Sheet2!B44': {'x': 2.4,  'y': 10.7, 'label': 'CTC Year'},
+    'Sheet2!D44': {'x': 3.6,  'y': 10.7, 'label': 'CTC Issued At'},
+    'Sheet2!A54': {'x': 2.1,  'y': 6.9,  'label': 'Assm 1 Kind'},
+    'Sheet2!A55': {'x': 2.1,  'y': 6.5,  'label': 'Assm 2 Kind'},
+    'Sheet2!A56': {'x': 2.1,  'y': 6.1,  'label': 'Assm 3 Kind'},
+    'Sheet2!A57': {'x': 2.1,  'y': 5.7,  'label': 'Assm 4 Kind'},
+    'Sheet2!D54': {'x': 5.4,  'y': 6.9,  'label': 'Assm 1 Use'},
+    'Sheet2!D55': {'x': 5.4,  'y': 6.5,  'label': 'Assm 2 Use'},
+    'Sheet2!D56': {'x': 5.4,  'y': 6.1,  'label': 'Assm 3 Use'},
+    'Sheet2!D57': {'x': 5.4,  'y': 5.7,  'label': 'Assm 4 Use'},
+    'Sheet2!G54': {'x': 9.0,  'y': 6.9,  'label': 'Assm 1 MV'},
+    'Sheet2!G55': {'x': 9.0,  'y': 6.5,  'label': 'Assm 2 MV'},
+    'Sheet2!G56': {'x': 9.0,  'y': 6.1,  'label': 'Assm 3 MV'},
+    'Sheet2!G57': {'x': 9.0,  'y': 5.7,  'label': 'Assm 4 MV'},
+    'Sheet2!K54': {'x': 12.9, 'y': 6.9,  'label': 'Assm 1 Lvl'},
+    'Sheet2!K55': {'x': 12.9, 'y': 6.5,  'label': 'Assm 2 Lvl'},
+    'Sheet2!K56': {'x': 12.9, 'y': 6.1,  'label': 'Assm 3 Lvl'},
+    'Sheet2!K57': {'x': 12.9, 'y': 5.7,  'label': 'Assm 4 Lvl'},
+    'Sheet2!M54': {'x': 16.2, 'y': 6.8,  'label': 'Assm 1 AV'},
+    'Sheet2!D59': {'x': 9.2,  'y': 5.3,  'label': 'Words'},
+    'Sheet2!E67': {'x': 10.8, 'y': 2.3,  'label': 'Prev TD'},
+    'Sheet2!B69': {'x': 2.8,  'y': 1.6,  'label': 'Eff Year'},
+    'Sheet2!E69': {'x': 7.7,  'y': 1.6,  'label': 'Prev Owner'},
+    'Sheet2!E70': {'x': 8.0,  'y': 0.8,  'label': 'Prev Land AV'},
+    'Sheet2!H70': {'x': 13.3, 'y': 0.5,  'label': 'Prev Impr AV'},
+    'Sheet2!L71': {'x': 16.0, 'y': 0.5,  'label': 'Total Prev AV'},
+    'Sheet2!L39': {'x': 14.1, 'y': 15.0, 'label': 'Owner/Administrator'},
 }
 
 class PrecisionPDFGenerator:
@@ -107,12 +142,40 @@ class PrecisionPDFGenerator:
             c = canvas.Canvas(output_path, pagesize=self.paper_size)
             
             fields_processed = 0
-            for key, coord in self.mapping.items():
+            current_sheet = None
+            
+            # Sort mapping by sheet name to group fields together (Sheet1 then Sheet2)
+            sorted_mapping = dict(sorted(self.mapping.items(), key=lambda item: item[0]))
+            
+            for key, coord in sorted_mapping.items():
                 try:
                     text = coord.get('text')
                     sn, addr = None, None
                     if '!' in key:
                         sn, addr = key.split('!')
+                        
+                        # Trigger Page 2 (Sheet 2) only when we first encounter a Sheet 2 field that HAS data
+                        if current_sheet == 'Sheet1' and sn == 'Sheet2':
+                            # Check if Sheet 2 actually exists and has at least one valid value to print
+                            # to avoid creating a blank second page
+                            has_sheet2_data = False
+                            for k2, v2 in sorted_mapping.items():
+                                if k2.startswith('Sheet2!'):
+                                    addr2 = k2.split('!')[1]
+                                    if '_line' in addr2: continue
+                                    if 'Sheet2' in wb.sheetnames and wb['Sheet2'][addr2].value:
+                                        has_sheet2_data = True
+                                        break
+                            
+                            if has_sheet2_data:
+                                c.showPage()
+                                # Reset transformation for new page
+                                c.setStrokeColorRGB(0, 0, 0)
+                                c.setFillColorRGB(0, 0, 0)
+                                c.setLineWidth(0.5)
+
+                        current_sheet = sn
+
                         # Strip _line suffix for Excel reading
                         if '_line' in addr:
                             addr = addr.split('_line')[0]
@@ -137,8 +200,8 @@ class PrecisionPDFGenerator:
                                 num_val = float(val)
                                 text = f"{num_val * 100:.0f}%" if num_val <= 1.0 else f"{num_val:.0f}%"
                             except: pass
-                        # 🚀 No decimal places for plant Area (I42)
-                        elif addr == 'I42':
+                        # 🚀 No decimal places for plant Area (I42) and K19/K20
+                        elif addr in ['I42', 'K19', 'K20']:
                             try: text = f"{int(float(val))}"
                             except: pass
                         # 🚀 2 decimal places for Currency/Calculated MV (I, J, K columns)
@@ -167,10 +230,10 @@ class PrecisionPDFGenerator:
                             t_j = c.beginText(0, 0)
                             t_j.setFont(self.font_name, fs_j36)
                             t_j.setTextRenderMode(2)
-                            c.setLineWidth(0.3)
+                            c.setLineWidth(0.5)
                             t_j.setHorizScale(75)
+                            t_j.textOut(f"{running_total:,.2f}")
                             c.drawText(t_j)
-                            c.drawString(0,0, f"{running_total:,.2f}")
                             c.restoreState()
                     
                     x, y = coord['x'] * cm, coord['y'] * cm
@@ -186,13 +249,16 @@ class PrecisionPDFGenerator:
                     t.setFont(self.font_name, fs)
                     t.setFillColorRGB(0, 0, 0)
                     t.setTextRenderMode(2) # Fill + Stroke
-                    c.setLineWidth(0.35)
+                    c.setLineWidth(0.5)
                     c.setStrokeColorRGB(0, 0, 0)
                     
                     if "Total" in str(coord.get('label','')):
                         # For Centered, we use standard canvas
                         c.setFont(self.font_name, fs)
+                        c.setTextRenderMode(2)
+                        c.setLineWidth(0.5)
                         c.drawCentredString(0, 0, text)
+                        c.setTextRenderMode(0)
                     else:
                         t.textOut(text)
                         c.drawText(t)

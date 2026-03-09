@@ -53,8 +53,25 @@ function broadcastSSE(event, data) {
   console.log(`📡 Broadcast '${event}' to ${sentCount} connections`);
 }
 
-// Make broadcast function available globally
+function sendToUserSSE(userId, event, data) {
+  const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  let sentCount = 0;
+  const userClients = sseClients.get(String(userId));
+  if (userClients) {
+    userClients.forEach(client => {
+      try {
+        client.res.write(message);
+        sentCount++;
+      } catch (error) {
+        console.error(`Error sending SSE to user ${userId}:`, error);
+      }
+    });
+  }
+}
+
+// Make functions available globally
 global.broadcastSSE = broadcastSSE;
+global.sendToUserSSE = sendToUserSSE;
 // ============================================
 
 // Middleware
@@ -141,6 +158,8 @@ const printRoutes = require('./routes/print');
 const dashboardRoutes = require('./routes/dashboard');
 const pdfViewerRoutes = require('./routes/pdfViewer');
 const usersRoutes = require('./routes/users');
+const notificationRoutes = require('./routes/notifications');
+const chatRoutes = require('./routes/chat');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -150,6 +169,8 @@ app.use('/api/print', printRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/pdf', pdfViewerRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat', chatRoutes);
 
 // File serving routes (add these BEFORE the health check)
 const path = require('path');

@@ -16,64 +16,67 @@ def generate_ruler_pdf(output_path):
     # Draw vertical lines
     for x_mm in range(0, int(width / (0.1 * cm)) + 1):
         x = x_mm * 0.1
-        if x_mm % 10 == 0: # 1cm (Solid)
-            c.setDash([], 0) # Reset to solid
-            val = int(x)
-            if val % 5 == 0:
-                c.setStrokeColorRGB(1, 0, 0)  # Red for every 5cm
-                c.setLineWidth(1.0)
-            else:
-                c.setStrokeColorRGB(1, 0.4, 0.4)  # Lighter red for every 1cm
-                c.setLineWidth(0.5)
+        c.setDash([], 0) # All solid
+        
+        if x_mm % 10 == 0: # 1cm
+            c.setStrokeColorRGB(1, 0, 0) # Primary Red
+            c.setLineWidth(0.8)
             c.line(x * cm, 0, x * cm, height)
             
             # CM labels
-            if val > 0:
-                c.setFont("Helvetica-Bold", 7)
-                c.setFillColorRGB(0.8, 0, 0)
-                c.drawString(x * cm + 2, 5, f"{x}")
-                c.drawString(x * cm + 2, height / 2, f"{x}")
-        else: # 1mm (Broken Lines)
-            c.setDash(1, 2) # 1pt dash, 2pt gap
-            c.setStrokeColorRGB(0.8, 0.8, 0.8) # Light gray
+            if int(x) > 0:
+                c.setFont("Helvetica-Bold", 8)
+                c.setFillColorRGB(1, 0, 0)
+                c.drawString(x * cm + 1, 10, f"{int(x)}")
+                c.drawString(x * cm + 1, height - 15, f"{int(x)}")
+        else: # 1mm (Sub-centimeter)
+            c.setStrokeColorRGB(1, 0.7, 0.7) # Lighter Red for sub-grid
             c.setLineWidth(0.2)
             c.line(x * cm, 0, x * cm, height)
+            
+            # Sub-indicators (.1 to .9)
+            if x < 2: # Only label first few cm to avoid clutter
+                val = x_mm % 10
+                c.setFont("Helvetica", 5)
+                c.setFillColorRGB(1, 0.5, 0.5)
+                c.drawString(x * cm + 0.5, 2, f".{val}")
+                c.drawString(x * cm + 0.5, height - 8, f".{val}")
 
     # Draw horizontal lines
     for y_mm in range(0, int(height / (0.1 * cm)) + 1):
         y = y_mm * 0.1
-        if y_mm % 10 == 0: # 1cm (Solid)
-            c.setDash([], 0)
-            val = int(y)
-            if val % 5 == 0:
-                c.setStrokeColorRGB(1, 0, 0)
-                c.setLineWidth(1.0)
-            else:
-                c.setStrokeColorRGB(1, 0.4, 0.4)
-                c.setLineWidth(0.5)
+        c.setDash([], 0)
+        
+        if y_mm % 10 == 0: # 1cm
+            c.setStrokeColorRGB(1, 0, 0)
+            c.setLineWidth(0.8)
             c.line(0, y * cm, width, y * cm)
             
             # CM labels
-            if val > 0:
-                c.setFont("Helvetica-Bold", 7)
-                c.setFillColorRGB(0.8, 0, 0)
-                c.drawString(5, y * cm + 2, f"{y}")
-                c.drawString(width / 2, y * cm + 2, f"{y}")
-        else: # 1mm (Broken Lines)
-            c.setDash(1, 2)
-            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            if int(y) > 0:
+                c.setFont("Helvetica-Bold", 8)
+                c.setFillColorRGB(1, 0, 0)
+                c.drawString(10, y * cm + 1, f"{int(y)}")
+                c.drawString(width - 20, y * cm + 1, f"{int(y)}")
+        else: # 1mm (Sub-centimeter)
+            c.setStrokeColorRGB(1, 0.7, 0.7)
             c.setLineWidth(0.2)
             c.line(0, y * cm, width, y * cm)
+            
+            # Sub-indicators (.1 to .9)
+            if y < 2: # Only label first few cm to avoid clutter
+                val = y_mm % 10
+                c.setFont("Helvetica", 5)
+                c.setFillColorRGB(1, 0.5, 0.5)
+                c.drawString(2, y * cm + 0.5, f".{val}")
+                c.drawString(width - 15, y * cm + 0.5, f".{val}")
 
-    # Reset dash for final elements
-    c.setDash([], 0)
-    
-    # Draw coordinate labels at intersections (every 2cm)
-    c.setFont("Helvetica-Bold", 5)
+    # Draw coordinate labels at intersections (every 5cm for clarity)
+    c.setFont("Helvetica-Bold", 6)
     c.setFillColorRGB(1, 0, 0)
-    for x in range(2, int(width / cm), 2):
-        for y in range(2, int(height / cm), 2):
-            c.drawString(x * cm + 5, y * cm + 5, f"({x},{y})")
+    for x in range(5, int(width / cm), 5):
+        for y in range(5, int(height / cm), 5):
+            c.drawString(x * cm + 2, y * cm + 2, f"({x},{y})")
 
     c.save()
     print(f"Ruler PDF generated at: {output_path}")

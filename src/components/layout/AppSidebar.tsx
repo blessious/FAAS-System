@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext.jsx";
+import { NotificationBell } from "./NotificationBell";
+import { ChatWindow } from "./ChatWindow";
 
 const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["encoder", "approver", "administrator"] },
@@ -90,21 +92,27 @@ export function AppSidebar() {
         "px-4 mb-6 mt-5 transition-all duration-300",
         collapsed ? "opacity-0 h-0 overflow-hidden mb-0 mt-0" : "opacity-100"
       )}>
-        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
-          <Avatar className="w-10 h-10 border border-slate-200 shrink-0 shadow-sm">
-            {user?.profile_picture ? (
-              <AvatarImage
-                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${user.profile_picture}`}
-                className="object-cover"
-              />
-            ) : null}
-            <AvatarFallback className="bg-blue-50 text-xs font-bold text-blue-600">
-              {userName.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="font-bold text-sm text-slate-800 truncate">{userName}</p>
-            <p className="text-[11px] font-medium text-slate-400 truncate">{displayRole}</p>
+        <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-4">
+          <div className="flex items-center justify-between w-full">
+            <Avatar className="w-12 h-12 border-2 border-white shrink-0 shadow-sm">
+              {user?.profile_picture ? (
+                <AvatarImage
+                  src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${user.profile_picture}`}
+                  className="object-cover"
+                />
+              ) : null}
+              <AvatarFallback className="bg-blue-600 text-white font-bold text-sm">
+                {userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex items-center gap-1.5">
+              <ChatWindow />
+              <NotificationBell />
+            </div>
+          </div>
+          <div className="min-w-0 text-center">
+            <p className="font-extrabold text-base text-slate-900 leading-tight">{userName}</p>
+            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">{displayRole}</p>
           </div>
         </div>
       </div>
@@ -142,7 +150,14 @@ export function AppSidebar() {
       </div>
 
       {/* Footer / Logout */}
-      <div className="p-4 mt-auto border-t border-slate-100">
+      <div className="p-4 mt-auto border-t border-slate-100 space-y-3">
+        {collapsed && (
+          <div className="flex flex-col items-center gap-4">
+            <ChatWindow />
+            <NotificationBell />
+          </div>
+        )}
+
         <Button
           variant="ghost"
           onClick={handleLogout}

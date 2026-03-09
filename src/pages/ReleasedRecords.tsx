@@ -259,6 +259,29 @@ export default function ReleasedRecords() {
         }, 500);
     };
 
+    const handleCancelRelease = async (id: string) => {
+        if (!window.confirm("Are you sure you want to cancel the release of this record? It will be moved back to Print Preview.")) {
+            return;
+        }
+
+        try {
+            await printAPI.cancelRelease(id);
+            toast({
+                title: "Release Cancelled",
+                description: "Record has been moved back to Print Preview.",
+            });
+            setSelectedRecord(null);
+            fetchReleasedRecords(); // Refresh the list
+        } catch (error: any) {
+            console.error('Cancel release error:', error);
+            toast({
+                title: "Error",
+                description: error.error || "Failed to cancel release",
+                variant: "destructive",
+            });
+        }
+    };
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-PH', {
             year: 'numeric',
@@ -508,6 +531,15 @@ export default function ReleasedRecords() {
                                             <Printer className="w-4 h-4" />
                                             Reprint
                                         </Button>
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleCancelRelease(selectedRecord.id)}
+                                            variant="outline"
+                                            className="gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg h-9"
+                                        >
+                                            <RotateCcw className="w-4 h-4" />
+                                            Cancel
+                                        </Button>
                                     </div>
                                 </div>
                             </CardHeader>
@@ -596,40 +628,6 @@ export default function ReleasedRecords() {
                                     )}
                                 </div>
 
-                                {/* Record Details Summary */}
-                                <div className="mt-6 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-xl p-5 border border-slate-100 flex-shrink-0">
-                                    <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                        <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
-                                        Historical Record Summary
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Owner Name</label>
-                                            <p className="font-semibold text-slate-900 flex items-center gap-1.5 uppercase">
-                                                <User className="w-3.5 h-3.5 text-slate-400" />
-                                                {selectedRecord.owner_name}
-                                            </p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">PIN</label>
-                                            <p className="font-bold text-blue-600">{selectedRecord.pin || "N/A"}</p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Released By</label>
-                                            <p className="font-medium text-slate-700 flex items-center gap-1.5">
-                                                <User className="w-3.5 h-3.5 text-slate-400" />
-                                                {selectedRecord.released_by_name}
-                                            </p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Date Released</label>
-                                            <p className="font-medium text-slate-700 flex items-center gap-1.5">
-                                                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                                {formatDate(selectedRecord.released_at)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
                             </CardContent>
                         </Card>
                     ) : (
@@ -658,6 +656,6 @@ export default function ReleasedRecords() {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

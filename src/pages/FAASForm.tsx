@@ -471,7 +471,7 @@ export default function FAASForm() {
     };
   };
 
-  const performSave = async (skipValidation = false) => {
+  const performSave = async (skipValidation = false, forceCreateLinked = false) => {
     if (!skipValidation) {
       const requiredFields = [
         { field: 'pin', label: 'PIN' },
@@ -496,7 +496,9 @@ export default function FAASForm() {
     let response;
 
     if (isEditing) {
-      if (recordStatus === 'draft') {
+      if (forceCreateLinked) {
+        response = await faasAPI.createLinkedEntry(id!, requestData);
+      } else if (recordStatus === 'draft') {
         response = await faasAPI.saveAsDraft(id!, requestData);
       } else if (recordStatus === 'approved') {
         response = await faasAPI.createLinkedEntry(id!, requestData);
@@ -515,7 +517,7 @@ export default function FAASForm() {
         // But for the purpose of preview, we need the ID.
         return response.data.id;
       }
-      return id || response.data?.id;
+      return response.data?.id || id || response.data?.id;
     }
     return null;
   };
@@ -872,7 +874,7 @@ export default function FAASForm() {
             ? "Your FAAS record has been saved as a draft."
             : "Your changes have been saved.",
         });
-        if (!isEditing && savedId) {
+        if (savedId && savedId !== id) {
           navigate(`/faas/${savedId}`, { state: { mode: 'view' } });
         }
       }
@@ -888,13 +890,13 @@ export default function FAASForm() {
 
     try {
       setCreatingLinked(true);
-      const savedId = await performSave();
+      const savedId = await performSave(false, true);
       if (savedId && savedId !== id) {
         toast({
           title: "Linked Entry Created",
           description: "New revision has been saved as a linked entry (draft).",
         });
-        navigate(`/faas/${savedId}/edit`, { state: { mode: 'edit' } });
+        navigate("/dashboard");
       }
     } catch (error: any) {
       showErrorToast(error, "Failed to create linked entry");

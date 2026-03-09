@@ -743,7 +743,7 @@ class FAASExcelGenerator:
                 self.safe_write_cell(sheet2, 'B69', record.get('effectivity_year', ''))
                 self.safe_write_cell(sheet2, 'E69', record.get('previous_owner', ''))
                 self.safe_write_cell(sheet2, 'E70', self.safe_float(record.get('previous_av_land'), default=None))
-                self.safe_write_cell(sheet2, 'I70', self.safe_float(record.get('previous_av_improvements'), default=None))
+                self.safe_write_cell(sheet2, 'H70', self.safe_float(record.get('previous_av_improvements'), default=None))
 
                 self.safe_write_cell(sheet2, 'A71', record.get('previous_owner2', ''))
                 

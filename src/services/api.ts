@@ -207,6 +207,9 @@ export const printAPI = {
   releaseRecord: (id: string | number): Promise<any> =>
     api.put(`/print/release/${id}`),
 
+  cancelRelease: (id: string | number): Promise<any> =>
+    api.put(`/print/release/${id}/cancel`),
+
   getReleasedHistory: (): Promise<any[]> =>
     api.get('/print/released-history'),
 
@@ -251,6 +254,27 @@ export const usersAPI = {
 
   getUserProfile: (): Promise<any> =>
     api.get('/users/profile'),
+};
+
+// Notifications API
+export const notificationAPI = {
+  getNotifications: (): Promise<any[]> =>
+    api.get('/notifications'),
+
+  markAsRead: (id: string | number): Promise<any> =>
+    api.put(`/notifications/read/${id}`),
+
+  markAllAsRead: (): Promise<any> =>
+    api.put('/notifications/read-all'),
+};
+
+// Chat API
+export const chatAPI = {
+  getMessages: (): Promise<any[]> =>
+    api.get('/chat'),
+
+  sendMessage: (message: string): Promise<any> =>
+    api.post('/chat', { message }),
 };
 
 // Helper functions
