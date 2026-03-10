@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Save, RotateCcw, Loader2, Gauge, LayoutTemplate } from "lucide-react";
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Save, RotateCcw, Loader2, Gauge, LayoutTemplate, Search, X } from "lucide-react";
 import { printAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,7 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [step, setStep] = useState<number>(0.1); // Precision step in cm
+    const [searchQuery, setSearchQuery] = useState<string>("");
 
     // Helper to get actual value from recordData based on mapping label
     const getActualValue = (id: string, label: string) => {
@@ -50,7 +51,25 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         const l = (label || "").toLowerCase();
         const k = id.toLowerCase();
 
-        // 2. Parse JSON fields for lookup safely
+        // 2. Define helper functions FIRST (before they're used)
+        const formatVal = (v: any) => {
+            if (v === null || v === undefined || v === "") return "";
+            const num = parseFloat(String(v).replace(/,/g, ''));
+            return isNaN(num) ? "" : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        const getNumeric = (v: any) => {
+            if (v === null || v === undefined || v === "") return 0;
+            const num = parseFloat(String(v).replace(/,/g, ''));
+            return isNaN(num) ? 0 : num;
+        };
+
+        const mround = (num: number, mult: number) => {
+            if (!num || !mult) return 0;
+            return Math.round(num / mult) * mult;
+        };
+
+        // 3. Parse JSON fields for lookup safely
         const parseSafely = (val: any) => {
             if (!val) return [];
             if (typeof val === 'object') return val; // Already parsed by backend/driver
@@ -67,31 +86,66 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         const marketValues = parseSafely(recordData.market_values_json);
         const assessments = parseSafely(recordData.assessments_json);
 
-        // 3. Regex matching for List Items (Land 1, Table R2, etc.)
-        // Case: "Land 1: Kind" or "Land 1 Area"
+        // 4. Regex matching for List Items
+        // Case: "Table R1 Class", "Table R2 Sub", etc. → land appraisals
+        const tableRMatch = l.match(/table\s+r(\d+)/);
+        if (tableRMatch) {
+            const index = parseInt(tableRMatch[1]) - 1; // R1=0, R2=1, etc.
+            const item = landAppraisals[index];
+            if (item) {
+                if (l.includes("sub")) return item.sub_class || "";
+                if (l.includes("class")) return item.classification || "";
+                if (l.includes("area")) return item.area || "";
+                if (l.includes("unit")) return formatVal(item.unit_value_land || item.unit_value || "");
+                if (l.includes("market")) return formatVal(item.market_value || "");
+            }
+            return "";
+        }
+
+        // Case: "Land 1: Kind" or "Land 1 Area" (backward compat)
         const landMatch = l.match(/land\s+(\d+)/);
         if (landMatch) {
             const index = parseInt(landMatch[1]) - 1;
             const item = landAppraisals[index];
             if (item) {
-                if (l.includes("kind") || l.includes("class")) return item.classification || item.kind || "";
+                if (l.includes("kind")) return item.classification || item.kind || "";
+                if (l.includes("class") && !l.includes("kind")) return item.sub_class || "";
                 if (l.includes("area")) return item.area || "";
-                if (l.includes("uv") || l.includes("unit")) return item.unit_value || "";
-                if (l.includes("mv") || l.includes("market")) return item.market_value || "";
+                if (l.includes("uv") || l.includes("unit")) return formatVal(item.unit_value_land || item.unit_value || "");
+                if (l.includes("mv") || l.includes("market")) return formatVal(item.market_value || "");
             }
         }
 
-        // Case: "Table R2 Class"
-        const tableMatch = l.match(/r(\d+)/);
-        if (tableMatch) {
-            const index = parseInt(tableMatch[1]) - 2; // R2 is index 0 in sub-table usually
+        // Case: "Plant: Kind", "Plant: Area", "Plant: UV", "Plant: MV" (rows 42-45, column K for MV)
+        const plantMatch = l.match(/plant(?:\s+(\d+))?/);
+        if (plantMatch && !l.includes("adj")) {
+            const index = plantMatch[1] ? parseInt(plantMatch[1]) - 1 : 0;
             const item = improvements[index];
             if (item) {
-                if (l.includes("class")) return item.product_class || "";
+                if (l.includes("kind") || l.includes("class")) return item.product_class || "";
                 if (l.includes("area") || l.includes("qty")) return item.improvement_qty || "";
-                if (l.includes("unit")) return item.unit_value_improvement || "";
-                if (l.includes("market")) return item.market_value || "";
+                if (l.includes("uv") || l.includes("unit")) return item.unit_value_improvement || "";
+                if (l.includes("mv") || l.includes("market")) {
+                    const mv = getNumeric(item.market_value || item.market_value_improvement || 0);
+                    return mv > 0 ? formatVal(mv) : "";
+                }
             }
+        }
+
+        // Plant Adjustment Percentages (G44, G47, G49, G52) - show as percentages
+        if (l.includes("plant adj") && l.includes("%")) {
+            const adjMatch = l.match(/adj\s+(\d+)/);
+            if (adjMatch && marketValues.length > 0) {
+                const adjIndex = parseInt(adjMatch[1]) - 1;
+                const adjFactor = marketValues[0].adj_factor || "";
+                const adjParts = String(adjFactor).split(',').map((p: string) => p.trim());
+                const adj = adjParts[adjIndex];
+                if (adj) {
+                    const pctNum = parseFloat(adj) || 0;
+                    return pctNum > 0 ? `${Math.round(pctNum)}%` : "";
+                }
+            }
+            return "";
         }
 
         // 4. Hardcoded Mappings for Top-Level Fields
@@ -116,24 +170,6 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         if (l.includes("east")) return recordData.east_boundary || "";
         if (l.includes("south")) return recordData.south_boundary || "";
         if (l.includes("west")) return recordData.west_boundary || "";
-
-        // 5. SHEET 2 TOTALS (L36-L39)
-        const formatVal = (v: any) => {
-            if (v === null || v === undefined || v === "") return "";
-            const num = parseFloat(String(v).replace(/,/g, ''));
-            return isNaN(num) ? "" : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        };
-
-        const getNumeric = (v: any) => {
-            if (v === null || v === undefined || v === "") return 0;
-            const num = parseFloat(String(v).replace(/,/g, ''));
-            return isNaN(num) ? 0 : num;
-        };
-
-        const mround = (num: number, mult: number) => {
-            if (!num || !mult) return 0;
-            return Math.round(num / mult) * mult;
-        };
 
         // Manual recalculation to match Excel/PDF generator exactly
         let totalLandVal = 0;
@@ -169,6 +205,41 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         if (l.includes("total land mv") || l.includes("total mv land")) return formatVal(l36_val);
         if (l.includes("total impr mv")) return formatVal(l37_val);
         if (l.includes("total mv plants") || l.includes("total plant mv")) return formatVal(totalImprVal);
+
+        // 5b. SHEET 1 K53 CALCULATION (Sum of K42-K45)
+        if (k.includes("k53") || (l.includes("total") && l.includes("plant"))) {
+            let k53_total = 0;
+            improvements.forEach((item: any, index: number) => {
+                if (index < 4) {
+                    const mv = getNumeric(item.market_value || item.market_value_improvement || item.unitValue || 0);
+                    k53_total += mv;
+                }
+            });
+            return k53_total > 0 ? formatVal(k53_total) : "0.00";
+        }
+
+        // 5c. SHEET 2 G58 CALCULATION (Sum of G54-G57)
+        if (k.includes("g58")) {
+            let g58_total = 0;
+            assessments.forEach((item: any) => {
+                const mv = getNumeric(item.market_value || item.adjusted_market_value || 0);
+                g58_total += mv;
+            });
+            return g58_total > 0 ? formatVal(g58_total) : "0.00";
+        }
+
+        // 5d. SHEET 2 M58 CALCULATION (Sum of M54-M57 - Assessment Values)
+        if (k.includes("m58")) {
+            let m58_total = 0;
+            assessments.forEach((item: any) => {
+                const mv = getNumeric(item.market_value || item.adjusted_market_value || 0);
+                const lvl = getNumeric(item.assessment_level || 0);
+                const levelDecimal = lvl <= 1 ? lvl : lvl / 100;
+                const av = mround(mv * levelDecimal, 10);
+                m58_total += av;
+            });
+            return m58_total > 0 ? formatVal(m58_total) : "0.00";
+        }
 
         // 6. SHEET 2 (PAGE 2) MAPPINGS
         const getFormattedDate = (dateStr: string | null | undefined) => {
@@ -217,11 +288,35 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
             const index = parseInt(assmMatch[1]) - 1;
             const item = assessments[index];
             if (item) {
-                if (l.includes("kind")) return item.actual_use_name || item.classification || "";
-                if (l.includes("use")) return item.actual_use_code || "";
-                if (l.includes("mv")) return item.market_value || "";
-                if (l.includes("lvl")) return item.assessment_level || "";
-                if (l.includes("av")) return item.assessed_value || "";
+                if (l.includes("kind")) return item.actual_use_name || item.classification || item.kind || "";
+                if (l.includes("use")) return item.actual_use_code || item.actual_use || "";
+                
+                // MV (Market Value) - 2 decimal format
+                if (l.includes("mv") && !l.includes("lvl") && !l.includes("av")) {
+                    const adjMv = getNumeric(item.adjusted_market_value || item.market_value || 0);
+                    return adjMv > 0 ? formatVal(adjMv) : "";
+                }
+                
+                // Lvl (Assessment Level) - percentage format (like 24%)
+                if (l.includes("lvl")) {
+                    const lvl = getNumeric(item.assessment_level || 0);
+                    if (lvl <= 1) {
+                        // If stored as 0-1 decimal, convert to percentage
+                        return lvl > 0 ? `${Math.round(lvl * 100)}%` : "";
+                    } else {
+                        // If stored as percentage (1-100), use directly
+                        return lvl > 0 ? `${Math.round(lvl)}%` : "";
+                    }
+                }
+                
+                // AV (Assessed Value) - calculated as MV * Level%
+                if (l.includes("av")) {
+                    const mv = getNumeric(item.adjusted_market_value || item.market_value || 0);
+                    const lvl = getNumeric(item.assessment_level || 0);
+                    const levelDecimal = lvl <= 1 ? lvl : lvl / 100;
+                    const av = mround(mv * levelDecimal, 10);
+                    return av > 0 ? formatVal(av) : "";
+                }
             }
         }
 
@@ -389,19 +484,12 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         if (!mapping) return;
         try {
             setSaving(true);
-            // 1. Save as global master template
+            // Save as global master template (this also deletes ALL record-specific files on the backend)
             await printAPI.updateCalibration(mapping);
 
-            // 2. If we're currently on a specific record, apply it there too
-            if (recordId) {
-                await printAPI.updateCalibration(mapping, recordId);
-            }
-
             toast({
-                title: "Template Saved & Applied",
-                description: recordId
-                    ? "Coordinates saved as global default AND applied to this record."
-                    : "Coordinates saved as global default for all future records.",
+                title: "Template Saved",
+                description: "Coordinates saved as global default. All record-specific overrides have been cleared.",
             });
 
             onCalibrated();
@@ -439,86 +527,138 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
 
                 <div className="flex flex-row gap-0 overflow-hidden" style={{ maxHeight: 'calc(100vh - 180px)' }}>
                     {/* LEFT COLUMN: Field Selector */}
-                    <div className="w-[260px] shrink-0 border-r border-slate-100 overflow-y-auto p-4 bg-white">
-                        <div className="space-y-2">
-                            <Label htmlFor="field-select" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Select Field to Adjust</Label>
+                    <div className="w-[300px] shrink-0 border-r border-slate-200 overflow-y-auto p-3 bg-white">
+                        <div className="space-y-3">
+                            <div>
+                                <Label htmlFor="field-select" className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Field</Label>
+                            </div>
                             <Select value={selectedField} onValueChange={setSelectedField}>
-                                <SelectTrigger id="field-select" className="border-slate-200 bg-slate-50/50 h-12 w-full">
-                                    <div className="flex flex-col items-start overflow-hidden">
-                                        <div className="text-[11px] font-bold text-slate-900 truncate w-full">
-                                            {selectedField ? (mapping[selectedField]?.label || selectedField).split('(')[0].trim() : "Choose a field"}
+                                <SelectTrigger id="field-select" className="border-slate-300 bg-white h-auto min-h-[60px] w-full p-2">
+                                    <div className="flex flex-col items-start gap-1 w-full text-left">
+                                        <div className="text-sm font-semibold text-slate-900 truncate w-full">
+                                            {selectedField ? (mapping[selectedField]?.label || selectedField).split('(')[0].trim() : "Select a field"}
                                         </div>
-                                        {selectedField && (
-                                            <div className="text-[9px] text-emerald-600 font-medium truncate w-full italic">
-                                                {getActualValue(selectedField, mapping[selectedField]?.label)}
-                                            </div>
+                                        {selectedField && mapping[selectedField] && (
+                                            <>
+                                                <div className="text-[10px] text-slate-500 font-mono">
+                                                    {mapping[selectedField].x.toFixed(1)}cm × {mapping[selectedField].y.toFixed(1)}cm
+                                                </div>
+                                                <div className="text-xs text-slate-700 font-medium truncate w-full block">
+                                                    {getActualValue(selectedField, mapping[selectedField]?.label) || "—"}
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                 </SelectTrigger>
-                                <SelectContent className="max-h-[80vh] w-[220px]">
+                                <SelectContent className="max-h-[75vh] w-[300px]" onCloseAutoFocus={() => setSearchQuery("")}>
+                                    <div className="sticky top-0 z-20 bg-white border-b border-slate-200 p-2">
+                                        <div className="relative">
+                                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                                            <input
+                                                className="w-full pl-7 pr-7 py-1.5 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-slate-50"
+                                                placeholder="Search label or cell (e.g. H28)..."
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                                onKeyDown={e => e.stopPropagation()}
+                                                onClick={e => e.stopPropagation()}
+                                            />
+                                            {searchQuery && (
+                                                <button className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" onClick={e => { e.stopPropagation(); setSearchQuery(""); }}>
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                     {(() => {
+                                        const q = searchQuery.toLowerCase().trim();
                                         const groups: { [key: string]: [string, MappingItem][] } = {
-                                            "Page 1: General": [],
-                                            "Page 1: Boundaries": [],
-                                            "Page 1: Appraisal": [],
-                                            "Page 2: Sworn/CTC": [],
-                                            "Page 2: Assessment": [],
-                                            "Page 2: Previous": [],
-                                            "Others": []
+                                            "General": [],
+                                            "Boundaries": [],
+                                            "Appraisal": [],
+                                            "Sworn/CTC": [],
+                                            "Assessment": [],
+                                            "Previous": [],
+                                            "Other": []
                                         };
 
                                         Object.entries(mapping).forEach(([key, item]) => {
                                             const label = item.label || key;
-                                            const sn = key.startsWith("Sheet2") ? "Page 2" : "Page 1";
+                                            const cellRef = key.includes('!') ? key.split('!')[1] : key;
+                                            if (q && !label.toLowerCase().includes(q) && !cellRef.toLowerCase().includes(q) && !key.toLowerCase().includes(q)) return;
+                                            const sn = key.startsWith("Sheet2") ? "Sheet2" : "Sheet1";
 
-                                            if (sn === "Page 1") {
+                                            if (sn === "Sheet1") {
                                                 if (label.includes("North") || label.includes("East") || label.includes("South") || label.includes("West")) {
-                                                    groups["Page 1: Boundaries"].push([key, item]);
-                                                } else if (label.includes("Land") || label.includes("Total MV") || label.includes("Plant")) {
-                                                    groups["Page 1: Appraisal"].push([key, item]);
+                                                    groups["Boundaries"].push([key, item]);
+                                                } else if (label.includes("Land") || label.includes("Total MV") || label.includes("Plant") || label.includes("Table R")) {
+                                                    groups["Appraisal"].push([key, item]);
                                                 } else {
-                                                    groups["Page 1: General"].push([key, item]);
+                                                    groups["General"].push([key, item]);
                                                 }
                                             } else {
                                                 if (label.includes("Sworn") || label.includes("CTC")) {
-                                                    groups["Page 2: Sworn/CTC"].push([key, item]);
+                                                    groups["Sworn/CTC"].push([key, item]);
                                                 } else if (label.includes("Assm") || label.includes("L36") || label.includes("L37") || label.includes("L38") || label.includes("L39") || label.includes("Words")) {
-                                                    groups["Page 2: Assessment"].push([key, item]);
+                                                    groups["Assessment"].push([key, item]);
                                                 } else if (label.includes("Prev")) {
-                                                    groups["Page 2: Previous"].push([key, item]);
+                                                    groups["Previous"].push([key, item]);
                                                 } else {
-                                                    groups["Others"].push([key, item]);
+                                                    groups["Other"].push([key, item]);
                                                 }
                                             }
                                         });
 
-                                        return Object.entries(groups).map(([groupName, items]) => (
-                                            items.length > 0 && (
+                                        const filteredGroups = Object.entries(groups).filter(([_, items]) => items.length > 0);
+                                        if (filteredGroups.length === 0) {
+                                            return (
+                                                <div className="py-8 text-center text-xs text-slate-400 italic">
+                                                    No fields match "{searchQuery}"
+                                                </div>
+                                            );
+                                        }
+                                        return filteredGroups.map(([groupName, items]) => (
                                                 <SelectGroup key={groupName}>
-                                                    <SelectLabel className="px-2 py-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50/50 uppercase tracking-widest">
+                                                    <SelectLabel className="px-2.5 py-2 text-[10px] font-bold text-slate-700 bg-slate-50 sticky top-0 z-10 uppercase tracking-wider border-b border-slate-200">
                                                         {groupName}
                                                     </SelectLabel>
-                                                    {items.map(([key, item]) => {
+                                                    {items
+                                                        .sort((a, b) => (a[1].label || a[0]).localeCompare(b[1].label || b[0]))
+                                                        .map(([key, item]) => {
                                                         const displayLabel = (item.label || key).split('(')[0].trim();
+                                                        const cellRef = key.includes('!') ? key.split('!')[1] : key;
                                                         const value = getActualValue(key, item.label);
+                                                        const isNewField = key.match(/M(54|55|56|57|58)|K39|J45|J47|A61|H28/) !== null;
                                                         return (
-                                                            <SelectItem key={key} value={key}>
-                                                                <div className="flex flex-col items-start py-0.5">
-                                                                    <span className="font-bold text-[11px] text-slate-900 group-hover:text-emerald-700 transition-colors">
-                                                                        {displayLabel}
-                                                                    </span>
-                                                                    {value && (
-                                                                        <span className="text-[9px] text-slate-400 font-medium truncate max-w-[180px] italic">
-                                                                            {value}
+                                                            <SelectItem key={key} value={key} className={`cursor-pointer focus:bg-emerald-50 ${isNewField ? 'bg-red-50 hover:bg-red-100' : ''}`}>
+                                                                <div className={`flex flex-col items-start gap-1 py-1 ${isNewField ? 'border-l-4 border-red-400 pl-2' : ''}`}>
+                                                                    <div className="flex items-baseline gap-2 w-full">
+                                                                        <span className={`font-semibold text-sm ${isNewField ? 'text-red-900' : 'text-slate-900'}`}>
+                                                                            {displayLabel}
+                                                                            {isNewField && <span className="ml-1 text-[10px] bg-red-300 text-red-900 px-1.5 py-0.5 rounded font-bold">NEW</span>}
                                                                         </span>
+                                                                        <span className="text-[10px] bg-blue-100 text-blue-700 font-mono font-bold px-1.5 py-0.5 rounded">
+                                                                            {cellRef}
+                                                                        </span>
+                                                                        <span className="text-[9px] text-slate-400 font-mono">
+                                                                            {item.x.toFixed(1)}×{item.y.toFixed(1)}
+                                                                        </span>
+                                                                    </div>
+                                                                    {value && (
+                                                                        <div className="text-xs text-slate-600 font-medium truncate max-w-[240px]">
+                                                                            {value}
+                                                                        </div>
+                                                                    )}
+                                                                    {!value && (
+                                                                        <div className="text-[9px] text-slate-400 italic">
+                                                                            No data
+                                                                        </div>
                                                                     )}
                                                                 </div>
                                                             </SelectItem>
                                                         );
                                                     })}
                                                 </SelectGroup>
-                                            )
-                                        ));
+                                            ));
                                     })()}
                                 </SelectContent>
                             </Select>

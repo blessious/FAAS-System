@@ -27,22 +27,22 @@ TEMPLATE_MAPPING = {
     'Sheet1!B22': {'x': 4.0,  'y': 19.4, 'label': 'East'},
     'Sheet1!I21': {'x': 12.3, 'y': 19.75, 'label': 'South'},
     'Sheet1!I22': {'x': 12.3, 'y': 19.4, 'label': 'West'},
-    'Sheet1!E28': {'x': 9.6,  'y': 16.8,  'label': 'Land 1: Kind'},
-    'Sheet1!G28': {'x': 11.6, 'y': 16.8,  'label': 'Land 1: Area'},
-    'Sheet1!H28': {'x': 14.0, 'y': 16.8,  'label': 'Land 1: Class'},
-    'Sheet1!I28': {'x': 15.5, 'y': 16.8,  'label': 'Land 1: UV'},
-    'Sheet1!J28': {'x': 17.6, 'y': 16.8,  'label': 'Land 1: MV'},
-    'Sheet1!E33': {'x': 8.2,  'y': 15.95, 'label': 'Land 3: Kind'},
-    'Sheet1!G33': {'x': 11.0, 'y': 15.45, 'label': 'Land 3: Area'},
-    'Sheet1!H33': {'x': 13.0, 'y': 14.95, 'label': 'Land 3: Class'},
-    'Sheet1!I33': {'x': 15.1, 'y': 14.35, 'label': 'Land 3: UV'},
-    'Sheet1!J33': {'x': 17.5, 'y': 13.85, 'label': 'Land 3: MV'},
-    'Sheet1!E35': {'x': 8.5,  'y': 13.35, 'label': 'Land 4: Kind'},
-    'Sheet1!G35': {'x': 11.0, 'y': 12.85, 'label': 'Land 4: Area'},
-    'Sheet1!H35': {'x': 13.0, 'y': 12.35, 'label': 'Land 4: Class'},
-    'Sheet1!I35': {'x': 15.0, 'y': 11.85, 'label': 'Land 4: UV'},
-    'Sheet1!J35': {'x': 17.5, 'y': 11.35, 'label': 'Land 4: MV'},
-    'Sheet1!J36': {'x': 17.8, 'y': 13.75, 'label': 'Total MV Land'},
+    'Sheet1!E28': {'x': 9.6,  'y': 16.8,  'label': 'Table R1 Class'},
+    'Sheet1!G28': {'x': 11.6, 'y': 16.8,  'label': 'Table R1 Area'},
+    'Sheet1!H28': {'x': 14.0, 'y': 16.8,  'label': 'Table R1 Sub'},
+    'Sheet1!I28': {'x': 15.5, 'y': 16.8,  'label': 'Table R1 Unit'},
+    'Sheet1!J28': {'x': 17.6, 'y': 16.8,  'label': 'Table R1 Market'},
+    'Sheet1!E33': {'x': 8.2,  'y': 15.95, 'label': 'Table R6 Class'},
+    'Sheet1!G33': {'x': 11.0, 'y': 15.45, 'label': 'Table R6 Area'},
+    'Sheet1!H33': {'x': 13.0, 'y': 14.95, 'label': 'Table R6 Sub'},
+    'Sheet1!I33': {'x': 15.1, 'y': 14.35, 'label': 'Table R6 Unit'},
+    'Sheet1!J33': {'x': 17.5, 'y': 13.85, 'label': 'Table R6 Market'},
+    'Sheet1!E35': {'x': 8.5,  'y': 13.35, 'label': 'Table R8 Class'},
+    'Sheet1!G35': {'x': 11.0, 'y': 12.85, 'label': 'Table R8 Area'},
+    'Sheet1!H35': {'x': 13.0, 'y': 12.35, 'label': 'Table R8 Sub'},
+    'Sheet1!I35': {'x': 15.0, 'y': 11.85, 'label': 'Table R8 Unit'},
+    'Sheet1!J35': {'x': 17.5, 'y': 11.35, 'label': 'Table R8 Market'},
+    'Sheet1!J36': {'x': 17.8, 'y': 13.75, 'label': 'Total MV'},
     'Sheet1!H42': {'x': 12.7, 'y': 11.8,  'label': 'Plant: Kind'},
     'Sheet1!I42': {'x': 15.0, 'y': 11.8,  'label': 'Plant: Area'},
     'Sheet1!J42': {'x': 17.0, 'y': 11.8,  'label': 'Plant: UV'},
@@ -57,14 +57,22 @@ TEMPLATE_MAPPING = {
     'Sheet1!H58': {'x': 13.7, 'y': 5.2,   'label': 'Land II: Class'},
     'Sheet1!H59': {'x': 13.7, 'y': 4.5,   'label': 'Land II: UV'},
     'Sheet1!J58': {'x': 17.6, 'y': 5.1,   'label': 'Land II: MV'},
-    # Additional table rows from mapping if present
-    'Sheet1!E29': {'x': 8.8, 'y': 16.35, 'label': 'Land 2: Kind'},
-    'Sheet1!G29': {'x': 11.5,'y': 16.35, 'label': 'Land 2: Area'},
-    'Sheet1!H29': {'x': 13.5,'y': 16.3,  'label': 'Land 2: Class'},
-    'Sheet1!I29': {'x': 15.5,'y': 16.3,  'label': 'Land 2: UV'},
-    'Sheet1!J29': {'x': 17.6,'y': 16.3,  'label': 'Land 2: MV'},
-    'Sheet1!E30': {'x': 8.8, 'y': 15.95, 'label': 'Land 3 alternative'}, 
-    'Sheet1!G30': {'x': 11.5,'y': 15.95, 'label': 'Land 3 alternative Area'},
+    # Additional table rows (R2-R4)
+    'Sheet1!E29': {'x': 8.8, 'y': 16.35, 'label': 'Table R2 Class'},
+    'Sheet1!G29': {'x': 11.5,'y': 16.35, 'label': 'Table R2 Area'},
+    'Sheet1!H29': {'x': 13.5,'y': 16.3,  'label': 'Table R2 Sub'},
+    'Sheet1!I29': {'x': 15.5,'y': 16.3,  'label': 'Table R2 Unit'},
+    'Sheet1!J29': {'x': 17.6,'y': 16.3,  'label': 'Table R2 Market'},
+    'Sheet1!E30': {'x': 8.8, 'y': 15.95, 'label': 'Table R3 Class'},
+    'Sheet1!G30': {'x': 11.5,'y': 15.95, 'label': 'Table R3 Area'},
+    'Sheet1!H30': {'x': 13.5,'y': 15.9,  'label': 'Table R3 Sub'},
+    'Sheet1!I30': {'x': 15.5,'y': 15.9,  'label': 'Table R3 Unit'},
+    'Sheet1!J30': {'x': 17.6,'y': 15.9,  'label': 'Table R3 Market'},
+    'Sheet1!E31': {'x': 8.8, 'y': 15.5,  'label': 'Table R4 Class'},
+    'Sheet1!G31': {'x': 11.5,'y': 15.5,  'label': 'Table R4 Area'},
+    'Sheet1!H31': {'x': 13.5,'y': 15.5,  'label': 'Table R4 Sub'},
+    'Sheet1!I31': {'x': 15.5,'y': 15.5,  'label': 'Table R4 Unit'},
+    'Sheet1!J31': {'x': 17.6,'y': 15.5,  'label': 'Table R4 Market'},
     'Sheet2!L36': {'x': 14.1, 'y': 14.1, 'label': 'Total Land MV'},
     'Sheet2!L37': {'x': 14.1, 'y': 14.3, 'label': 'Total Impr MV'},
     'Sheet2!L38': {'x': 14.1, 'y': 14.7, 'label': 'L38'},
@@ -87,11 +95,16 @@ TEMPLATE_MAPPING = {
     'Sheet2!G55': {'x': 9.0,  'y': 6.5,  'label': 'Assm 2 MV'},
     'Sheet2!G56': {'x': 9.0,  'y': 6.1,  'label': 'Assm 3 MV'},
     'Sheet2!G57': {'x': 9.0,  'y': 5.7,  'label': 'Assm 4 MV'},
+    'Sheet2!G58': {'x': 9.0,  'y': 5.3,  'label': 'Total Assm MV'},
     'Sheet2!K54': {'x': 12.9, 'y': 6.9,  'label': 'Assm 1 Lvl'},
     'Sheet2!K55': {'x': 12.9, 'y': 6.5,  'label': 'Assm 2 Lvl'},
     'Sheet2!K56': {'x': 12.9, 'y': 6.1,  'label': 'Assm 3 Lvl'},
     'Sheet2!K57': {'x': 12.9, 'y': 5.7,  'label': 'Assm 4 Lvl'},
-    'Sheet2!M54': {'x': 16.2, 'y': 6.8,  'label': 'Assm 1 AV'},
+    'Sheet2!M54': {'x': 16.2, 'y': 6.9,  'label': 'Assm 1 AV'},
+    'Sheet2!M55': {'x': 16.2, 'y': 6.5,  'label': 'Assm 2 AV'},
+    'Sheet2!M56': {'x': 16.2, 'y': 6.1,  'label': 'Assm 3 AV'},
+    'Sheet2!M57': {'x': 16.2, 'y': 5.7,  'label': 'Assm 4 AV'},
+    'Sheet2!M58': {'x': 16.2, 'y': 5.3,  'label': 'Total Assm AV'},
     'Sheet2!D59': {'x': 9.2,  'y': 5.3,  'label': 'Words'},
     'Sheet2!E67': {'x': 10.8, 'y': 2.3,  'label': 'Prev TD'},
     'Sheet2!B69': {'x': 2.8,  'y': 1.6,  'label': 'Eff Year'},
@@ -100,6 +113,10 @@ TEMPLATE_MAPPING = {
     'Sheet2!H70': {'x': 13.3, 'y': 0.5,  'label': 'Prev Impr AV'},
     'Sheet2!L71': {'x': 16.0, 'y': 0.5,  'label': 'Total Prev AV'},
     'Sheet2!L39': {'x': 14.1, 'y': 15.0, 'label': 'Owner/Administrator'},
+    'Sheet2!K39': {'x': 13.0, 'y': 12.6, 'label': 'K39'},
+    'Sheet2!J45': {'x': 12.7, 'y': 10.3, 'label': 'J45'},
+    'Sheet2!J47': {'x': 13.6, 'y': 9.6,  'label': 'J47'},
+    'Sheet2!A61': {'x': 2.8,  'y': 3.7,  'label': 'A61'},
 }
 
 class PrecisionPDFGenerator:
@@ -195,7 +212,7 @@ class PrecisionPDFGenerator:
                         
                         text = str(val)
                         # Percentage conversion for specific G cells
-                        if addr in ['G44', 'G47', 'G49', 'G52']:
+                        if addr in ['G44', 'G47', 'G49', 'G52', 'K54', 'K55', 'K56', 'K57']:
                             try:
                                 num_val = float(val)
                                 text = f"{num_val * 100:.0f}%" if num_val <= 1.0 else f"{num_val:.0f}%"
@@ -204,8 +221,8 @@ class PrecisionPDFGenerator:
                         elif addr in ['I42', 'K19', 'K20']:
                             try: text = f"{int(float(val))}"
                             except: pass
-                        # 🚀 2 decimal places for Currency/Calculated MV (I, J, K columns)
-                        elif addr and any(col in addr for col in ['I', 'J', 'K']):
+                        # 🚀 2 decimal places for Currency/Calculated MV (I, J, K, L, M columns and G54-G58, H58)
+                        elif addr and (any(col in addr for col in ['I', 'J', 'K', 'L', 'M']) or addr in ['G54', 'G55', 'G56', 'G57', 'G58', 'H58']):
                             try: text = f"{float(val):,.2f}"
                             except: pass
                     
@@ -236,6 +253,93 @@ class PrecisionPDFGenerator:
                             c.drawText(t_j)
                             c.restoreState()
                     
+                    # 🚀 G58: Sum of G54-G57
+                    if addr == 'G58':
+                        g58_total = 0.0
+                        for row_idx in range(54, 58):
+                            val_to_add = wb[sn][f'G{row_idx}'].value
+                            if val_to_add:
+                                try:
+                                    g58_total = float(g58_total) + float(val_to_add)
+                                except: pass
+                        
+                        if g58_total > 0:
+                            target_g58 = self.mapping.get('Sheet2!G58')
+                            if target_g58:
+                                fs_g58 = target_g58.get('fontSize', 10.5)
+                                x_g58, y_g58 = target_g58['x'] * cm, target_g58['y'] * cm
+                                c.saveState()
+                                c.translate(x_g58, y_g58)
+                                c.scale(0.75, 1.0)
+                                t_g = c.beginText(0, 0)
+                                t_g.setFont(self.font_name, fs_g58)
+                                t_g.setFillColorRGB(0, 0, 0)
+                                t_g.setTextRenderMode(2)
+                                c.setLineWidth(0.5)
+                                c.setStrokeColorRGB(0, 0, 0)
+                                t_g.textOut(f"{g58_total:,.2f}")
+                                c.drawText(t_g)
+                                c.restoreState()
+                        continue  # Skip normal rendering for G58
+                    
+                    # 🚀 M58: Sum of M54-M57
+                    if addr == 'M58':
+                        m58_total = 0.0
+                        for row_idx in range(54, 58):
+                            val_to_add = wb[sn][f'M{row_idx}'].value
+                            if val_to_add:
+                                try:
+                                    m58_total = float(m58_total) + float(val_to_add)
+                                except: pass
+                        
+                        if m58_total > 0:
+                            target_m58 = self.mapping.get('Sheet2!M58')
+                            if target_m58:
+                                fs_m58 = target_m58.get('fontSize', 10.5)
+                                x_m58, y_m58 = target_m58['x'] * cm, target_m58['y'] * cm
+                                c.saveState()
+                                c.translate(x_m58, y_m58)
+                                c.scale(0.75, 1.0)
+                                t_m = c.beginText(0, 0)
+                                t_m.setFont(self.font_name, fs_m58)
+                                t_m.setFillColorRGB(0, 0, 0)
+                                t_m.setTextRenderMode(2)
+                                c.setLineWidth(0.5)
+                                c.setStrokeColorRGB(0, 0, 0)
+                                t_m.textOut(f"{m58_total:,.2f}")
+                                c.drawText(t_m)
+                                c.restoreState()
+                        continue  # Skip normal rendering for M58
+                    
+                    # 🚀 K53: Sum of K42-K45
+                    if addr == 'K53':
+                        k53_total = 0.0
+                        for row_idx in range(42, 46):
+                            val_to_add = wb[sn][f'K{row_idx}'].value
+                            if val_to_add:
+                                try:
+                                    k53_total = float(k53_total) + float(val_to_add)
+                                except: pass
+                        
+                        if k53_total > 0:
+                            target_k53 = self.mapping.get('Sheet1!K53')
+                            if target_k53:
+                                fs_k53 = target_k53.get('fontSize', 10.5)
+                                x_k53, y_k53 = target_k53['x'] * cm, target_k53['y'] * cm
+                                c.saveState()
+                                c.translate(x_k53, y_k53)
+                                c.scale(0.75, 1.0)
+                                t_k = c.beginText(0, 0)
+                                t_k.setFont(self.font_name, fs_k53)
+                                t_k.setFillColorRGB(0, 0, 0)
+                                t_k.setTextRenderMode(2)
+                                c.setLineWidth(0.5)
+                                c.setStrokeColorRGB(0, 0, 0)
+                                t_k.textOut(f"{k53_total:,.2f}")
+                                c.drawText(t_k)
+                                c.restoreState()
+                        continue  # Skip normal rendering for K53
+                    
                     x, y = coord['x'] * cm, coord['y'] * cm
 
                     c.saveState()
@@ -253,12 +357,9 @@ class PrecisionPDFGenerator:
                     c.setStrokeColorRGB(0, 0, 0)
                     
                     if "Total" in str(coord.get('label','')):
-                        # For Centered, we use standard canvas
-                        c.setFont(self.font_name, fs)
-                        c.setTextRenderMode(2)
-                        c.setLineWidth(0.5)
-                        c.drawCentredString(0, 0, text)
-                        c.setTextRenderMode(0)
+                        # For Total fields, use textOut like regular fields
+                        t.textOut(text)
+                        c.drawText(t)
                     else:
                         t.textOut(text)
                         c.drawText(t)

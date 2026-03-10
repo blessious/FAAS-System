@@ -161,21 +161,32 @@ class PrintController {
       const excelPath = records[0].unirrig_excel_file_path;
       const pythonDir = path.resolve(__dirname, '../python');
 
-      // Priority: 1. Record-specific mapping, 2. Global Template mapping
+      // Merge template + record-specific mapping (same logic as getCalibration)
+      const templateMappingPath = path.resolve(pythonDir, 'precision_mapping.json');
       const specificMappingPath = path.resolve(pythonDir, `precision_mapping_${recordId}.json`);
-      const templateMappingPath = path.resolve(pythonDir, `precision_mapping.json`);
 
-      let command = `python precision_pdf_generator.py --excel-path "${excelPath}"`;
-
-      if (fs.existsSync(specificMappingPath)) {
-        command += ` --mapping-file "precision_mapping_${recordId}.json"`;
-      } else if (fs.existsSync(templateMappingPath)) {
-        command += ` --mapping-file "precision_mapping.json"`;
+      let mergedMapping = {};
+      if (fs.existsSync(templateMappingPath)) {
+        mergedMapping = JSON.parse(fs.readFileSync(templateMappingPath, 'utf8'));
       }
+      if (fs.existsSync(specificMappingPath)) {
+        const specificData = JSON.parse(fs.readFileSync(specificMappingPath, 'utf8'));
+        mergedMapping = { ...mergedMapping, ...specificData };
+      }
+
+      // Write merged mapping to OS temp dir to avoid triggering nodemon restart
+      const os = require('os');
+      const mergedPath = path.resolve(os.tmpdir(), `precision_mapping_merged_${recordId}.json`);
+      fs.writeFileSync(mergedPath, JSON.stringify(mergedMapping, null, 4));
+
+      let command = `python precision_pdf_generator.py --excel-path "${excelPath}" --mapping-file "${mergedPath}"`;
 
       console.log(`🚀 Precision Print Command: ${command}`);
 
       exec(command, { cwd: pythonDir, timeout: 60000, maxBuffer: 1024 * 1024 * 10 }, async (error, stdout, stderr) => {
+        // Clean up temp merged file
+        try { fs.unlinkSync(mergedPath); } catch (e) { /* ignore */ }
+
         if (error) {
           console.error('❌ Precision Error:', error.message);
           return res.status(500).json({ success: false, error: 'PDF generation failed or timed out' });
@@ -248,15 +259,14 @@ class PrintController {
       const { mapping, recordId } = req.body;
       if (!mapping) return res.status(400).json({ success: false, error: 'Mapping data required' });
 
-      // Save as record-specific calibration if recordId is provided
       const pythonDir = path.resolve(__dirname, '../python');
       const filename = recordId ? `precision_mapping_${recordId}.json` : 'precision_mapping.json';
       const configPath = path.resolve(pythonDir, filename);
 
       fs.writeFileSync(configPath, JSON.stringify(mapping, null, 4));
 
-      // NEW FLOW: If we are calibrating a specific record, DELETE its existing Precision PDF
       if (recordId) {
+        // Record-specific save: delete only this record's precision PDF
         const pool = getConnection();
         const [rows] = await pool.execute('SELECT unirrig_precision_pdf_path FROM faas_records WHERE id = ?', [recordId]);
 
@@ -265,12 +275,29 @@ class PrintController {
           if (fs.existsSync(oldPdfPath)) {
             try { fs.unlinkSync(oldPdfPath); } catch (e) { console.error('Failed to delete old precision pdf:', e); }
           }
-          // Clear current path in DB so UI shows it's gone
           await pool.execute('UPDATE faas_records SET unirrig_precision_pdf_path = NULL WHERE id = ?', [recordId]);
         }
+      } else {
+        // Template save: delete ALL record-specific mapping files so all records use the new template
+        const files = fs.readdirSync(pythonDir);
+        const recordSpecificFiles = files.filter(f => /^precision_mapping_\d+\.json$/.test(f));
+        for (const f of recordSpecificFiles) {
+          try { fs.unlinkSync(path.resolve(pythonDir, f)); } catch (e) { console.error('Failed to delete record mapping:', f, e); }
+        }
+        console.log(`Template saved. Deleted ${recordSpecificFiles.length} record-specific mapping files.`);
+
+        // Clear ALL precision PDF paths so they regenerate with the new template
+        const pool = getConnection();
+        const [rows] = await pool.execute('SELECT id, unirrig_precision_pdf_path FROM faas_records WHERE unirrig_precision_pdf_path IS NOT NULL');
+        for (const row of rows) {
+          if (row.unirrig_precision_pdf_path && fs.existsSync(row.unirrig_precision_pdf_path)) {
+            try { fs.unlinkSync(row.unirrig_precision_pdf_path); } catch (e) { /* ignore */ }
+          }
+        }
+        await pool.execute('UPDATE faas_records SET unirrig_precision_pdf_path = NULL WHERE unirrig_precision_pdf_path IS NOT NULL');
       }
 
-      res.json({ success: true, message: 'Calibration saved. Previous PDF deleted.' });
+      res.json({ success: true, message: recordId ? 'Calibration saved.' : 'Template saved & applied to all records.' });
     } catch (error) {
       console.error('Error updating calibration:', error);
       res.status(500).json({ success: false, error: 'Failed to update calibration' });

@@ -625,6 +625,15 @@ class FAASExcelGenerator:
                     if u_val_safe: self.safe_write_cell(sheet, f'J{unirrig_row}', u_val_safe)
                     if mv: self.safe_write_cell(sheet, f'K{unirrig_row}', mv)
 
+            # K53: Sum of K42-K45 (Total MV Plants)
+            k42_val = self.safe_float(sheet['K42'].value)
+            k43_val = self.safe_float(sheet['K43'].value)
+            k44_val = self.safe_float(sheet['K44'].value)
+            k45_val = self.safe_float(sheet['K45'].value)
+            k53_total = self.mround(k42_val + k43_val + k44_val + k45_val, 10)
+            if k53_total > 0:
+                self.safe_write_cell(sheet, 'K53', k53_total)
+
             if 'Sheet2' in workbook.sheetnames:
                 sheet2 = workbook['Sheet2']
                 sheet2.page_margins.top = 0.25
@@ -666,6 +675,16 @@ class FAASExcelGenerator:
                 else:
                     self.safe_write_cell(sheet2, 'L37', total_impr_mv)
 
+                # L38: Total Market Value (L36 + L37)
+                if pct_adj != 0:
+                    l36_val = self.mround(total_land_mv * pct_adj, 10)
+                    l37_val = self.mround(total_impr_mv * pct_adj, 10)
+                else:
+                    l36_val = total_land_mv
+                    l37_val = total_impr_mv
+                l38_total = self.mround(l36_val + l37_val, 10)
+                self.safe_write_cell(sheet2, 'L38', l38_total)
+
                 adjusted_mvs: list[float] = []
                 for i in range(min(4, len(base_mvs))):
                     mv = base_mvs[i]
@@ -695,6 +714,24 @@ class FAASExcelGenerator:
                         self.safe_write_cell(sheet2, f'M{row}', calc_av if calc_av != 0 else '')
                         total_assessed_value += float(calc_av)
 
+                # G58: Sum of G54-G57 (Total of Market Values in Assessment)
+                g54_val = self.safe_float(sheet2['G54'].value)
+                g55_val = self.safe_float(sheet2['G55'].value)
+                g56_val = self.safe_float(sheet2['G56'].value)
+                g57_val = self.safe_float(sheet2['G57'].value)
+                g58_total = self.mround(g54_val + g55_val + g56_val + g57_val, 10)
+                if g58_total > 0:
+                    self.safe_write_cell(sheet2, 'G58', g58_total)
+
+                # M58: Sum of M54-M57 (Total of Assessment Values)
+                m54_val = self.safe_float(sheet2['M54'].value)
+                m55_val = self.safe_float(sheet2['M55'].value)
+                m56_val = self.safe_float(sheet2['M56'].value)
+                m57_val = self.safe_float(sheet2['M57'].value)
+                m58_total = self.mround(m54_val + m55_val + m56_val + m57_val, 10)
+                if m58_total > 0:
+                    self.safe_write_cell(sheet2, 'M58', m58_total)
+
                 # Round total and write words to D59
                 total_rounded = self.mround(total_assessed_value, 10)
                 if total_rounded > 0:
@@ -702,7 +739,7 @@ class FAASExcelGenerator:
                     self.safe_write_cell(sheet2, 'D59', words)
 
                 # Owner/Administrator Field (Matches FAAS A51 logic)
-                self.safe_write_cell(sheet2, 'K39', record.get('owner_administrator') or record.get('owner_name', ''))
+                self.safe_write_cell(sheet2, 'L39', record.get('owner_administrator') or record.get('owner_name', ''))
 
                 # CTC Information
                 self.safe_write_cell(sheet2, 'G43', record.get('ctc_no', ''))
