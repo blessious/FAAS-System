@@ -489,25 +489,45 @@
         "y": 1.75,
         "label": "Eff Year (B69)"
     },
-    "Sheet2!E69": {
+    "Sheet2!G70": {
         "x": 7.7,
         "y": 1.75,
-        "label": "Prev Owner (E69)"
+        "label": "Prev Owner (G70)"
     },
-    "Sheet2!E70": {
+    "Sheet2!E71": {
         "x": 8.2,
         "y": 1,
-        "label": "Prev Land AV (E70)"
+        "label": "Prev Land AV (E71)"
     },
-    "Sheet2!H70": {
+    "Sheet2!H71": {
         "x": 13.3,
         "y": 1.1,
-        "label": "Prev Impr AV (H70)"
+        "label": "Prev Impr AV (H71)"
     },
     "Sheet2!L71": {
         "x": 16,
         "y": 1.1,
         "label": "Total Prev AV (L71)"
+    },
+    "Sheet2!A72": {
+        "x": 2.5,
+        "y": 1.2,
+        "label": "Prev Owner 2 (A72)"
+    },
+    "Sheet2!E72": {
+        "x": 8.2,
+        "y": 1.2,
+        "label": "Prev Land AV 2 (E72)"
+    },
+    "Sheet2!H72": {
+        "x": 13.4,
+        "y": 1.2,
+        "label": "Prev Impr AV 2 (H72)"
+    },
+    "Sheet2!L72": {
+        "x": 16.5,
+        "y": 1.2,
+        "label": "Total Prev AV 2 (L72)"
     },
     "Sheet2!K39": {
         "x": 13,

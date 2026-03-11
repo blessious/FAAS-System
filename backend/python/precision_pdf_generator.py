@@ -108,10 +108,14 @@ TEMPLATE_MAPPING = {
     'Sheet2!D59': {'x': 9.2,  'y': 5.3,  'label': 'Words'},
     'Sheet2!E67': {'x': 10.8, 'y': 2.3,  'label': 'Prev TD'},
     'Sheet2!B69': {'x': 2.8,  'y': 1.6,  'label': 'Eff Year'},
-    'Sheet2!E69': {'x': 7.7,  'y': 1.6,  'label': 'Prev Owner'},
-    'Sheet2!E70': {'x': 8.0,  'y': 0.8,  'label': 'Prev Land AV'},
-    'Sheet2!H70': {'x': 13.3, 'y': 0.5,  'label': 'Prev Impr AV'},
+    'Sheet2!G70': {'x': 7.7,  'y': 1.6,  'label': 'Prev Owner'},
+    'Sheet2!E71': {'x': 8.0,  'y': 0.8,  'label': 'Prev Land AV'},
+    'Sheet2!H71': {'x': 13.3, 'y': 0.5,  'label': 'Prev Impr AV'},
     'Sheet2!L71': {'x': 16.0, 'y': 0.5,  'label': 'Total Prev AV'},
+    'Sheet2!A72': {'x': 2.5,  'y': 1.2,  'label': 'Prev Owner 2'},
+    'Sheet2!E72': {'x': 8.2,  'y': 1.2,  'label': 'Prev Land AV 2'},
+    'Sheet2!H72': {'x': 13.4, 'y': 1.2,  'label': 'Prev Impr AV 2'},
+    'Sheet2!L72': {'x': 16.5, 'y': 1.2,  'label': 'Total Prev AV 2'},
     'Sheet2!L39': {'x': 14.1, 'y': 15.0, 'label': 'Owner/Administrator'},
     'Sheet2!K39': {'x': 13.0, 'y': 12.6, 'label': 'K39'},
     'Sheet2!J45': {'x': 12.7, 'y': 10.3, 'label': 'J45'},
@@ -222,7 +226,7 @@ class PrecisionPDFGenerator:
                             try: text = f"{int(float(val))}"
                             except: pass
                         # 🚀 2 decimal places for Currency/Calculated MV (I, J, K, L, M columns and G54-G58, H58)
-                        elif addr and (any(col in addr for col in ['I', 'J', 'K', 'L', 'M']) or addr in ['G54', 'G55', 'G56', 'G57', 'G58', 'H58']):
+                        elif addr and (any(col in addr for col in ['I', 'J', 'K', 'L', 'M']) or addr in ['G54', 'G55', 'G56', 'G57', 'G58', 'H58', 'H71']):
                             try: text = f"{float(val):,.2f}"
                             except: pass
                     

@@ -10,7 +10,7 @@
         "label": "Memoranda Code (A7)"
     },
     "Sheet1!B11": {
-        "x": 4,
+        "x": 4.2,
         "y": 23.2,
         "label": "Owner Name (B11)"
     },
@@ -51,7 +51,7 @@
     },
     "Sheet1!H19": {
         "x": 11.8,
-        "y": 20.6,
+        "y": 20.7,
         "label": "Cadastral Lot No (H19)"
     },
     "Sheet1!K19": {
@@ -66,17 +66,17 @@
     },
     "Sheet1!B21": {
         "x": 4,
-        "y": 19.75,
+        "y": 19.85,
         "label": "North Boundary (B21)"
     },
     "Sheet1!B22": {
         "x": 4,
-        "y": 19.4,
+        "y": 19.5,
         "label": "East Boundary (B22)"
     },
     "Sheet1!I21": {
         "x": 12.3,
-        "y": 19.75,
+        "y": 19.85,
         "label": "South Boundary (I21)"
     },
     "Sheet1!I22": {
@@ -326,7 +326,7 @@
     },
     "Sheet2!L39": {
         "x": 14.1,
-        "y": 15,
+        "y": 15.3,
         "label": "Owner/Administrator (L39)"
     },
     "Sheet2!E42": {
@@ -489,25 +489,45 @@
         "y": 1.75,
         "label": "Eff Year (B69)"
     },
-    "Sheet2!E69": {
-        "x": 7.7,
-        "y": 1.75,
-        "label": "Prev Owner (E69)"
+    "Sheet2!G70": {
+        "x": 9.2,
+        "y": 1.3,
+        "label": "Prev Owner (G70)"
     },
-    "Sheet2!E70": {
+    "Sheet2!E71": {
         "x": 8.2,
-        "y": 1,
-        "label": "Prev Land AV (E70)"
+        "y": 0.9,
+        "label": "Prev Land AV (E71)"
     },
-    "Sheet2!H70": {
-        "x": 13.3,
-        "y": 1.1,
-        "label": "Prev Impr AV (H70)"
+    "Sheet2!H71": {
+        "x": 13.5,
+        "y": 0.9,
+        "label": "Prev Impr AV (H71)"
     },
     "Sheet2!L71": {
         "x": 16,
-        "y": 1.1,
+        "y": 0.9,
         "label": "Total Prev AV (L71)"
+    },
+    "Sheet2!A72": {
+        "x": 2.5,
+        "y": 0.6,
+        "label": "Prev Owner 2 (A72)"
+    },
+    "Sheet2!E72": {
+        "x": 8.2,
+        "y": 0.6,
+        "label": "Prev Land AV 2 (E72)"
+    },
+    "Sheet2!H72": {
+        "x": 13.4,
+        "y": 0.6,
+        "label": "Prev Impr AV 2 (H72)"
+    },
+    "Sheet2!L72": {
+        "x": 16.5,
+        "y": 0.6,
+        "label": "Total Prev AV 2 (L72)"
     },
     "Sheet2!K39": {
         "x": 13,

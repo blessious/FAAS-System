@@ -778,22 +778,26 @@ class FAASExcelGenerator:
                 # New Previous record mappings for Sheet 2
                 self.safe_write_cell(sheet2, 'E67', record.get('previous_td_no', ''))
                 self.safe_write_cell(sheet2, 'B69', record.get('effectivity_year', ''))
-                self.safe_write_cell(sheet2, 'E69', record.get('previous_owner', ''))
-                self.safe_write_cell(sheet2, 'E70', self.safe_float(record.get('previous_av_land'), default=None))
-                self.safe_write_cell(sheet2, 'H70', self.safe_float(record.get('previous_av_improvements'), default=None))
+                self.safe_write_cell(sheet2, 'G70', record.get('previous_owner', ''))
+                prev_land = self.safe_float(record.get('previous_av_land'))
+                prev_impr = self.safe_float(record.get('previous_av_improvements'))
+                self.safe_write_cell(sheet2, 'E71', prev_land if prev_land else None)
+                self.safe_write_cell(sheet2, 'H71', prev_impr if prev_impr else None)
+                if prev_land or prev_impr:
+                    self.safe_write_cell(sheet2, 'L71', self.mround(prev_land + prev_impr, 10))
 
-                self.safe_write_cell(sheet2, 'A71', record.get('previous_owner2', ''))
+                self.safe_write_cell(sheet2, 'A72', record.get('previous_owner2', ''))
                 
                 prev_land2 = self.safe_float(record.get('previous_av_land2'))
                 prev_impr2 = self.safe_float(record.get('previous_av_improvements2'))
                 
                 if prev_land2:
-                    self.safe_write_cell(sheet2, 'E71', f"L = {prev_land2:,.2f}")
+                    self.safe_write_cell(sheet2, 'E72', f"L = {prev_land2:,.2f}")
                 if prev_impr2:
-                    self.safe_write_cell(sheet2, 'I71', f"I = {prev_impr2:,.2f}")
+                    self.safe_write_cell(sheet2, 'H72', f"I = {prev_impr2:,.2f}")
                 if prev_land2 or prev_impr2:
                     total2 = self.mround(prev_land2 + prev_impr2, 10)
-                    self.safe_write_cell(sheet2, 'L71', f"T = {total2:,.2f}")
+                    self.safe_write_cell(sheet2, 'L72', f"T = {total2:,.2f}")
 
             owner_raw = record.get('owner_name', 'Unknown')
             owner_name_safe = self.clean_filename(owner_raw)

@@ -149,10 +149,10 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         }
 
         // 4. Hardcoded Mappings for Top-Level Fields
-        if ((l.includes("owner") || k.includes("owner")) && !l.includes("addr")) return recordData.owner_name || "";
-        if (l.includes("admin") && !l.includes("addr")) return recordData.administrator_name || "";
+        if ((l.includes("owner") || k.includes("owner")) && !l.includes("addr") && !l.includes("prev owner") && !k.includes("a72") && !k.includes("l39")) return recordData.owner_name || "";
+        if (l.includes("admin") && !l.includes("addr") && !k.includes("l39")) return recordData.administrator_name || "";
         if (l.includes("owner addr")) return recordData.owner_address || "";
-        if (l.includes("admin addr")) return recordData.administrator_address || "";
+        if ((l.includes("admin") && l.includes("addr")) || l.includes("admin addr")) return recordData.administrator_address || "";
 
         if (l.includes("pin") || k.includes("pin")) return recordData.pin || recordData.arf_no || "";
         if (l.includes("arf") || k.includes("arf")) return recordData.arf_no || "";
@@ -274,6 +274,13 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
 
         if (l.includes("prev td")) return recordData.previous_td_no || recordData.previous_td || "";
         if (l.includes("eff year")) return recordData.effectivity_year || "";
+        if (k.includes("a72")) return recordData.previous_owner2 || "";
+        if (k.includes("e72")) return formatVal(recordData.previous_av_land2);
+        if (k.includes("h72")) return formatVal(recordData.previous_av_improvements2);
+        if (k.includes("l72")) {
+            const sum2 = getNumeric(recordData.previous_av_land2) + getNumeric(recordData.previous_av_improvements2);
+            return sum2 > 0 ? `T = ${formatVal(sum2)}` : "";
+        }
         if (l.includes("prev owner")) return recordData.previous_owner || "";
         if (l.includes("prev land av")) return formatVal(recordData.previous_av_land);
         if (l.includes("prev impr av")) return formatVal(recordData.previous_av_improvements);
