@@ -781,10 +781,12 @@ class FAASExcelGenerator:
                 self.safe_write_cell(sheet2, 'G70', record.get('previous_owner', ''))
                 prev_land = self.safe_float(record.get('previous_av_land'))
                 prev_impr = self.safe_float(record.get('previous_av_improvements'))
-                self.safe_write_cell(sheet2, 'E71', prev_land if prev_land else None)
-                self.safe_write_cell(sheet2, 'H71', prev_impr if prev_impr else None)
+                if prev_land:
+                    self.safe_write_cell(sheet2, 'E71', f"{prev_land:,.2f}")
+                if prev_impr:
+                    self.safe_write_cell(sheet2, 'H71', f"{prev_impr:,.2f}")
                 if prev_land or prev_impr:
-                    self.safe_write_cell(sheet2, 'L71', self.mround(prev_land + prev_impr, 10))
+                    self.safe_write_cell(sheet2, 'L71', f"{self.mround(prev_land + prev_impr, 10):,.2f}")
 
                 self.safe_write_cell(sheet2, 'A72', record.get('previous_owner2', ''))
                 

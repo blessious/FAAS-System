@@ -219,7 +219,7 @@ export default function PrintPreview() {
     try {
       setGeneratingPrecision(true);
       toast({
-        title: "Generating Precision Version",
+        title: "Generating Blank Version",
         description: "Placing text at exact coordinates for both Sheet 1 and Sheet 2...",
       });
 
@@ -228,7 +228,7 @@ export default function PrintPreview() {
       if (response.success) {
         toast({
           title: "Success",
-          description: "Precision version is ready. Check the alignment on your form.",
+          description: "Blank version is ready. Check the alignment on your form.",
         });
 
         const updatedRecord = {
@@ -244,7 +244,7 @@ export default function PrintPreview() {
       console.error('Error generating precision print:', error);
       toast({
         title: "Generation Failed",
-        description: error.error || "Failed to generate precision version",
+        description: error.error || "Failed to generate blank version",
         variant: "destructive",
       });
     } finally {
@@ -747,7 +747,7 @@ export default function PrintPreview() {
                             )}
                           >
                             {generatingPrecision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 text-emerald-500" />}
-                            <span>{showPrecision ? "Show Original" : "Precision (Shoot)"}</span>
+                            <span>{showPrecision ? "Show Original" : "Show Blank"}</span>
                           </Button>
 
                           <Button
@@ -906,7 +906,7 @@ export default function PrintPreview() {
 
             toast({
               title: "Calibration Saved",
-              description: "Previous PDF deleted. Click 'Precision (Shoot)' to generate the new aligned version.",
+              description: "Previous PDF deleted. Click 'Show Blank' to generate the new aligned version.",
             });
           }
         }}
