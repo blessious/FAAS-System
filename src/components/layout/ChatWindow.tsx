@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, Send } from "lucide-react";
+import { MessageCircle, Send, Trash2 } from "lucide-react";
 import {
     Popover,
     PopoverContent,
@@ -65,6 +65,11 @@ export function ChatWindow() {
                 }
             });
 
+            eventSource.addEventListener('chatCleared', () => {
+                setMessages([]);
+                setUnreadCount(0);
+            });
+
             return () => eventSource.close();
         }
     }, [user, isOpen]);
@@ -89,6 +94,15 @@ export function ChatWindow() {
         const timeout = setTimeout(scrollToBottom, 100);
         return () => clearTimeout(timeout);
     }, [messages]);
+
+    const handleClear = async () => {
+        if (!window.confirm('Clear all chat history? This cannot be undone.')) return;
+        try {
+            await chatAPI.clearMessages();
+        } catch (error) {
+            console.error("Failed to clear messages:", error);
+        }
+    };
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -130,6 +144,17 @@ export function ChatWindow() {
                         <h3 className="font-bold text-slate-900">Group Chat</h3>
                         <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Connect with team</p>
                     </div>
+                    {user?.role === 'administrator' && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleClear}
+                            className="h-8 w-8 text-slate-400 hover:text-rose-500 hover:bg-rose-50"
+                            title="Clear chat history"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    )}
                 </div>
 
                 <ScrollArea ref={scrollRef} className="flex-1 p-4 bg-slate-50/30">

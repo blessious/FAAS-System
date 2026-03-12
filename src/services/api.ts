@@ -275,6 +275,9 @@ export const chatAPI = {
 
   sendMessage: (message: string): Promise<any> =>
     api.post('/chat', { message }),
+
+  clearMessages: (): Promise<any> =>
+    api.delete('/chat'),
 };
 
 // Helper functions

@@ -71,6 +71,27 @@ class ChatController {
             res.status(500).json({ success: false, error: 'Failed to fetch messages' });
         }
     }
+
+    async clearMessages(req, res) {
+        try {
+            if (req.user.role !== 'administrator') {
+                return res.status(403).json({ success: false, error: 'Only administrators can clear chat history' });
+            }
+
+            const pool = getConnection();
+            await pool.execute('DELETE FROM messages');
+
+            // Broadcast clear event to all connected clients
+            if (global.broadcastSSE) {
+                global.broadcastSSE('chatCleared', {});
+            }
+
+            res.json({ success: true });
+        } catch (error) {
+            console.error('Clear messages error:', error);
+            res.status(500).json({ success: false, error: 'Failed to clear messages' });
+        }
+    }
 }
 
 module.exports = new ChatController();
