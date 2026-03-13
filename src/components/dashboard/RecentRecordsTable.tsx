@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext.jsx";
 
 import {
@@ -56,6 +56,7 @@ interface FAASRecord {
 interface RecentRecordsTableProps {
   records: FAASRecord[];
   onDelete?: (id: string | number) => void | Promise<void>;
+  searchQuery?: string;
 }
 
 const statusStyles = {
@@ -79,7 +80,7 @@ const rowHoverStyles = {
   rejected: "hover:bg-gradient-to-r hover:from-rose-50/50 hover:to-rose-100/30",
 } as const;
 
-export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProps) {
+export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: RecentRecordsTableProps) {
   const { isAdmin, isEncoder, isApprover } = useAuth() as { isAdmin?: boolean, isEncoder?: boolean, isApprover?: boolean };
   const navigate = useNavigate();
 
@@ -92,6 +93,38 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
   const [linkedEntriesMap, setLinkedEntriesMap] = useState<Record<string | number, FAASRecord[]>>({});
   const [loadingLinked, setLoadingLinked] = useState<Set<string | number>>(new Set());
 
+  const fetchLinkedEntries = async (rootId: string | number) => {
+    if (linkedEntriesMap[rootId] || loadingLinked.has(rootId)) return;
+
+    try {
+      setLoadingLinked(prev => new Set(prev).add(rootId));
+      const entries = await dashboardAPI.getLinkedEntries(rootId);
+      const sortedEntries = [...entries].sort((a, b) =>
+        (a.pin || "").localeCompare(b.pin || "", undefined, { numeric: true, sensitivity: "base" })
+      );
+      setLinkedEntriesMap(prev => ({ ...prev, [rootId]: sortedEntries }));
+    } catch (error) {
+      console.error("Failed to fetch linked entries:", error);
+    } finally {
+      setLoadingLinked(prev => {
+        const next = new Set(prev);
+        next.delete(rootId);
+        return next;
+      });
+    }
+  };
+
+  const matchesSearchQuery = (record: FAASRecord): boolean => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      (record.pin || "").toLowerCase().includes(query) ||
+      (record.arf_no || "").toLowerCase().includes(query) ||
+      (record.owner_name || "").toLowerCase().includes(query) ||
+      (record.property_location || "").toLowerCase().includes(query)
+    );
+  };
+
   const toggleExpand = async (e: React.MouseEvent, record: FAASRecord) => {
     e.stopPropagation();
     const rootId = record.id;
@@ -101,24 +134,7 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
       newExpanded.delete(rootId);
     } else {
       newExpanded.add(rootId);
-      if (!linkedEntriesMap[rootId]) {
-        try {
-          setLoadingLinked(prev => new Set(prev).add(rootId));
-          const entries = await dashboardAPI.getLinkedEntries(rootId);
-          const sortedEntries = [...entries].sort((a, b) =>
-            (a.pin || "").localeCompare(b.pin || "", undefined, { numeric: true, sensitivity: "base" })
-          );
-          setLinkedEntriesMap(prev => ({ ...prev, [rootId]: sortedEntries }));
-        } catch (error) {
-          console.error("Failed to fetch linked entries:", error);
-        } finally {
-          setLoadingLinked(prev => {
-            const next = new Set(prev);
-            next.delete(rootId);
-            return next;
-          });
-        }
-      }
+      await fetchLinkedEntries(rootId);
     }
     setExpandedRootIds(newExpanded);
   };
@@ -146,6 +162,27 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
   const handleDelete = (id: string | number) => {
     setDeleteId(id);
   };
+
+  // Auto-expand and fetch all linked sub-records when searching.
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const parentRecordsToExpand = records
+        .filter(r => (r.linked_entries_count || 0) > 0)
+        .map(r => r.id);
+      
+      if (parentRecordsToExpand.length > 0) {
+        setExpandedRootIds(prev => {
+          const newSet = new Set(prev);
+          parentRecordsToExpand.forEach(id => newSet.add(id));
+          return newSet;
+        });
+
+        parentRecordsToExpand.forEach((id) => {
+          void fetchLinkedEntries(id);
+        });
+      }
+    }
+  }, [searchQuery, records]);
 
   const handleViewHistory = (record: FAASRecord) => {
     setHistoryRecord(record);
@@ -257,9 +294,19 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                 </TableCell>
               </TableRow>
             ) : (
-              records.map((record, index) => (
-                <div key={record.id} style={{ display: "contents" }}>
+              records.flatMap((record, index) => {
+                // When searching: show record if it matches search OR has linked entries (will be expanded)
+                if (searchQuery.trim()) {
+                  const matchesSearch = matchesSearchQuery(record);
+                  const hasLinkedEntries = (record.linked_entries_count || 0) > 0;
+                  if (!matchesSearch && !hasLinkedEntries) {
+                    return [];
+                  }
+                }
+                
+                const rows = [
                   <TableRow
+                    key={`${record.id}-main`}
                     className={cn(
                       "group border-b border-slate-100 transition-all duration-200 cursor-pointer select-none",
                       index % 2 === 1 && "bg-slate-300/30",
@@ -494,127 +541,135 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
                       </div>
                     </TableCell>
                   </TableRow>
+                ];
 
-                  {/* Sub-records Rendering */}
-                  {expandedRootIds.has(record.id) && linkedEntriesMap[record.id] && linkedEntriesMap[record.id].map((subRecord) => (
-                    <TableRow
-                      key={subRecord.id}
-                      className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-100 transition-colors"
-                      onDoubleClick={() => handleView(subRecord)}
-                    >
-                      <TableCell className="p-0 border-r border-slate-100"></TableCell>
-                      <TableCell className="px-6 py-2 pl-12 relative overflow-hidden">
-                        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-blue-200/50"></div>
-                        <div className="absolute left-6 top-1/2 w-4 h-0.5 bg-blue-200/50"></div>
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <span className="text-xs font-bold text-slate-600 tracking-tight block uppercase truncate min-w-0" title={subRecord.pin || "N/A"}>{subRecord.pin || "N/A"}</span>
-                            <span className="text-[10px] text-slate-400 font-medium">Revision ID: {formatId(subRecord.id)}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-2">
-                        <span className="text-xs font-medium text-slate-600 truncate block max-w-[200px]" title={subRecord.owner_name}>{subRecord.owner_name}</span>
-                      </TableCell>
-                      <TableCell className="px-6 py-2">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-6 h-6 border border-slate-200">
-                            {(subRecord.updater_profile_picture || subRecord.encoder_profile_picture) ? (
-                              <AvatarImage
-                                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${subRecord.updater_profile_picture || subRecord.encoder_profile_picture}`}
-                              />
-                            ) : null}
-                            <AvatarFallback className="text-[8px] font-bold">{(subRecord.updater_name || subRecord.encoder_name || '?')[0].toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-[10px] text-slate-500">{subRecord.updater_name || subRecord.encoder_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-2">
-                        <Badge variant="outline" className={cn("px-1.5 py-0 text-[9px] font-extrabold uppercase border shadow-none", statusStyles[subRecord.status])}>
-                          {statusLabels[subRecord.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-6 py-2">
-                        <span className="text-xs text-slate-500">
-                          {new Date(subRecord.created_at).toLocaleDateString()}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-6 py-2">
-                        <span className="text-xs text-slate-500" title={`Created: ${new Date(subRecord.created_at).toLocaleString()}`}>
-                          {new Date(subRecord.updated_at || subRecord.created_at).toLocaleDateString()}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-4 py-2 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewHistory(subRecord)}
-                            className="h-7 w-7 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                            title="View Progress"
-                          >
-                            <History className="w-3.5 h-3.5" />
-                          </Button>
+                {/* Sub-records Rendering */}
+                if (expandedRootIds.has(record.id) && linkedEntriesMap[record.id]) {
+                  linkedEntriesMap[record.id]
+                    .filter(subRecord => matchesSearchQuery(subRecord))
+                    .forEach((subRecord) => {
+                      rows.push(
+                        <TableRow
+                          key={subRecord.id}
+                          className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-100 transition-colors"
+                          onDoubleClick={() => handleView(subRecord)}
+                        >
+                          <TableCell className="p-0 border-r border-slate-100"></TableCell>
+                          <TableCell className="px-6 py-2 pl-12 relative overflow-hidden">
+                            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-blue-200/50"></div>
+                            <div className="absolute left-6 top-1/2 w-4 h-0.5 bg-blue-200/50"></div>
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <span className="text-xs font-bold text-slate-600 tracking-tight block uppercase truncate min-w-0" title={subRecord.pin || "N/A"}>{subRecord.pin || "N/A"}</span>
+                                <span className="text-[10px] text-slate-400 font-medium">Revision ID: {formatId(subRecord.id)}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-2">
+                            <span className="text-xs font-medium text-slate-600 truncate block max-w-[200px]" title={subRecord.owner_name}>{subRecord.owner_name}</span>
+                          </TableCell>
+                          <TableCell className="px-6 py-2">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="w-6 h-6 border border-slate-200">
+                                {(subRecord.updater_profile_picture || subRecord.encoder_profile_picture) ? (
+                                  <AvatarImage
+                                    src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${subRecord.updater_profile_picture || subRecord.encoder_profile_picture}`}
+                                  />
+                                ) : null}
+                                <AvatarFallback className="text-[8px] font-bold">{(subRecord.updater_name || subRecord.encoder_name || '?')[0].toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-[10px] text-slate-500">{subRecord.updater_name || subRecord.encoder_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-2">
+                            <Badge variant="outline" className={cn("px-1.5 py-0 text-[9px] font-extrabold uppercase border shadow-none", statusStyles[subRecord.status])}>
+                              {statusLabels[subRecord.status]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-2">
+                            <span className="text-xs text-slate-500">
+                              {new Date(subRecord.created_at).toLocaleDateString()}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-6 py-2">
+                            <span className="text-xs text-slate-500" title={`Created: ${new Date(subRecord.created_at).toLocaleString()}`}>
+                              {new Date(subRecord.updated_at || subRecord.created_at).toLocaleDateString()}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-2 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleViewHistory(subRecord)}
+                                className="h-7 w-7 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                                title="View Progress"
+                              >
+                                <History className="w-3.5 h-3.5" />
+                              </Button>
 
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleView(subRecord)}
-                            className="h-7 gap-1 rounded-lg border-blue-100 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all font-bold px-2 text-[10px]"
-                          >
-                            <Eye className="w-3 h-3" />
-                            View
-                          </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleView(subRecord)}
+                                className="h-7 gap-1 rounded-lg border-blue-100 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all font-bold px-2 text-[10px]"
+                              >
+                                <Eye className="w-3 h-3" />
+                                View
+                              </Button>
 
-                          {(isAdmin || isEncoder) && (subRecord.status === "draft" || subRecord.status === "for_approval" || subRecord.status === "rejected") && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(subRecord)}
-                              className="h-7 gap-1 rounded-lg border-amber-100 bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all font-bold px-2 text-[10px]"
-                            >
-                              <Edit className="w-3 h-3" />
-                              Edit
-                            </Button>
-                          )}
+                              {(isAdmin || isEncoder) && (subRecord.status === "draft" || subRecord.status === "for_approval" || subRecord.status === "rejected") && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(subRecord)}
+                                  className="h-7 gap-1 rounded-lg border-amber-100 bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all font-bold px-2 text-[10px]"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                  Edit
+                                </Button>
+                              )}
 
-                          {onDelete && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(subRecord.id)}
-                              className="h-7 w-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                              title="Delete Revision"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
+                              {onDelete && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(subRecord.id)}
+                                  className="h-7 w-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                  title="Delete Revision"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
 
-                          {subRecord.status === 'approved' && (isEncoder || isAdmin || isApprover) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                try {
-                                  const { approvalAPI } = await import("@/services/api");
-                                  await approvalAPI.cancelAction(subRecord.id);
-                                  window.location.reload();
-                                } catch (err) {
-                                  console.error(err);
-                                }
-                              }}
-                              className="h-7 w-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                              title="Cancel Approval"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </div>
-              ))
+                              {subRecord.status === 'approved' && (isEncoder || isAdmin || isApprover) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={async () => {
+                                    try {
+                                      const { approvalAPI } = await import("@/services/api");
+                                      await approvalAPI.cancelAction(subRecord.id);
+                                      window.location.reload();
+                                    } catch (err) {
+                                      console.error(err);
+                                    }
+                                  }}
+                                  className="h-7 w-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                  title="Cancel Approval"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                }
+
+                return rows;
+              })
             )}
           </TableBody>
         </Table>

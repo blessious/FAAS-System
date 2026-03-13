@@ -446,6 +446,7 @@ export default function Dashboard() {
                         key={lastRefresh}
                         records={displayedRecords}
                         onDelete={handleDeleteDraft}
+                        searchQuery={debouncedSearchQuery}
                       />
                     </div>
 

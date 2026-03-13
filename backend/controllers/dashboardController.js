@@ -41,7 +41,19 @@ class DashboardController {
           f.pin LIKE ? OR 
           f.arf_no LIKE ? OR 
           f.owner_name LIKE ? OR 
-          f.property_location LIKE ?
+          f.property_location LIKE ? OR
+          EXISTS (
+            SELECT 1
+            FROM faas_records s
+            WHERE s.parent_id = f.id
+              AND s.hidden = 0
+              AND (
+                s.pin LIKE ? OR
+                s.arf_no LIKE ? OR
+                s.owner_name LIKE ? OR
+                s.property_location LIKE ?
+              )
+          )
         )`;
         whereClause += searchCondition;
 
@@ -49,13 +61,43 @@ class DashboardController {
           pin LIKE ? OR 
           arf_no LIKE ? OR 
           owner_name LIKE ? OR 
-          property_location LIKE ?
+          property_location LIKE ? OR
+          EXISTS (
+            SELECT 1
+            FROM faas_records s
+            WHERE s.parent_id = faas_records.id
+              AND s.hidden = 0
+              AND (
+                s.pin LIKE ? OR
+                s.arf_no LIKE ? OR
+                s.owner_name LIKE ? OR
+                s.property_location LIKE ?
+              )
+          )
         )`;
         countWhereClause += countCondition;
 
         const searchPattern = `%${search}%`;
-        queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
-        countParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        queryParams.push(
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern
+        );
+        countParams.push(
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern,
+          searchPattern
+        );
       }
 
       // Get total count for pagination with search filter
@@ -91,7 +133,7 @@ class DashboardController {
         LEFT JOIN users ue ON f.encoder_id = ue.id 
         LEFT JOIN users uu ON f.updated_by = uu.id
         ${whereClause}
-        ORDER BY COALESCE(f.updated_at, f.created_at) DESC
+        ORDER BY COALESCE(f.updated_at, f.created_at) ASC
         LIMIT ? OFFSET ?`,
         queryParams
       );
