@@ -240,44 +240,44 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: Rece
       <div className="overflow-x-auto">
         <Table>
           <TableHeader className="bg-gradient-to-r from-slate-50 to-blue-50/30">
-            <TableRow className="border-b-2 border-slate-100 hover:bg-transparent text-[10px]">
-              <TableHead className="w-14 bg-white/50 border-r border-slate-100 px-0 text-center font-bold align-middle">No.</TableHead>
-              <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
+              <TableRow className="border-b-2 border-blue-200 hover:bg-transparent text-[10px]">
+                <TableHead className="h-14 w-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200 text-center">No.</TableHead>
+                <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    <FileText className="w-3.5 h-3.5 text-blue-400" />
                   PIN
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
+                <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200">
                 <div className="flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
+                    <User className="w-3.5 h-3.5 text-blue-400" />
                   Owner Name
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
+                <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200">
                 <div className="flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
+                    <User className="w-3.5 h-3.5 text-blue-400" />
                   Last Actor
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
-                Status
-              </TableHead>
-              <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
+                <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200">
+                  Status
+                </TableHead>
+                <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
                   Date Created
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
+                <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
                   Last Updated
                 </div>
               </TableHead>
-              <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 text-center">
-                Actions
-              </TableHead>
+                <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 text-center">
+                  Actions
+                </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

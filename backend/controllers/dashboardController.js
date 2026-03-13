@@ -133,7 +133,7 @@ class DashboardController {
         LEFT JOIN users ue ON f.encoder_id = ue.id 
         LEFT JOIN users uu ON f.updated_by = uu.id
         ${whereClause}
-        ORDER BY COALESCE(f.updated_at, f.created_at) ASC
+        ORDER BY f.created_at ASC
         LIMIT ? OFFSET ?`,
         queryParams
       );
