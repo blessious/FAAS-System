@@ -241,7 +241,7 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: Rece
         <Table>
           <TableHeader className="bg-gradient-to-r from-slate-50 to-blue-50/30">
             <TableRow className="border-b-2 border-slate-100 hover:bg-transparent text-[10px]">
-              <TableHead className="w-10 bg-white/50 border-r border-slate-100 px-0 text-center"></TableHead>
+              <TableHead className="w-14 bg-white/50 border-r border-slate-100 px-0 text-center font-bold align-middle">No.</TableHead>
               <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white/50 border-r border-slate-100">
                 <div className="flex items-center gap-2">
                   <FileText className="w-3.5 h-3.5 text-slate-400" />
@@ -283,7 +283,7 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: Rece
           <TableBody>
             {records.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-20">
+                <TableCell colSpan={8} className="text-center py-20">
                   <div className="space-y-3">
                     <FileText className="w-12 h-12 text-slate-300 mx-auto" />
                     <div>
@@ -318,32 +318,30 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: Rece
                     onDoubleClick={() => handleView(record)}
                   >
                     <TableCell
-                      className={cn(
-                        "w-10 px-0 border-r border-slate-100 text-center transition-colors",
-                        (record.linked_entries_count || 0) > 0 ? "hover:bg-blue-50/50 cursor-pointer" : ""
-                      )}
-                      onDoubleClick={(e) => e.stopPropagation()} // Prevent viewing record on double click
+                      className="w-14 px-0 border-r border-slate-100 text-center font-bold cursor-pointer hover:bg-blue-50/50 align-middle"
+                      style={{ verticalAlign: 'middle' }}
                       onClick={(e) => {
                         if ((record.linked_entries_count || 0) > 0) {
+                          e.stopPropagation();
                           toggleExpand(e, record);
                         }
                       }}
+                      onDoubleClick={(e) => e.stopPropagation()}
                     >
-                      {(record.linked_entries_count || 0) > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 rounded-md hover:bg-blue-100 hover:text-blue-600 pointer-events-none"
-                        >
-                          {loadingLinked.has(record.id) ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
-                          ) : expandedRootIds.has(record.id) ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
-                          )}
-                        </Button>
-                      )}
+                      <div className="flex items-center justify-center gap-1 select-none min-h-[40px]">
+                        <span className="inline-block align-middle leading-none">{index + 1}</span>
+                        {(record.linked_entries_count || 0) > 0 && (
+                          <span className="inline-flex align-middle ml-1">
+                            {loadingLinked.has(record.id) ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                            ) : expandedRootIds.has(record.id) ? (
+                              <ChevronDown className="w-4 h-4 text-blue-500" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-blue-500" />
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -547,21 +545,27 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: Rece
                 if (expandedRootIds.has(record.id) && linkedEntriesMap[record.id]) {
                   linkedEntriesMap[record.id]
                     .filter(subRecord => matchesSearchQuery(subRecord))
-                    .forEach((subRecord) => {
+                    .forEach((subRecord, subIndex) => {
                       rows.push(
                         <TableRow
                           key={subRecord.id}
                           className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-100 transition-colors"
                           onDoubleClick={() => handleView(subRecord)}
                         >
-                          <TableCell className="p-0 border-r border-slate-100"></TableCell>
-                          <TableCell className="px-6 py-2 pl-12 relative overflow-hidden">
-                            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-blue-200/50"></div>
-                            <div className="absolute left-6 top-1/2 w-4 h-0.5 bg-blue-200/50"></div>
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <span className="text-xs font-bold text-slate-600 tracking-tight block uppercase truncate min-w-0" title={subRecord.pin || "N/A"}>{subRecord.pin || "N/A"}</span>
-                                <span className="text-[10px] text-slate-400 font-medium">Revision ID: {formatId(subRecord.id)}</span>
+                          <TableCell className="w-14 px-0 border-r border-slate-100 text-center text-xs text-slate-400 font-bold align-middle" style={{ verticalAlign: 'middle' }}>
+                            {`${index + 1}.${subIndex + 1}`}
+                          </TableCell>
+                          <TableCell className="px-6 py-2 relative overflow-visible" colSpan={1} style={{ paddingLeft: 0 }}>
+                            <div className="relative flex items-center" style={{ minHeight: '40px' }}>
+                              {/* Vertical line aligned with PIN column */}
+                              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-blue-200/50" style={{ left: '2.5rem' }}></div>
+                              {/* Horizontal line from vertical to content */}
+                              <div className="absolute top-1/2 left-6 w-4 h-0.5 bg-blue-200/50" style={{ left: '2.5rem' }}></div>
+                              <div className="pl-24 flex items-center gap-3">
+                                <div>
+                                  <span className="text-xs font-bold text-slate-600 tracking-tight block uppercase truncate min-w-0" title={subRecord.pin || "N/A"}>{subRecord.pin || "N/A"}</span>
+                                  <span className="text-[10px] text-slate-400 font-medium">Revision ID: {formatId(subRecord.id)}</span>
+                                </div>
                               </div>
                             </div>
                           </TableCell>
