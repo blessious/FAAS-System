@@ -389,7 +389,7 @@ export default function Dashboard() {
                 <div className="relative group flex-1 sm:flex-none">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                   <Input
-                    type="search"
+                    type="text"
                     value={recentRecordsQuery}
                     onChange={(e) => setRecentRecordsQuery(e.target.value)}
                     placeholder="Search PIN, Owner, Location..."
