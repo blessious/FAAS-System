@@ -105,7 +105,10 @@ export function RecentRecordsTable({ records, onDelete }: RecentRecordsTableProp
         try {
           setLoadingLinked(prev => new Set(prev).add(rootId));
           const entries = await dashboardAPI.getLinkedEntries(rootId);
-          setLinkedEntriesMap(prev => ({ ...prev, [rootId]: entries }));
+          const sortedEntries = [...entries].sort((a, b) =>
+            (a.pin || "").localeCompare(b.pin || "", undefined, { numeric: true, sensitivity: "base" })
+          );
+          setLinkedEntriesMap(prev => ({ ...prev, [rootId]: sortedEntries }));
         } catch (error) {
           console.error("Failed to fetch linked entries:", error);
         } finally {
