@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
 require('dotenv').config();
 
+const logger = require('./utils/logger');
 const { connectDB } = require('./utils/database');
 
 const app = express();
@@ -19,7 +19,7 @@ function addSSEClient(userId, res) {
   }
   const clientId = Date.now();
   sseClients.get(userId).push({ id: clientId, res });
-  console.log(`✅ SSE Client connected: User ${userId}, Client ${clientId}`);
+  logger.sse('CONNECT', `User ${userId}`);
   return clientId;
 }
 
@@ -29,7 +29,7 @@ function removeSSEClient(userId, clientId) {
     const index = userClients.findIndex(c => c.id === clientId);
     if (index !== -1) {
       userClients.splice(index, 1);
-      console.log(`❌ SSE Client disconnected: User ${userId}, Client ${clientId}`);
+      logger.sse('DISCONNECT', `User ${userId}`);
     }
     if (userClients.length === 0) {
       sseClients.delete(userId);
@@ -46,11 +46,13 @@ function broadcastSSE(event, data) {
         client.res.write(message);
         sentCount++;
       } catch (error) {
-        console.error('Error broadcasting SSE:', error);
+        logger.debug(`SSE broadcast error: ${error.message}`);
       }
     });
   });
-  console.log(`📡 Broadcast '${event}' to ${sentCount} connections`);
+  if (sentCount > 0) {
+    logger.debug(`SSE broadcast '${event}' to ${sentCount} connections`);
+  }
 }
 
 function sendToUserSSE(userId, event, data) {
@@ -63,7 +65,7 @@ function sendToUserSSE(userId, event, data) {
         client.res.write(message);
         sentCount++;
       } catch (error) {
-        console.error(`Error sending SSE to user ${userId}:`, error);
+        logger.debug(`SSE send error for user ${userId}: ${error.message}`);
       }
     });
   }
@@ -102,7 +104,22 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+
+// Custom HTTP logging - only log important requests (POST, PUT, DELETE, errors)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    
+    // Log only if: mutation request (POST/PUT/DELETE) OR error response
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method) || status >= 400) {
+      const statusColor = status >= 400 ? '❌' : '✅';
+      logger.debug(`${req.method} ${req.path} ${status} ${duration}ms`);
+    }
+  });
+  next();
+});
 
 // Static files
 app.use('/uploads', express.static('uploads'));
@@ -223,7 +240,7 @@ app.get('/api/health', (req, res) => {
 
 // Error handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.error('Unhandled error', err.message);
   res.status(err.status || 500).json({
     message: err.message || 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err : {}
@@ -235,20 +252,18 @@ const PORT = process.env.PORT || 3000;
 const startServer = async () => {
   try {
     await connectDB();
-    console.log('✅ Database connected successfully');
+    logger.success('Database connected');
 
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌐 CORS enabled for ALL origins`);
-      console.log(`📡 SSE real-time updates enabled`);
-      console.log(`📡 Access via:`);
-      console.log(`   http://localhost:${PORT}`);
-      console.log(`   http://<your-ip>:${PORT}`);
+      logger.startup(`Server running on port ${PORT}`);
+      logger.info(`CORS: enabled for all origins`);
+      logger.info(`SSE: real-time updates enabled`);
+      logger.info(`Access: http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.error('Failed to start server', error.message);
     process.exit(1);
   }
 };
 
-startServer();  
+startServer();

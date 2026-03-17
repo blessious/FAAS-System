@@ -1,4 +1,5 @@
-const { getConnection } = require('../utils/database');
+﻿const { getConnection } = require('../utils/database');
+const logger = require('../utils/logger');
 const printController = require('./printController');
 const path = require('path');
 const fs = require('fs');
@@ -28,15 +29,15 @@ async function generatePDF(recordId, excelFilePath) {
 
     const command = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${absoluteExcelPath}" --pdf-path "${absolutePdfPath}"`;
 
-    console.log(`📄 PDF Conversion Command: ${command}`);
+    logger.debug(`ðŸ“„ PDF Conversion Command: ${command}`);
 
     return new Promise((resolve) => {
       exec(command, { cwd: pythonDir }, (error, stdout, stderr) => {
-        if (stdout) console.log('📄 PDF Conversion STDOUT:', stdout);
-        if (stderr) console.error('📄 PDF Conversion STDERR:', stderr);
+        if (stdout) logger.debug('ðŸ“„ PDF Conversion STDOUT:', stdout);
+        if (stderr) logger.error('ðŸ“„ PDF Conversion STDERR:', stderr);
 
         if (error) {
-          console.error('❌ PDF process error:', error.message);
+          logger.error('âŒ PDF process error:', error.message);
           resolve({
             success: false,
             error: stderr || error.message,
@@ -61,7 +62,7 @@ async function generatePDF(recordId, excelFilePath) {
                   });
                   return;
                 } else {
-                  console.error('❌ PDF script reported failure:', jsonData.error);
+                  logger.error('âŒ PDF script reported failure:', jsonData.error);
                   resolve({
                     success: false,
                     error: jsonData.error,
@@ -75,12 +76,12 @@ async function generatePDF(recordId, excelFilePath) {
             }
           }
         } catch (parseError) {
-          console.error('❌ PDF result parsing error:', parseError.message);
+          logger.error('âŒ PDF result parsing error:', parseError.message);
         }
 
         // Fallback: check if file actually exists even if parsing failed
         if (fs.existsSync(pdfPath)) {
-          console.log(`✅ PDF found on disk at fallback: ${pdfPath}`);
+          logger.debug(`âœ… PDF found on disk at fallback: ${pdfPath}`);
           resolve({
             success: true,
             message: 'PDF generated successfully',
@@ -97,7 +98,7 @@ async function generatePDF(recordId, excelFilePath) {
     });
 
   } catch (error) {
-    console.error('PDF generation error:', error);
+    logger.error('PDF generation error:', error);
     return {
       success: false,
       error: error.message,
@@ -124,7 +125,7 @@ class FAASController {
 
   // Centralized database error handler
   handleDatabaseError(error, defaultMessage) {
-    console.error(`❌ ${defaultMessage}:`, error);
+    logger.error(`âŒ ${defaultMessage}:`, error);
 
     if (error.code === 'ER_DUP_ENTRY') {
       const match = error.sqlMessage?.match(/Duplicate entry '(.+)' for key '(.+)'/);
@@ -758,7 +759,7 @@ class FAASController {
         VALUES (?, ?, ?, ?, ?)
       `, [userId, 'SUBMIT', 'faas_records', id, `Submitted FAAS record ${record.arf_no} for approval`]);
 
-      console.log(`📊 Generating Excel for submitted record: ${record.arf_no}`);
+      logger.debug(`ðŸ“Š Generating Excel for submitted record: ${record.arf_no}`);
 
       const excelResult = await new Promise((resolve, reject) => {
         const mockReq = {
@@ -770,7 +771,7 @@ class FAASController {
           json: (result) => resolve(result),
           status: (code) => ({
             json: (result) => {
-              console.error(`⚠️ Excel generation failed (${code}):`, result.error);
+              logger.error(`âš ï¸ Excel generation failed (${code}):`, result.error);
               resolve({
                 success: false,
                 error: result.error,
@@ -800,7 +801,7 @@ class FAASController {
       }
 
       if (faasExcelPath) {
-        console.log(`📄 Attempting to generate PDF preview for FAAS: ${record.arf_no}`);
+        logger.debug(`ðŸ“„ Attempting to generate PDF preview for FAAS: ${record.arf_no}`);
         try {
           pdfResult = await generatePDF(id, faasExcelPath);
           if (pdfResult.success) {
@@ -808,12 +809,12 @@ class FAASController {
               'UPDATE faas_records SET pdf_preview_path = ? WHERE id = ? AND hidden = 0',
               [pdfResult.data.pdfPath, id]
             );
-            console.log(`✅ PDF generated and saved: ${pdfResult.data.pdfPath}`);
+            logger.debug(`âœ… PDF generated and saved: ${pdfResult.data.pdfPath}`);
           } else {
-            console.log(`⚠️ PDF generation failed: ${pdfResult.error}`);
+            logger.debug(`âš ï¸ PDF generation failed: ${pdfResult.error}`);
           }
         } catch (pdfError) {
-          console.error(`⚠️ PDF generation error (non-critical):`, pdfError.message);
+          logger.error(`âš ï¸ PDF generation error (non-critical):`, pdfError.message);
           pdfResult = {
             success: false,
             error: pdfError.message,
@@ -821,11 +822,11 @@ class FAASController {
           };
         }
       } else {
-        console.log(`⚠️ Skipping PDF generation - FAAS Excel was not generated successfully for ${record.arf_no}`);
+        logger.debug(`âš ï¸ Skipping PDF generation - FAAS Excel was not generated successfully for ${record.arf_no}`);
       }
 
       if (unirrigExcelPath) {
-        console.log(`📄 Attempting to generate PDF preview for UNIRRIG: ${record.arf_no}`);
+        logger.debug(`ðŸ“„ Attempting to generate PDF preview for UNIRRIG: ${record.arf_no}`);
         try {
           unirrigPdfResult = await generatePDF(id, unirrigExcelPath);
           if (unirrigPdfResult.success) {
@@ -833,12 +834,12 @@ class FAASController {
               'UPDATE faas_records SET unirrig_pdf_preview_path = ? WHERE id = ? AND hidden = 0',
               [unirrigPdfResult.data.pdfPath, id]
             );
-            console.log(`✅ UNIRRIG PDF generated and saved: ${unirrigPdfResult.data.pdfPath}`);
+            logger.debug(`âœ… UNIRRIG PDF generated and saved: ${unirrigPdfResult.data.pdfPath}`);
           } else {
-            console.log(`⚠️ UNIRRIG PDF generation failed: ${unirrigPdfResult.error}`);
+            logger.debug(`âš ï¸ UNIRRIG PDF generation failed: ${unirrigPdfResult.error}`);
           }
         } catch (pdfError) {
-          console.error(`⚠️ UNIRRIG PDF generation error (non-critical):`, pdfError.message);
+          logger.error(`âš ï¸ UNIRRIG PDF generation error (non-critical):`, pdfError.message);
           unirrigPdfResult = {
             success: false,
             error: pdfError.message,
@@ -846,7 +847,7 @@ class FAASController {
           };
         }
       } else {
-        console.log(`⚠️ Skipping PDF generation - UNIRRIG Excel was not generated successfully for ${record.arf_no}`);
+        logger.debug(`âš ï¸ Skipping PDF generation - UNIRRIG Excel was not generated successfully for ${record.arf_no}`);
       }
 
       // Broadcast real-time event
@@ -894,7 +895,7 @@ class FAASController {
       });
 
     } catch (error) {
-      console.error('Submit for approval error:', error);
+      logger.error('Submit for approval error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to submit record for approval'
@@ -942,7 +943,7 @@ class FAASController {
       });
 
     } catch (error) {
-      console.error('Get FAAS record error:', error);
+      logger.error('Get FAAS record error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch FAAS record'
@@ -973,7 +974,7 @@ class FAASController {
 
       const params = [];
 
-      // ✅ REMOVED: No user filter - shows all records to everyone
+      // âœ… REMOVED: No user filter - shows all records to everyone
       // if (req.user.role === 'encoder') {
       //   query += ` AND f.encoder_id = ?`;
       //   params.push(userId);
@@ -994,7 +995,7 @@ class FAASController {
       });
 
     } catch (error) {
-      console.error('Get my FAAS records error:', error);
+      logger.error('Get my FAAS records error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch your FAAS records'
@@ -1020,7 +1021,7 @@ class FAASController {
         WHERE f.status = 'draft' 
           AND f.hidden = 0
         ORDER BY f.created_at DESC`,
-        [] // ✅ No user filter
+        [] // âœ… No user filter
       );
 
       res.json({
@@ -1028,7 +1029,7 @@ class FAASController {
         data: records
       });
     } catch (error) {
-      console.error('Get drafts error:', error);
+      logger.error('Get drafts error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch drafts'
@@ -1038,15 +1039,15 @@ class FAASController {
 
   async saveAsDraft(req, res) {
     try {
-      console.log('========================================');
-      console.log('📝 saveAsDraft called');
-      console.log('Has ID:', !!req.params.id);
-      console.log('Request body keys:', Object.keys(req.body));
-      console.log('ARF No:', req.body.arf_no);
-      console.log('Owner Name:', req.body.owner_name);
-      console.log('land_appraisals_json type:', typeof req.body.land_appraisals_json);
-      console.log('improvements_json type:', typeof req.body.improvements_json);
-      console.log('========================================');
+      logger.debug('========================================');
+      logger.debug('ðŸ“ saveAsDraft called');
+      logger.debug('Has ID:', !!req.params.id);
+      logger.debug('Request body keys:', Object.keys(req.body));
+      logger.debug('ARF No:', req.body.arf_no);
+      logger.debug('Owner Name:', req.body.owner_name);
+      logger.debug('land_appraisals_json type:', typeof req.body.land_appraisals_json);
+      logger.debug('improvements_json type:', typeof req.body.improvements_json);
+      logger.debug('========================================');
 
       const { id } = req.params;
       const {
@@ -1514,7 +1515,7 @@ class FAASController {
       });
 
     } catch (error) {
-      console.error('Delete draft error:', error);
+      logger.error('Delete draft error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete FAAS record'
@@ -1543,7 +1544,7 @@ class FAASController {
         data: activities
       });
     } catch (error) {
-      console.error('Get record history error:', error);
+      logger.error('Get record history error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch record history'
@@ -1572,7 +1573,7 @@ class FAASController {
         message: 'History entry deleted successfully'
       });
     } catch (error) {
-      console.error('Delete history entry error:', error);
+      logger.error('Delete history entry error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete history entry'
@@ -1604,7 +1605,7 @@ class FAASController {
         message: 'Record history cleared successfully'
       });
     } catch (error) {
-      console.error('Clear record history error:', error);
+      logger.error('Clear record history error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to clear record history'
@@ -1772,3 +1773,4 @@ class FAASController {
 }
 
 module.exports = new FAASController();
+

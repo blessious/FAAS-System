@@ -1,4 +1,5 @@
-const { getConnection } = require('../utils/database');
+﻿const { getConnection } = require('../utils/database');
+const logger = require('../utils/logger');
 
 const getMyNotifications = async (req, res) => {
     try {
@@ -18,7 +19,7 @@ const getMyNotifications = async (req, res) => {
 
         res.json(notifications);
     } catch (error) {
-        console.error('Error fetching notifications:', error);
+        logger.error('Error fetching notifications:', error);
         res.status(500).json({ error: 'Failed to fetch notifications' });
     }
 };
@@ -36,7 +37,7 @@ const markAsRead = async (req, res) => {
 
         res.json({ message: 'Notification marked as read' });
     } catch (error) {
-        console.error('Error marking notification as read:', error);
+        logger.error('Error marking notification as read:', error);
         res.status(500).json({ error: 'Failed to mark notification as read' });
     }
 };
@@ -53,7 +54,7 @@ const markAllAsRead = async (req, res) => {
 
         res.json({ message: 'All notifications marked as read' });
     } catch (error) {
-        console.error('Error marking all notifications as read:', error);
+        logger.error('Error marking all notifications as read:', error);
         res.status(500).json({ error: 'Failed to mark notifications as read' });
     }
 };
@@ -76,3 +77,5 @@ module.exports = {
     markAllAsRead,
     deleteOldNotifications
 };
+
+

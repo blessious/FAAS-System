@@ -1,4 +1,5 @@
-const { getConnection } = require('../utils/database');
+﻿const { getConnection } = require('../utils/database');
+const logger = require('../utils/logger');
 
 class DashboardController {
   async getStats(req, res) {
@@ -16,7 +17,7 @@ class DashboardController {
 
       res.json(stats[0]);
     } catch (error) {
-      console.error('Get stats error:', error);
+      logger.error('Get stats error:', error);
       res.status(500).json({ error: 'Failed to fetch statistics' });
     }
   }
@@ -151,7 +152,7 @@ class DashboardController {
         }
       });
     } catch (error) {
-      console.error('Get recent records error:', error);
+      logger.error('Get recent records error:', error);
       res.status(500).json({
         error: 'Failed to fetch recent records',
         message: error.message
@@ -176,7 +177,7 @@ class DashboardController {
 
       res.json(activities);
     } catch (error) {
-      console.error('Get activity log error:', error);
+      logger.error('Get activity log error:', error);
       res.status(500).json({ error: 'Failed to fetch activity log' });
     }
   }
@@ -207,15 +208,16 @@ class DashboardController {
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users uu ON f.updated_by = uu.id
         WHERE f.parent_id = ? AND f.hidden = 0
-        ORDER BY COALESCE(f.updated_at, f.created_at) DESC
+        ORDER BY f.created_at ASC
       `, [parentId]);
 
       res.json(entries);
     } catch (error) {
-      console.error('Get linked entries error:', error);
+      logger.error('Get linked entries error:', error);
       res.status(500).json({ error: 'Failed to fetch linked entries' });
     }
   }
 }
 
 module.exports = new DashboardController();
+

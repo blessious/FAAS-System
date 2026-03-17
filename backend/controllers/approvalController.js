@@ -1,4 +1,5 @@
-const { getConnection } = require('../utils/database');
+﻿const { getConnection } = require('../utils/database');
+const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
@@ -28,15 +29,15 @@ async function generatePDF(recordId, excelFilePath) {
 
     const command = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${absoluteExcelPath}" --pdf-path "${absolutePdfPath}"`;
 
-    console.log(`📄 PDF Conversion Command: ${command}`);
+    logger.debug(`ðŸ“„ PDF Conversion Command: ${command}`);
 
     return new Promise((resolve) => {
       exec(command, { cwd: pythonDir }, (error, stdout, stderr) => {
-        if (stdout) console.log('📄 PDF Conversion STDOUT:', stdout);
-        if (stderr) console.error('📄 PDF Conversion STDERR:', stderr);
+        if (stdout) logger.debug('ðŸ“„ PDF Conversion STDOUT:', stdout);
+        if (stderr) logger.error('ðŸ“„ PDF Conversion STDERR:', stderr);
 
         if (error) {
-          console.error('❌ PDF process error:', error.message);
+          logger.error('âŒ PDF process error:', error.message);
           resolve({
             success: false,
             error: stderr || error.message,
@@ -74,7 +75,7 @@ async function generatePDF(recordId, excelFilePath) {
       });
     });
   } catch (error) {
-    console.error('PDF generation error:', error);
+    logger.error('PDF generation error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -106,12 +107,12 @@ class ApprovalController {
             OR EXISTS (SELECT 1 FROM faas_records WHERE parent_id = f.id AND status = 'for_approval' AND hidden = 0)
           )
         ORDER BY COALESCE(f.updated_at, f.created_at) DESC
-      `); // ✅ No parameters needed
+      `); // âœ… No parameters needed
 
       res.json(records);
 
     } catch (error) {
-      console.error('Get pending approvals error:', error);
+      logger.error('Get pending approvals error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch pending approvals'
@@ -131,7 +132,7 @@ class ApprovalController {
       const [records] = await pool.execute('SELECT * FROM faas_records WHERE id = ? AND hidden = 0', [id]);
       const record = records[0];
 
-      console.log(`✅ Approving record ${id} by user ${userId}`);
+      logger.debug(`âœ… Approving record ${id} by user ${userId}`);
       await pool.execute(`
         UPDATE faas_records 
         SET 
@@ -144,8 +145,8 @@ class ApprovalController {
         WHERE id = ?
       `, [userId, comment || null, userId, id]);
 
-      // ✅ REGENERATE EXCEL & PDF AFTER APPROVAL (to include approval_date)
-      console.log(`📊 Regenerating Excel for approved record: ${id}`);
+      // âœ… REGENERATE EXCEL & PDF AFTER APPROVAL (to include approval_date)
+      logger.debug(`ðŸ“Š Regenerating Excel for approved record: ${id}`);
       try {
         const excelResult = await new Promise((resolve) => {
           const mockReq = { body: { recordId: id }, user: req.user };
@@ -161,7 +162,7 @@ class ApprovalController {
           const unirrigExcelPath = excelResult.data.unirrig ? excelResult.data.unirrig.filePath : null;
 
           if (faasExcelPath) {
-            console.log(`📄 Generating FAAS PDF preview for ${id}`);
+            logger.debug(`ðŸ“„ Generating FAAS PDF preview for ${id}`);
             const pdfRes = await generatePDF(id, faasExcelPath);
             if (pdfRes.success) {
               await pool.execute('UPDATE faas_records SET pdf_preview_path = ? WHERE id = ?', [pdfRes.data.pdfPath, id]);
@@ -169,7 +170,7 @@ class ApprovalController {
           }
 
           if (unirrigExcelPath) {
-            console.log(`📄 Generating UNIRRIG PDF preview for ${id}`);
+            logger.debug(`ðŸ“„ Generating UNIRRIG PDF preview for ${id}`);
             const pdfRes = await generatePDF(id, unirrigExcelPath);
             if (pdfRes.success) {
               await pool.execute('UPDATE faas_records SET unirrig_pdf_preview_path = ? WHERE id = ?', [pdfRes.data.pdfPath, id]);
@@ -177,7 +178,7 @@ class ApprovalController {
           }
         }
       } catch (genError) {
-        console.error('⚠️ Post-approval regeneration error (non-critical):', genError.message);
+        logger.error('âš ï¸ Post-approval regeneration error (non-critical):', genError.message);
       }
 
       // Log activity
@@ -219,7 +220,7 @@ class ApprovalController {
       });
 
     } catch (error) {
-      console.error('Approve record error:', error);
+      logger.error('Approve record error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to approve record'
@@ -250,7 +251,7 @@ class ApprovalController {
         return res.status(404).json({ success: false, error: 'Record not found' });
       }
 
-      console.log(`❌ Rejecting record ${id} by user ${userId}`);
+      logger.debug(`âŒ Rejecting record ${id} by user ${userId}`);
       // Reject only the actual record
       await pool.execute(`
         UPDATE faas_records 
@@ -303,7 +304,7 @@ class ApprovalController {
       });
 
     } catch (error) {
-      console.error('Reject record error:', error);
+      logger.error('Reject record error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to reject record'
@@ -330,12 +331,12 @@ class ApprovalController {
         WHERE f.status IN ('approved', 'rejected')
           AND f.hidden = 0
         ORDER BY f.approval_date DESC
-      `); // ✅ Removed params array
+      `); // âœ… Removed params array
 
       res.json(records);
 
     } catch (error) {
-      console.error('Get approval history error:', error);
+      logger.error('Get approval history error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch approval history'
@@ -375,7 +376,7 @@ class ApprovalController {
       res.json(records);
 
     } catch (error) {
-      console.error('Get rejected records error:', error);
+      logger.error('Get rejected records error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch rejected records'
@@ -399,7 +400,7 @@ class ApprovalController {
       res.json(stats[0]);
 
     } catch (error) {
-      console.error('Get approval stats error:', error);
+      logger.error('Get approval stats error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch approval statistics'
@@ -422,13 +423,13 @@ class ApprovalController {
         return res.status(404).json({ success: false, error: 'Record not found' });
       }
 
-      console.log(`🔄 Cancelling action for record ${id} by user ${userId}`);
+      logger.debug(`ðŸ”„ Cancelling action for record ${id} by user ${userId}`);
 
       // Clear all generated files (including precision PDF) so they are regenerated on next approval
       try {
         await printController.clearGeneratedFiles(id);
       } catch (cleanError) {
-        console.error('⚠️ Cleanup error during cancelAction:', cleanError.message);
+        logger.error('âš ï¸ Cleanup error during cancelAction:', cleanError.message);
       }
 
       await pool.execute(`
@@ -479,7 +480,7 @@ class ApprovalController {
       });
 
     } catch (error) {
-      console.error('Cancel action error:', error);
+      logger.error('Cancel action error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to cancel action'
@@ -489,3 +490,4 @@ class ApprovalController {
 }
 
 module.exports = new ApprovalController();
+

@@ -578,37 +578,99 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                                     </div>
                                     {(() => {
                                         const q = searchQuery.toLowerCase().trim();
+
                                         const groups: { [key: string]: [string, MappingItem][] } = {
                                             "General": [],
                                             "Boundaries": [],
-                                            "Appraisal": [],
-                                            "Sworn/CTC": [],
+                                            "Land Appraisal": [],
+                                            "Plants & Improvements": [],
+                                            "Land II": [],
                                             "Assessment": [],
-                                            "Previous": [],
+                                            "Sworn / CTC": [],
+                                            "Previous Record": [],
                                             "Other": []
                                         };
 
                                         Object.entries(mapping).forEach(([key, item]) => {
                                             const label = item.label || key;
                                             const cellRef = key.includes('!') ? key.split('!')[1] : key;
-                                            if (q && !label.toLowerCase().includes(q) && !cellRef.toLowerCase().includes(q) && !key.toLowerCase().includes(q)) return;
+                                            const lc = label.toLowerCase();
+                                            const actualVal = String(getActualValue(key, label) ?? "").toLowerCase();
+                                            if (q && !lc.includes(q) && !cellRef.toLowerCase().includes(q) && !key.toLowerCase().includes(q) && !actualVal.includes(q)) return;
+
                                             const sn = key.startsWith("Sheet2") ? "Sheet2" : "Sheet1";
 
                                             if (sn === "Sheet1") {
-                                                if (label.includes("North") || label.includes("East") || label.includes("South") || label.includes("West")) {
+                                                if (lc.includes("north") || lc.includes("east") || lc.includes("south") || lc.includes("west")) {
                                                     groups["Boundaries"].push([key, item]);
-                                                } else if (label.includes("Land") || label.includes("Total MV") || label.includes("Plant") || label.includes("Table R")) {
-                                                    groups["Appraisal"].push([key, item]);
+                                                } else if (
+                                                    lc.includes("table r") ||
+                                                    lc.includes("total land mv") ||
+                                                    lc.includes("total mv land") ||
+                                                    lc.includes("total mv") ||
+                                                    cellRef.startsWith("J3") ||
+                                                    cellRef === "J35" ||
+                                                    cellRef === "J36"
+                                                ) {
+                                                    groups["Land Appraisal"].push([key, item]);
+                                                } else if (
+                                                    lc.includes("plant") ||
+                                                    lc.includes("k52") ||
+                                                    lc.includes("k53") ||
+                                                    cellRef.startsWith("H4") ||
+                                                    cellRef.startsWith("I4") ||
+                                                    cellRef.startsWith("J4") ||
+                                                    cellRef.startsWith("K4") ||
+                                                    cellRef === "K52" ||
+                                                    cellRef === "K53" ||
+                                                    cellRef.startsWith("G4") ||
+                                                    cellRef.startsWith("G5")
+                                                ) {
+                                                    groups["Plants & Improvements"].push([key, item]);
+                                                } else if (
+                                                    lc.includes("land ii") ||
+                                                    cellRef.startsWith("E58") ||
+                                                    cellRef.startsWith("G58") ||
+                                                    cellRef.startsWith("H58") ||
+                                                    cellRef.startsWith("H59") ||
+                                                    cellRef.startsWith("J58")
+                                                ) {
+                                                    groups["Land II"].push([key, item]);
                                                 } else {
                                                     groups["General"].push([key, item]);
                                                 }
                                             } else {
-                                                if (label.includes("Sworn") || label.includes("CTC")) {
-                                                    groups["Sworn/CTC"].push([key, item]);
-                                                } else if (label.includes("Assm") || label.includes("L36") || label.includes("L37") || label.includes("L38") || label.includes("L39") || label.includes("Words")) {
+                                                if (lc.includes("sworn") || lc.includes("ctc")) {
+                                                    groups["Sworn / CTC"].push([key, item]);
+                                                } else if (
+                                                    lc.includes("assm") ||
+                                                    lc.includes("total assm") ||
+                                                    lc.includes("total land mv") ||
+                                                    lc.includes("total impr mv") ||
+                                                    lc.includes("words") ||
+                                                    cellRef === "L36" || cellRef === "L37" ||
+                                                    cellRef === "L38" || cellRef === "L39" ||
+                                                    cellRef === "G58" || cellRef === "M58" ||
+                                                    cellRef.startsWith("G5") ||
+                                                    cellRef.startsWith("K5") ||
+                                                    cellRef.startsWith("M5")
+                                                ) {
                                                     groups["Assessment"].push([key, item]);
-                                                } else if (label.includes("Prev")) {
-                                                    groups["Previous"].push([key, item]);
+                                                } else if (
+                                                    lc.includes("prev") ||
+                                                    lc.includes("eff year") ||
+                                                    cellRef.startsWith("E67") ||
+                                                    cellRef.startsWith("B69") ||
+                                                    cellRef.startsWith("G70") ||
+                                                    cellRef.startsWith("E71") ||
+                                                    cellRef.startsWith("H71") ||
+                                                    cellRef.startsWith("L71") ||
+                                                    cellRef.startsWith("A72") ||
+                                                    cellRef.startsWith("E72") ||
+                                                    cellRef.startsWith("H72") ||
+                                                    cellRef.startsWith("L72")
+                                                ) {
+                                                    groups["Previous Record"].push([key, item]);
                                                 } else {
                                                     groups["Other"].push([key, item]);
                                                 }

@@ -1,4 +1,5 @@
-const { exec } = require('child_process');
+﻿const { exec } = require('child_process');
+const logger = require('../utils/logger');
 const path = require('path');
 const { getConnection } = require('../utils/database');
 const fs = require('fs');
@@ -13,15 +14,15 @@ class PrintController {
       const generatedDir = path.join(__dirname, '../python/generated');
       const filePath = path.join(generatedDir, subPath);
 
-      console.log('[PDF DEBUG] Requested subPath:', subPath);
-      console.log('[PDF DEBUG] Resolved filePath:', filePath);
+      logger.debug('[PDF DEBUG] Requested subPath:', subPath);
+      logger.debug('[PDF DEBUG] Resolved filePath:', filePath);
 
       if (!subPath) {
         return res.status(400).json({ success: false, error: 'No PDF path specified' });
       }
 
       if (!fs.existsSync(filePath)) {
-        console.error('[PDF DEBUG] File NOT found on disk:', filePath);
+        logger.error('[PDF DEBUG] File NOT found on disk:', filePath);
         return res.status(404).json({ success: false, error: 'PDF file not found' });
       }
 
@@ -42,7 +43,7 @@ class PrintController {
       res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(filePath);
     } catch (error) {
-      console.error('Error serving PDF:', error);
+      logger.error('Error serving PDF:', error);
       res.status(500).json({ success: false, error: 'Failed to serve PDF' });
     }
   }
@@ -50,7 +51,7 @@ class PrintController {
 
   async generatePlainPrint(req, res) {
     try {
-      console.log('=== GENERATE PLAIN PRINT REQUEST ===');
+      logger.debug('=== GENERATE PLAIN PRINT REQUEST ===');
       const { recordId } = req.body;
 
       if (!recordId) {
@@ -73,11 +74,11 @@ class PrintController {
 
       // Command for plain UNIRRIG
       const command = `cd "${pythonDir}" && python excel_generator.py --record-id ${recordId} --type unirrig --plain`;
-      console.log(`🚀 Plain Command: ${command}`);
+      logger.debug(`ðŸš€ Plain Command: ${command}`);
 
       exec(command, { cwd: pythonDir }, async (error, stdout, stderr) => {
         if (error) {
-          console.error('❌ Python error:', stderr || error.message);
+          logger.error('âŒ Python error:', stderr || error.message);
           return res.status(500).json({ success: false, error: 'Failed to generate plain Excel' });
         }
 
@@ -103,11 +104,11 @@ class PrintController {
             if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
             const pdfCommand = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${excelPath}" --pdf-path "${pdfPath}"`;
-            console.log(`📄 Plain PDF Command: ${pdfCommand}`);
+            logger.debug(`ðŸ“„ Plain PDF Command: ${pdfCommand}`);
 
             exec(pdfCommand, { cwd: pythonDir }, async (pdfError, pdfStdout, pdfStderr) => {
               if (pdfError) {
-                console.error('❌ PDF error:', pdfStderr || pdfError.message);
+                logger.error('âŒ PDF error:', pdfStderr || pdfError.message);
                 // Still save the excel even if PDF failed
               }
 
@@ -132,13 +133,13 @@ class PrintController {
             throw new Error('Python did not return valid result');
           }
         } catch (e) {
-          console.error('❌ Error processing plain print:', e);
+          logger.error('âŒ Error processing plain print:', e);
           res.status(500).json({ success: false, error: 'Failed to process files' });
         }
       });
 
     } catch (error) {
-      console.error('❌ Generate plain print error:', error);
+      logger.error('âŒ Generate plain print error:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
@@ -181,14 +182,14 @@ class PrintController {
 
       let command = `python precision_pdf_generator.py --excel-path "${excelPath}" --mapping-file "${mergedPath}"`;
 
-      console.log(`🚀 Precision Print Command: ${command}`);
+      logger.debug(`ðŸš€ Precision Print Command: ${command}`);
 
       exec(command, { cwd: pythonDir, timeout: 60000, maxBuffer: 1024 * 1024 * 10 }, async (error, stdout, stderr) => {
         // Clean up temp merged file
         try { fs.unlinkSync(mergedPath); } catch (e) { /* ignore */ }
 
         if (error) {
-          console.error('❌ Precision Error:', error.message);
+          logger.error('âŒ Precision Error:', error.message);
           return res.status(500).json({ success: false, error: 'PDF generation failed or timed out' });
         }
 
@@ -215,12 +216,12 @@ class PrintController {
           }
           res.status(400).json({ success: false, error: jsonData.error });
         } catch (e) {
-          console.error('❌ Parsing Error:', e, 'Raw:', stdout);
+          logger.error('âŒ Parsing Error:', e, 'Raw:', stdout);
           res.status(500).json({ success: false, error: 'Failed to process precision file output' });
         }
       });
     } catch (error) {
-      console.error('❌ Precision print error:', error);
+      logger.error('âŒ Precision print error:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
@@ -249,7 +250,7 @@ class PrintController {
 
       res.json(fullMapping);
     } catch (error) {
-      console.error('Error reading calibration:', error);
+      logger.error('Error reading calibration:', error);
       res.status(500).json({ success: false, error: 'Failed to load calibration' });
     }
   }
@@ -273,7 +274,7 @@ class PrintController {
         if (rows.length > 0 && rows[0].unirrig_precision_pdf_path) {
           const oldPdfPath = rows[0].unirrig_precision_pdf_path;
           if (fs.existsSync(oldPdfPath)) {
-            try { fs.unlinkSync(oldPdfPath); } catch (e) { console.error('Failed to delete old precision pdf:', e); }
+            try { fs.unlinkSync(oldPdfPath); } catch (e) { logger.error('Failed to delete old precision pdf:', e); }
           }
           await pool.execute('UPDATE faas_records SET unirrig_precision_pdf_path = NULL WHERE id = ?', [recordId]);
         }
@@ -282,9 +283,9 @@ class PrintController {
         const files = fs.readdirSync(pythonDir);
         const recordSpecificFiles = files.filter(f => /^precision_mapping_\d+\.json$/.test(f));
         for (const f of recordSpecificFiles) {
-          try { fs.unlinkSync(path.resolve(pythonDir, f)); } catch (e) { console.error('Failed to delete record mapping:', f, e); }
+          try { fs.unlinkSync(path.resolve(pythonDir, f)); } catch (e) { logger.error('Failed to delete record mapping:', f, e); }
         }
-        console.log(`Template saved. Deleted ${recordSpecificFiles.length} record-specific mapping files.`);
+        logger.debug(`Template saved. Deleted ${recordSpecificFiles.length} record-specific mapping files.`);
 
         // Clear ALL precision PDF paths so they regenerate with the new template
         const pool = getConnection();
@@ -299,7 +300,7 @@ class PrintController {
 
       res.json({ success: true, message: recordId ? 'Calibration saved.' : 'Template saved & applied to all records.' });
     } catch (error) {
-      console.error('Error updating calibration:', error);
+      logger.error('Error updating calibration:', error);
       res.status(500).json({ success: false, error: 'Failed to update calibration' });
     }
   }
@@ -330,9 +331,9 @@ class PrintController {
         if (filePath && fs.existsSync(filePath)) {
           try {
             fs.unlinkSync(filePath);
-            console.log(`🗑️ Deleted on cleanup: ${filePath}`);
+            logger.debug(`ðŸ—‘ï¸ Deleted on cleanup: ${filePath}`);
           } catch (e) {
-            console.error(`⚠️ Could not delete file: ${filePath} — ${e.message}`);
+            logger.error(`âš ï¸ Could not delete file: ${filePath} â€” ${e.message}`);
           }
         }
       });
@@ -348,14 +349,14 @@ class PrintController {
         [recordId]
       );
 
-      console.log(`✅ Cleared generated files for record ${recordId}`);
+      logger.debug(`âœ… Cleared generated files for record ${recordId}`);
     } catch (e) {
-      console.error(`❌ clearGeneratedFiles error: ${e.message}`);
+      logger.error(`âŒ clearGeneratedFiles error: ${e.message}`);
     }
   }
   async generateFAASExcel(req, res) {
     try {
-      console.log('=== GENERATE EXCEL REQUEST ===');
+      logger.debug('=== GENERATE EXCEL REQUEST ===');
       const { recordId } = req.body;
 
       if (!recordId) {
@@ -378,7 +379,7 @@ class PrintController {
       }
 
       const record = records[0];
-      console.log(`📊 Generating Excel for: ${record.arf_no}`);
+      logger.debug(`ðŸ“Š Generating Excel for: ${record.arf_no}`);
 
       // Auto-cleanup: Delete previous preview files if they exist to save space
       const filesToDelete = [
@@ -392,9 +393,9 @@ class PrintController {
         if (filePath && fs.existsSync(filePath)) {
           try {
             fs.unlinkSync(filePath);
-            console.log(`🧹 Deleted old preview file: ${path.basename(filePath)}`);
+            logger.debug(`ðŸ§¹ Deleted old preview file: ${path.basename(filePath)}`);
           } catch (err) {
-            console.warn(`⚠️ Could not delete old preview file ${filePath}:`, err.message);
+            logger.warn(`âš ï¸ Could not delete old preview file ${filePath}:`, err.message);
           }
         }
       });
@@ -415,13 +416,13 @@ class PrintController {
       }
 
       const command = `cd "${pythonDir}" && python excel_generator.py --record-id ${recordId} --type both`;
-      console.log(`🚀 Command: ${command}`);
+      logger.debug(`ðŸš€ Command: ${command}`);
 
       exec(command, { cwd: pythonDir }, async (error, stdout, stderr) => {
-        console.log('🐍 Python output:', stdout);
+        logger.debug('ðŸ Python output:', stdout);
 
         if (error) {
-          console.error('❌ Python error:', stderr || error.message);
+          logger.error('âŒ Python error:', stderr || error.message);
           return res.status(500).json({
             success: false,
             error: 'Failed to generate Excel',
@@ -460,12 +461,12 @@ class PrintController {
               const pdfPath = path.join(pdfDir, pdfFilename);
 
               const pdfCommand = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${excelPath}" --pdf-path "${pdfPath}"`;
-              console.log(`📄 Generating PDF Preview [${type}]: ${pdfCommand}`);
+              logger.debug(`ðŸ“„ Generating PDF Preview [${type}]: ${pdfCommand}`);
 
               return new Promise((resolve) => {
                 exec(pdfCommand, { cwd: pythonDir }, (pdfError, pdfStdout, pdfStderr) => {
                   if (pdfError) {
-                    console.error(`❌ PDF error [${type}]:`, pdfStderr || pdfError.message);
+                    logger.error(`âŒ PDF error [${type}]:`, pdfStderr || pdfError.message);
                     resolve(null);
                   } else {
                     resolve(fs.existsSync(pdfPath) ? pdfPath : null);
@@ -509,7 +510,7 @@ class PrintController {
             throw new Error('Python script did not return success status');
           }
         } catch (parseError) {
-          console.error('❌ Parse error:', parseError);
+          logger.error('âŒ Parse error:', parseError);
           return res.status(500).json({
             success: false,
             error: 'Failed to process Python output',
@@ -519,7 +520,7 @@ class PrintController {
       });
 
     } catch (error) {
-      console.error('❌ Generate Excel error:', error);
+      logger.error('âŒ Generate Excel error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error'
@@ -528,21 +529,21 @@ class PrintController {
   }
 
   async executePythonScript(pythonCommand, pythonDir, recordId, record, res) {
-    console.log(`🚀 Using Python command: ${pythonCommand}`);
+    logger.debug(`ðŸš€ Using Python command: ${pythonCommand}`);
 
     // Build command - change to python directory first
     const command = `cd "${pythonDir}" && ${pythonCommand} excel_generator.py --record-id ${recordId}`;
-    console.log(`🔧 Command: ${command}`);
+    logger.debug(`ðŸ”§ Command: ${command}`);
 
     exec(command, { cwd: pythonDir }, async (error, stdout, stderr) => {
-      console.log('=== PYTHON EXECUTION OUTPUT ===');
-      console.log('stdout:', stdout);
-      console.log('stderr:', stderr);
-      console.log('error:', error);
-      console.log('===============================');
+      logger.debug('=== PYTHON EXECUTION OUTPUT ===');
+      logger.debug('stdout:', stdout);
+      logger.debug('stderr:', stderr);
+      logger.debug('error:', error);
+      logger.debug('===============================');
 
       if (error) {
-        console.error('❌ Python execution failed:', error);
+        logger.error('âŒ Python execution failed:', error);
         return res.status(500).json({
           success: false,
           error: 'Python script execution failed',
@@ -551,7 +552,7 @@ class PrintController {
       }
 
       // Check if Python printed success
-      if (stdout.includes('"success": true') || stdout.includes('✅ Success!')) {
+      if (stdout.includes('"success": true') || stdout.includes('âœ… Success!')) {
         try {
           // Parse JSON output
           const lines = stdout.split('\n');
@@ -561,7 +562,7 @@ class PrintController {
             if (line.trim().startsWith('{') && line.trim().endsWith('}')) {
               try {
                 jsonData = JSON.parse(line.trim());
-                console.log('✅ Parsed JSON output:', jsonData);
+                logger.debug('âœ… Parsed JSON output:', jsonData);
                 break;
               } catch (e) {
                 // Not valid JSON, continue
@@ -588,11 +589,11 @@ class PrintController {
 
           // Verify file exists
           if (!fs.existsSync(jsonData.file_path)) {
-            console.error('❌ Generated file not found at:', jsonData.file_path);
+            logger.error('âŒ Generated file not found at:', jsonData.file_path);
             throw new Error('Generated file does not exist');
           }
 
-          console.log('✅ File verified at:', jsonData.file_path);
+          logger.debug('âœ… File verified at:', jsonData.file_path);
 
           // Update database
           const pool = getConnection();
@@ -614,8 +615,8 @@ class PrintController {
           });
 
         } catch (parseError) {
-          console.error('❌ Parse error:', parseError);
-          console.error('Raw stdout:', stdout);
+          logger.error('âŒ Parse error:', parseError);
+          logger.error('Raw stdout:', stdout);
           res.status(500).json({
             success: false,
             error: 'Failed to process Python output',
@@ -649,20 +650,20 @@ class PrintController {
         filePath = path.resolve(generatedDir, filename);
       }
 
-      console.log('📥 DOWNLOAD DEBUG:');
-      console.log(`- Folder: ${folder}, ParamFilename: ${paramFilename}`);
-      console.log(`- Raw param: ${rawParam}`);
-      console.log(`- Final FilePath: ${filePath}`);
+      logger.debug('ðŸ“¥ DOWNLOAD DEBUG:');
+      logger.debug(`- Folder: ${folder}, ParamFilename: ${paramFilename}`);
+      logger.debug(`- Raw param: ${rawParam}`);
+      logger.debug(`- Final FilePath: ${filePath}`);
 
       if (!fs.existsSync(filePath)) {
-        console.error('❌ File not found:', filePath);
+        logger.error('âŒ File not found:', filePath);
         // List directory to help debug
         const subDir = filename.includes('/') ? path.dirname(filename) : '';
         const searchDir = path.join(generatedDir, subDir);
         if (fs.existsSync(searchDir)) {
-          console.log(`- Directory ${searchDir} exists. Contents:`, fs.readdirSync(searchDir));
+          logger.debug(`- Directory ${searchDir} exists. Contents:`, fs.readdirSync(searchDir));
         } else {
-          console.log(`- Directory ${searchDir} does NOT exist.`);
+          logger.debug(`- Directory ${searchDir} does NOT exist.`);
         }
 
         return res.status(404).json({ success: false, error: 'File not found' });
@@ -673,13 +674,13 @@ class PrintController {
         return res.status(403).json({ success: false, error: 'Invalid file path' });
       }
 
-      console.log('✅ File found, sending download...');
+      logger.debug('âœ… File found, sending download...');
 
       // Pass only the basename as the second argument (the name the user sees)
       const downloadName = path.basename(filename);
       res.download(filePath, downloadName, (err) => {
         if (err) {
-          console.error('❌ Download error:', err);
+          logger.error('âŒ Download error:', err);
           if (!res.headersSent) {
             res.status(500).json({
               success: false,
@@ -687,12 +688,12 @@ class PrintController {
             });
           }
         } else {
-          console.log('✅ Download sent successfully');
+          logger.debug('âœ… Download sent successfully');
         }
       });
 
     } catch (error) {
-      console.error('❌ Download error:', error);
+      logger.error('âŒ Download error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error'
@@ -747,7 +748,7 @@ class PrintController {
       });
 
     } catch (error) {
-      console.error('Get files error:', error);
+      logger.error('Get files error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error'
@@ -757,7 +758,7 @@ class PrintController {
 
   async getApprovedRecords(req, res) {
     try {
-      console.log('📋 Getting approved records...');
+      logger.debug('ðŸ“‹ Getting approved records...');
 
       const pool = getConnection();
       const [records] = await pool.execute(`
@@ -786,13 +787,13 @@ class PrintController {
       ORDER BY f.approval_date DESC
     `);
 
-      console.log(`✅ Found ${records.length} approved records`);
+      logger.debug(`âœ… Found ${records.length} approved records`);
 
       res.json(records);
 
     } catch (error) {
-      console.error('❌ Get approved records error:', error);
-      console.error('❌ SQL Error details:', {
+      logger.error('âŒ Get approved records error:', error);
+      logger.error('âŒ SQL Error details:', {
         code: error.code,
         message: error.message,
         sql: error.sql,
@@ -817,7 +818,7 @@ class PrintController {
         return res.status(400).json({ success: false, error: 'Record ID is required' });
       }
 
-      console.log(`📦 Releasing record ${id} by user ${userId}`);
+      logger.debug(`ðŸ“¦ Releasing record ${id} by user ${userId}`);
 
       const pool = getConnection();
 
@@ -850,7 +851,7 @@ class PrintController {
       });
 
     } catch (error) {
-      console.error('❌ Release record error:', error);
+      logger.error('âŒ Release record error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to release record'
@@ -867,7 +868,7 @@ class PrintController {
         return res.status(400).json({ success: false, error: 'Record ID is required' });
       }
 
-      console.log(`↩️ Cancelling release for record ${id} by user ${userId}`);
+      logger.debug(`â†©ï¸ Cancelling release for record ${id} by user ${userId}`);
 
       const pool = getConnection();
 
@@ -900,7 +901,7 @@ class PrintController {
       });
 
     } catch (error) {
-      console.error('❌ Cancel release error:', error);
+      logger.error('âŒ Cancel release error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to cancel release'
@@ -910,7 +911,7 @@ class PrintController {
 
   async getReleasedRecords(req, res) {
     try {
-      console.log('📜 Getting released records history...');
+      logger.debug('ðŸ“œ Getting released records history...');
 
       const pool = getConnection();
       const [records] = await pool.execute(`
@@ -948,7 +949,7 @@ class PrintController {
       res.json(records);
 
     } catch (error) {
-      console.error('❌ Get released records error:', error);
+      logger.error('âŒ Get released records error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch released records history'
@@ -958,3 +959,4 @@ class PrintController {
 }
 
 module.exports = new PrintController();
+

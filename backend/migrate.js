@@ -1,4 +1,4 @@
-
+﻿
 const { connectDB, getConnection } = require('./utils/database');
 
 async function migrate() {

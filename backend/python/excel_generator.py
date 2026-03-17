@@ -483,7 +483,7 @@ class FAASExcelGenerator:
             regular_land = [a for a in land_appraisals if str(a.get('classification', '')).upper().strip() not in special_cats]
             special_land = [a for a in land_appraisals if str(a.get('classification', '')).upper().strip() in special_cats]
 
-            for i in range(8):
+            for i in range(7):
                 unirrig_row = 28 + i
                 if i < len(regular_land):
                     item = regular_land[i]
@@ -521,7 +521,7 @@ class FAASExcelGenerator:
                         self.safe_write_cell(sheet, f'I{unirrig_row}', unit_value)
                     else:
                         self.safe_write_cell(sheet, f'I{unirrig_row}', '')
-                        
+
                     if market_value:
                         self.safe_write_cell(sheet, f'J{unirrig_row}', market_value)
                     else:
@@ -532,6 +532,21 @@ class FAASExcelGenerator:
                     self.safe_write_cell(sheet, f'G{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'I{unirrig_row}', '')
                     self.safe_write_cell(sheet, f'J{unirrig_row}', '')
+
+            # J35: Sum of J28-J31 (Total of Land Appraisals), rounded to 10
+            j28_val = self.safe_float(sheet['J28'].value)
+            j29_val = self.safe_float(sheet['J29'].value)
+            j30_val = self.safe_float(sheet['J30'].value)
+            j31_val = self.safe_float(sheet['J31'].value)
+            j35_total = self.mround(j28_val + j29_val + j30_val + j31_val, 10)
+            if j35_total > 0:
+                self.safe_write_cell(sheet, 'J35', j35_total)
+
+            # J36: J35 * G52 (Total Land MV * Percent Adjustment), rounded to 10
+            g52_val = self.safe_float(sheet['G52'].value)
+            j36_total = self.mround(j35_total * g52_val, 10)
+            if j36_total > 0:
+                self.safe_write_cell(sheet, 'J36', j36_total)
 
             # Special Land Appraisals (Residential/Commercial) → blocks starting at rows 58, 60
             special_cats = ["RESIDENTIAL", "COMMERCIAL"]
@@ -625,12 +640,19 @@ class FAASExcelGenerator:
                     if u_val_safe: self.safe_write_cell(sheet, f'J{unirrig_row}', u_val_safe)
                     if mv: self.safe_write_cell(sheet, f'K{unirrig_row}', mv)
 
-            # K53: Sum of K42-K45 (Total MV Plants)
+            # K52: Sum of K42-K45 (Total MV Plants)
             k42_val = self.safe_float(sheet['K42'].value)
             k43_val = self.safe_float(sheet['K43'].value)
             k44_val = self.safe_float(sheet['K44'].value)
             k45_val = self.safe_float(sheet['K45'].value)
-            k53_total = self.mround(k42_val + k43_val + k44_val + k45_val, 10)
+            k52_total = self.mround(k42_val + k43_val + k44_val + k45_val, 10)
+            if k52_total > 0:
+                self.safe_write_cell(sheet, 'K52', k52_total)
+
+            # K53: K52 * G52 (Total MV Plants * Percent Adjustment), rounded to 10
+            k52_val = self.safe_float(sheet['K52'].value)
+            g52_val = self.safe_float(sheet['G52'].value)
+            k53_total = self.mround(k52_val * g52_val, 10)
             if k53_total > 0:
                 self.safe_write_cell(sheet, 'K53', k53_total)
 

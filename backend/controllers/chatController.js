@@ -1,4 +1,5 @@
-const { getConnection } = require('../utils/database');
+﻿const { getConnection } = require('../utils/database');
+const logger = require('../utils/logger');
 
 class ChatController {
     async sendMessage(req, res) {
@@ -43,7 +44,7 @@ class ChatController {
                 data: fullMessage
             });
         } catch (error) {
-            console.error('Send message error:', error);
+            logger.error('Send message error:', error);
             res.status(500).json({ success: false, error: 'Failed to send message' });
         }
     }
@@ -67,7 +68,7 @@ class ChatController {
 
             res.json(messages);
         } catch (error) {
-            console.error('Get messages error:', error);
+            logger.error('Get messages error:', error);
             res.status(500).json({ success: false, error: 'Failed to fetch messages' });
         }
     }
@@ -88,10 +89,12 @@ class ChatController {
 
             res.json({ success: true });
         } catch (error) {
-            console.error('Clear messages error:', error);
+            logger.error('Clear messages error:', error);
             res.status(500).json({ success: false, error: 'Failed to clear messages' });
         }
     }
 }
 
 module.exports = new ChatController();
+
+

@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 const { getConnection } = require('../utils/database');
 const multer = require('multer');
 const path = require('path');
@@ -8,45 +9,37 @@ const fs = require('fs');
 class AuthController {
   async login(req, res) {
     try {
-      console.log('=== LOGIN ATTEMPT ===');
-      console.log('Request body:', req.body);
-
       const { username, password } = req.body;
 
       if (!username || !password) {
-        console.log('Missing username or password');
+        logger.debug('Login attempt: missing credentials');
         return res.status(400).json({
           success: false,
           error: 'Username and password are required'
         });
       }
 
-      console.log('Connecting to database...');
       const pool = getConnection();
 
       // Test database connection first
       try {
         const testConn = await pool.getConnection();
-        console.log('✅ Database connection test successful');
         testConn.release();
       } catch (dbError) {
-        console.error('❌ Database connection failed:', dbError);
+        logger.error('Database connection failed during login', dbError.message);
         return res.status(500).json({
           success: false,
           error: 'Database connection failed'
         });
       }
 
-      console.log(`Querying for user: ${username}`);
       const [users] = await pool.execute(
         'SELECT * FROM users WHERE username = ?',
         [username]
       );
 
-      console.log(`Found ${users.length} user(s)`);
-
       if (users.length === 0) {
-        console.log(`User ${username} not found in database`);
+        logger.debug(`Login failed: user not found - ${username}`);
         return res.status(401).json({
           success: false,
           error: 'Invalid username or password'
@@ -54,27 +47,19 @@ class AuthController {
       }
 
       const user = users[0];
-      console.log('User found:', {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        hasPassword: !!user.password
-      });
 
       // Simple password check (for demo)
       const isPasswordValid = password === user.password;
-      console.log(`Password check: ${password} === ${user.password} ? ${isPasswordValid}`);
 
       if (!isPasswordValid) {
+        logger.debug(`Login failed: invalid password - ${username}`);
         return res.status(401).json({
           success: false,
           error: 'Invalid username or password'
         });
       }
 
-      console.log('✅ Login successful, creating response...');
-
-      // Create simple demo token (not JWT) - FIXED
+      // Create simple demo token (not JWT)
       const token = `demo-token-${user.id}-${Date.now()}`;
 
       // Remove password from response
@@ -87,12 +72,11 @@ class AuthController {
         message: 'Login successful'
       };
 
-      console.log('Sending response:', response);
+      logger.info(`Login successful: ${username} [${user.role}]`);
       res.json(response);
 
     } catch (error) {
-      console.error('💥 LOGIN ERROR:', error);
-      console.error('Error stack:', error.stack);
+      logger.error('LOGIN ERROR', error.message);
 
       res.status(500).json({
         success: false,
@@ -109,7 +93,7 @@ class AuthController {
         message: 'Logout successful'
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error', error.message);
       res.status(500).json({
         success: false,
         error: 'Internal server error'
@@ -138,7 +122,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('Get profile error:', error);
+      logger.error('Get profile error', error.message);
       res.status(500).json({
         success: false,
         error: 'Internal server error'
@@ -206,7 +190,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('Update profile error:', error);
+      logger.error('Update profile error', error.message);
       res.status(500).json({
         success: false,
         error: 'Internal server error'
@@ -260,7 +244,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('Change password error:', error);
+      logger.error('Change password error', error.message);
       res.status(500).json({
         success: false,
         error: 'Internal server error'
@@ -296,7 +280,7 @@ class AuthController {
           try {
             fs.unlinkSync(oldPath);
           } catch (err) {
-            console.error('Error deleting old profile picture:', err);
+            logger.debug(`Error deleting old profile picture: ${err.message}`);
           }
         }
       }
@@ -313,7 +297,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('Update profile picture error:', error);
+      logger.error('Update profile picture error', error.message);
       res.status(500).json({
         success: false,
         error: 'Internal server error'

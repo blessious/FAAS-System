@@ -1,13 +1,13 @@
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 const { getConnection } = require('../utils/database');
 
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.header('Authorization');
-    console.log('🔐 Auth Header:', authHeader);
 
     if (!authHeader) {
-      console.log('❌ No Authorization header');
+      logger.debug('No Authorization header provided');
       return res.status(401).json({
         success: false,
         error: 'Authentication required'
@@ -19,8 +19,6 @@ const authenticate = async (req, res, next) => {
       ? authHeader.replace('Bearer ', '')
       : authHeader;
 
-    console.log('🔐 Token:', token ? 'Present' : 'Missing');
-
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -30,8 +28,6 @@ const authenticate = async (req, res, next) => {
 
     // DEMO MODE: Accept any token that starts with 'demo-token-'
     if (token.startsWith('demo-token-')) {
-      console.log('✅ Demo token detected, fetching user info...');
-
       // Extract user ID from token: demo-token-{id}-{timestamp}
       const tokenParts = token.split('-');
       const userId = parseInt(tokenParts[2]);
@@ -53,11 +49,11 @@ const authenticate = async (req, res, next) => {
               role: user.role,
               fullName: user.full_name
             };
-            console.log(`✅ Authenticated as (DB): ${req.user.username} [${req.user.role}]`);
+            logger.debug(`Auth successful: ${req.user.username} [${req.user.role}]`);
             return next();
           }
         } catch (dbError) {
-          console.error('⚠️ DB lookup for demo token failed:', dbError.message);
+          logger.debug(`DB lookup for demo token failed: ${dbError.message}`);
           // Fallback to hardcoded logic if DB lookup fails
         }
       }
@@ -85,7 +81,7 @@ const authenticate = async (req, res, next) => {
       }
 
       req.user = { id: fallbackId, username, role, fullName };
-      console.log(`✅ Authenticated as (Fallback): ${req.user.username} [${req.user.role}]`);
+      logger.debug(`Auth successful (fallback): ${req.user.username} [${req.user.role}]`);
       return next();
     }
 
@@ -93,10 +89,10 @@ const authenticate = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
       req.user = decoded;
-      console.log('✅ JWT verified for:', req.user.username);
+      logger.debug(`JWT verified for: ${req.user.username}`);
       return next();
     } catch (jwtError) {
-      console.log('❌ JWT verification failed:', jwtError.message);
+      logger.debug(`JWT verification failed: ${jwtError.message}`);
       return res.status(401).json({
         success: false,
         error: 'Invalid or expired token'
@@ -104,7 +100,7 @@ const authenticate = async (req, res, next) => {
     }
 
   } catch (error) {
-    console.error('💥 Auth middleware error:', error);
+    logger.error('Auth middleware error:', error.message);
     return res.status(401).json({
       success: false,
       error: 'Authentication failed'
@@ -121,17 +117,18 @@ const authorize = (...roles) => {
       });
     }
 
-    console.log(`🔐 Authorization check: ${req.user.role} in [${roles}]`);
+    logger.debug(`Authorization check: ${req.user.role} in [${roles}]`);
 
     // Allow 'administrator' as superuser for all roles
     if (!(roles.includes(req.user.role) || req.user.role === 'administrator')) {
+      logger.warn(`Unauthorized access attempted by ${req.user.username} [${req.user.role}]`);
       return res.status(403).json({
         success: false,
         error: 'Insufficient permissions'
       });
     }
 
-    console.log('✅ Authorized');
+    logger.debug(`${req.user.username} authorized for ${roles}`);
     next();
   };
 };

@@ -37,17 +37,17 @@ TEMPLATE_MAPPING = {
     'Sheet1!H33': {'x': 13.0, 'y': 14.95, 'label': 'Table R6 Sub'},
     'Sheet1!I33': {'x': 15.1, 'y': 14.35, 'label': 'Table R6 Unit'},
     'Sheet1!J33': {'x': 17.5, 'y': 13.85, 'label': 'Table R6 Market'},
-    'Sheet1!E35': {'x': 8.5,  'y': 13.35, 'label': 'Table R8 Class'},
     'Sheet1!G35': {'x': 11.0, 'y': 12.85, 'label': 'Table R8 Area'},
     'Sheet1!H35': {'x': 13.0, 'y': 12.35, 'label': 'Table R8 Sub'},
     'Sheet1!I35': {'x': 15.0, 'y': 11.85, 'label': 'Table R8 Unit'},
-    'Sheet1!J35': {'x': 17.5, 'y': 11.35, 'label': 'Table R8 Market'},
+    'Sheet1!J35': {'x': 17.5, 'y': 11.8, 'label': 'Total Land MV (J28+J29+J33)'},
     'Sheet1!J36': {'x': 17.8, 'y': 13.75, 'label': 'Total MV'},
     'Sheet1!H42': {'x': 12.7, 'y': 11.8,  'label': 'Plant: Kind'},
     'Sheet1!I42': {'x': 15.0, 'y': 11.8,  'label': 'Plant: Area'},
     'Sheet1!J42': {'x': 17.0, 'y': 11.8,  'label': 'Plant: UV'},
     'Sheet1!K42': {'x': 18.2, 'y': 11.8,  'label': 'Plant: MV'},
-    'Sheet1!K53': {'x': 18.4, 'y': 7.8,   'label': 'Total MV Plants'},
+    'Sheet1!K52': {'x': 18.4, 'y': 8.25,   'label': 'Total MV Plants'},
+    'Sheet1!K53': {'x': 18.4, 'y': 7.3,   'label': 'Adjusted MV Plants'},
     'Sheet1!G44': {'x': 11.0, 'y': 11.4,  'label': 'Plant Adj 1 %'},
     'Sheet1!G47': {'x': 11.0, 'y': 10.6,  'label': 'Plant Adj 2 %'},
     'Sheet1!G49': {'x': 11.0, 'y': 9.7,   'label': 'Plant Adj 3 %'},
@@ -232,32 +232,62 @@ class PrecisionPDFGenerator:
                     
                     if not text or str(text).strip() == "": continue
                     
-                    # 🚀 Fix for J36: Calculate Total MV manually if Excel version is blank
-                    if addr == 'J28': 
-                        running_total = 0.0
-                        for row_idx in range(28, 36):
-                            val_to_add = wb[sn][f'J{row_idx}'].value
-                            if val_to_add:
-                                try:
-                                    running_total = float(running_total) + float(val_to_add)
-                                except: pass
-                        
-                        target_j36 = self.mapping.get('Sheet1!J36')
-                        if target_j36:
-                            fs_j36 = target_j36.get('fontSize', 10.5)
-                            x_j36, y_j36 = target_j36['x'] * cm, target_j36['y'] * cm
-                            c.saveState()
-                            c.translate(x_j36, y_j36)
-                            t_j = c.beginText(0, 0)
-                            t_j.setFont(self.font_name, fs_j36)
-                            t_j.setTextRenderMode(2)
-                            c.setLineWidth(0.5)
-                            t_j.setHorizScale(75)
-                            t_j.textOut(f"{running_total:,.2f}")
-                            c.drawText(t_j)
-                            c.restoreState()
+                    # 🚫 Skip static template labels baked into the Excel template
+                    STATIC_LABELS = {"total", "grand total", "sub total", "subtotal"}
+                    if str(text).strip().lower() in STATIC_LABELS: continue
                     
-                    # 🚀 G58: Sum of G54-G57
+                    # 🚀 J35: Sum of J28-J31 — read directly from Excel (written by excel_generator)
+                    if addr == 'J35':
+                        j35_val = wb[sn]['J35'].value
+                        if j35_val:
+                            try:
+                                target_j35 = self.mapping.get('Sheet1!J35')
+                                if target_j35:
+                                    fs_j35 = target_j35.get('fontSize', 10.5)
+                                    x_j35 = target_j35['x'] * cm
+                                    y_j35 = target_j35['y'] * cm
+                                    c.saveState()
+                                    c.translate(x_j35, y_j35)
+                                    c.scale(0.75, 1.0)
+                                    t_j35 = c.beginText(0, 0)
+                                    t_j35.setFont(self.font_name, fs_j35)
+                                    t_j35.setFillColorRGB(0, 0, 0)
+                                    t_j35.setTextRenderMode(2)
+                                    c.setLineWidth(0.5)
+                                    c.setStrokeColorRGB(0, 0, 0)
+                                    t_j35.textOut(f"{float(j35_val):,.2f}")
+                                    c.drawText(t_j35)
+                                    c.restoreState()
+                            except: pass
+                        continue  # Skip normal rendering for J35
+
+                    # 🚀 J36: J35 * G52 — read directly from Excel, draw at J35.y - 0.45
+                    if addr == 'J36':
+                        j36_val = wb[sn]['J36'].value
+                        if j36_val:
+                            try:
+                                target_j35 = self.mapping.get('Sheet1!J35')
+                                target_j36 = self.mapping.get('Sheet1!J36')
+                                if target_j35 and target_j36:
+                                    fs_j36 = target_j36.get('fontSize', 10.5)
+                                    x_j36 = target_j36['x'] * cm
+                                    y_j36 = (target_j35['y'] - 0.45) * cm
+                                    c.saveState()
+                                    c.translate(x_j36, y_j36)
+                                    c.scale(0.75, 1.0)
+                                    t_j36 = c.beginText(0, 0)
+                                    t_j36.setFont(self.font_name, fs_j36)
+                                    t_j36.setFillColorRGB(0, 0, 0)
+                                    t_j36.setTextRenderMode(2)
+                                    c.setLineWidth(0.5)
+                                    c.setStrokeColorRGB(0, 0, 0)
+                                    t_j36.textOut(f"{float(j36_val):,.2f}")
+                                    c.drawText(t_j36)
+                                    c.restoreState()
+                            except: pass
+                        continue  # Skip normal rendering for J36
+
+
                     if addr == 'G58':
                         g58_total = 0.0
                         for row_idx in range(54, 58):
@@ -315,15 +345,46 @@ class PrecisionPDFGenerator:
                                 c.restoreState()
                         continue  # Skip normal rendering for M58
                     
-                    # 🚀 K53: Sum of K42-K45
-                    if addr == 'K53':
-                        k53_total = 0.0
+                    # 🚀 K52: Sum of K42-K45
+                    if addr == 'K52':
+                        k52_total = 0.0
                         for row_idx in range(42, 46):
                             val_to_add = wb[sn][f'K{row_idx}'].value
                             if val_to_add:
                                 try:
-                                    k53_total = float(k53_total) + float(val_to_add)
+                                    k52_total = float(k52_total) + float(val_to_add)
                                 except: pass
+                        
+                        if k52_total > 0:
+                            target_k52 = self.mapping.get('Sheet1!K52')
+                            if target_k52:
+                                fs_k52 = target_k52.get('fontSize', 10.5)
+                                x_k52, y_k52 = target_k52['x'] * cm, target_k52['y'] * cm
+                                c.saveState()
+                                c.translate(x_k52, y_k52)
+                                c.scale(0.75, 1.0)
+                                t_k = c.beginText(0, 0)
+                                t_k.setFont(self.font_name, fs_k52)
+                                t_k.setFillColorRGB(0, 0, 0)
+                                t_k.setTextRenderMode(2)
+                                c.setLineWidth(0.5)
+                                c.setStrokeColorRGB(0, 0, 0)
+                                t_k.textOut(f"{k52_total:,.2f}")
+                                c.drawText(t_k)
+                                c.restoreState()
+                        continue  # Skip normal rendering for K52
+                    
+                    # 🚀 K53: K52 * G52 (Total MV Plants * Percent Adjustment)
+                    if addr == 'K53':
+                        k52_val = wb[sn]['K52'].value
+                        g52_val = wb[sn]['G52'].value
+                        k53_total = 0.0
+                        if k52_val and g52_val:
+                            try:
+                                k53_total = float(k52_val) * float(g52_val)
+                                # Round to nearest 10
+                                k53_total = round(k53_total / 10) * 10
+                            except: pass
                         
                         if k53_total > 0:
                             target_k53 = self.mapping.get('Sheet1!K53')
@@ -344,6 +405,9 @@ class PrecisionPDFGenerator:
                                 c.restoreState()
                         continue  # Skip normal rendering for K53
                     
+                    # J35: use the workbook value (no special rendering here)
+                    # J36: use the workbook value (no special rendering here)
+                    
                     x, y = coord['x'] * cm, coord['y'] * cm
 
                     c.saveState()
@@ -361,9 +425,9 @@ class PrecisionPDFGenerator:
                     c.setStrokeColorRGB(0, 0, 0)
                     
                     if "Total" in str(coord.get('label','')):
-                        # For Total fields, use textOut like regular fields
-                        t.textOut(text)
-                        c.drawText(t)
+                        # Skip Total fields - they are computed and drawn via special hooks above
+                        c.restoreState()
+                        continue
                     else:
                         t.textOut(text)
                         c.drawText(t)

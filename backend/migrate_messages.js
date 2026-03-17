@@ -1,4 +1,4 @@
-const mysql = require('mysql2/promise');
+﻿const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const migrate = async () => {
@@ -10,7 +10,7 @@ const migrate = async () => {
     });
 
     try {
-        console.log('🚀 Starting migration for messages table...');
+        console.log('ðŸš€ Starting migration for messages table...');
 
         await connection.query(`
             CREATE TABLE IF NOT EXISTS messages (
@@ -24,9 +24,9 @@ const migrate = async () => {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
         `);
 
-        console.log('✅ Messages table created successfully');
+        console.log('âœ… Messages table created successfully');
     } catch (error) {
-        console.error('❌ Migration failed:', error);
+        console.error('âŒ Migration failed:', error);
     } finally {
         await connection.end();
     }

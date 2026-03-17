@@ -1,4 +1,4 @@
-
+﻿
 const { connectDB, getConnection } = require('./utils/database');
 require('dotenv').config();
 
@@ -26,10 +26,10 @@ async function migrate() {
             console.log('Added column ctc_issued_at');
         }
 
-        console.log('✅ Migration successful.');
+        console.log('âœ… Migration successful.');
         process.exit(0);
     } catch (error) {
-        console.error('❌ Migration failed:', error);
+        console.error('âŒ Migration failed:', error);
         process.exit(1);
     }
 }

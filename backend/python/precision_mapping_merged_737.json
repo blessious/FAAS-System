@@ -156,8 +156,8 @@
     },
     "Sheet1!J35": {
         "x": 17.5,
-        "y": 11.35,
-        "label": "Land 4: MV"
+        "y": 11.8,
+        "label": "Total Land MV (J28+J29+J33)"
     },
     "Sheet1!J36": {
         "x": 17.8,
@@ -184,10 +184,15 @@
         "y": 11.8,
         "label": "Plant: MV"
     },
+    "Sheet1!K52": {
+        "x": 18.35,
+        "y": 8.35,
+        "label": "Total MV Plants"
+    },
     "Sheet1!K53": {
         "x": 18.35,
-        "y": 7.9,
-        "label": "Total MV Plants"
+        "y": 7.4,
+        "label": "Adjusted MV Plants"
     },
     "Sheet1!G44": {
         "x": 11,

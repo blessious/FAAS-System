@@ -1,4 +1,5 @@
-const { getConnection } = require('../utils/database');
+﻿const { getConnection } = require('../utils/database');
+const logger = require('../utils/logger');
 const bcrypt = require('bcryptjs');
 
 class UserController {
@@ -13,7 +14,7 @@ class UserController {
 
       res.json(users);
     } catch (error) {
-      console.error('Get all users error:', error);
+      logger.error('Get all users error:', error);
       res.status(500).json({ success: false, error: 'Failed to fetch users' });
     }
   }
@@ -33,7 +34,7 @@ class UserController {
 
       res.json(users[0]);
     } catch (error) {
-      console.error('Get user error:', error);
+      logger.error('Get user error:', error);
       res.status(500).json({ success: false, error: 'Failed to fetch user' });
     }
   }
@@ -52,7 +53,7 @@ class UserController {
 
       res.json(users[0]);
     } catch (error) {
-      console.error('Get profile error:', error);
+      logger.error('Get profile error:', error);
       res.status(500).json({ success: false, error: 'Failed to fetch profile' });
     }
   }
@@ -93,7 +94,7 @@ class UserController {
       });
 
     } catch (error) {
-      console.error('Create user error:', error);
+      logger.error('Create user error:', error);
 
       if (error.code === 'ER_DUP_ENTRY') {
         return res.status(400).json({
@@ -136,7 +137,7 @@ class UserController {
       });
 
     } catch (error) {
-      console.error('Update user error:', error);
+      logger.error('Update user error:', error);
 
       if (error.code === 'ER_DUP_ENTRY') {
         return res.status(400).json({
@@ -182,7 +183,7 @@ class UserController {
       });
 
     } catch (error) {
-      console.error('Delete user error:', error);
+      logger.error('Delete user error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete user'
@@ -192,3 +193,4 @@ class UserController {
 }
 
 module.exports = new UserController();
+
