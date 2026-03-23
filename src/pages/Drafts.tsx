@@ -210,7 +210,7 @@ export default function Drafts() {
               </div>
             ) : (
               <div className="space-y-4">
-                <RecentRecordsTable records={paginatedDrafts} onDelete={handleDeleteDraft} searchQuery={searchQuery} />
+                <RecentRecordsTable records={paginatedDrafts} onDelete={handleDeleteDraft} searchQuery={searchQuery} startIndex={(currentPage - 1) * itemsPerPage} />
 
                 {/* Pagination Controls */}
                 {totalPages > 1 && (

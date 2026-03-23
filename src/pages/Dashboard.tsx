@@ -447,6 +447,7 @@ export default function Dashboard() {
                         records={displayedRecords}
                         onDelete={handleDeleteDraft}
                         searchQuery={debouncedSearchQuery}
+                        startIndex={(pagination.page - 1) * pagination.limit}
                       />
                     </div>
 

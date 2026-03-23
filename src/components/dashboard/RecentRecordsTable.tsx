@@ -57,6 +57,7 @@ interface RecentRecordsTableProps {
   records: FAASRecord[];
   onDelete?: (id: string | number) => void | Promise<void>;
   searchQuery?: string;
+  startIndex?: number;
 }
 
 const statusStyles = {
@@ -80,7 +81,7 @@ const rowHoverStyles = {
   rejected: "hover:bg-gradient-to-r hover:from-rose-50/50 hover:to-rose-100/30",
 } as const;
 
-export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: RecentRecordsTableProps) {
+export function RecentRecordsTable({ records, onDelete, searchQuery = "", startIndex = 0 }: RecentRecordsTableProps) {
   const { isAdmin, isEncoder, isApprover } = useAuth() as { isAdmin?: boolean, isEncoder?: boolean, isApprover?: boolean };
   const navigate = useNavigate();
 
@@ -329,7 +330,7 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: Rece
                       onDoubleClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-center gap-1 select-none min-h-[40px]">
-                        <span className="inline-block align-middle leading-none">{index + 1}</span>
+                        <span className="inline-block align-middle leading-none">{startIndex + index + 1}</span>
                         {(record.linked_entries_count || 0) > 0 && (
                           <span className="inline-flex align-middle ml-1">
                             {loadingLinked.has(record.id) ? (
@@ -553,7 +554,7 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "" }: Rece
                           onDoubleClick={() => handleView(subRecord)}
                         >
                           <TableCell className="w-14 px-0 border-r border-slate-100 text-center text-xs text-slate-400 font-bold align-middle" style={{ verticalAlign: 'middle' }}>
-                            {`${index + 1}.${subIndex + 1}`}
+                            {`${startIndex + index + 1}.${subIndex + 1}`}
                           </TableCell>
                           <TableCell className="px-6 py-2 relative overflow-visible" colSpan={1} style={{ paddingLeft: 0 }}>
                             <div className="relative flex items-center" style={{ minHeight: '40px' }}>
