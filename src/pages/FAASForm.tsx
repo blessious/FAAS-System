@@ -391,7 +391,7 @@ export default function FAASForm() {
       west_boundary: formData.west_boundary || null,
       rw_row: formData.rw_row || null,
       ctc_no: formData.ctc_no || null,
-      ctc_issued_on: formData.ctc_issued_on || null,
+      ctc_issued_on: formData.ctc_issued_on || null,  // Send as plain YYYY-MM-DD string
       ctc_issued_at: formData.ctc_issued_at || null,
 
       classification: formData.landAppraisals[0]?.classification || null,

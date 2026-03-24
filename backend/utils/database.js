@@ -15,7 +15,8 @@ const connectDB = async () => {
     connectionLimit: 10,
     queueLimit: 0,
     enableKeepAlive: true,
-    keepAliveInitialDelay: 0
+    keepAliveInitialDelay: 0,
+    timezone: '+00:00'  // Use UTC to prevent timezone shifts on DATE fields
   });
 
   // Test connection

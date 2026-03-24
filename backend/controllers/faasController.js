@@ -6,6 +6,28 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const { createNotification, notifyAll, notifyRoles } = require('../utils/notifications');
 
+// Helper function to parse and format dates for MySQL DATE type
+// Simply extracts YYYY-MM-DD string without timezone conversion
+function parseDate(dateValue) {
+  if (!dateValue) return null;
+  
+  try {
+    // If it's already a string, just extract the date part
+    if (typeof dateValue === 'string') {
+      // Extract just the date part (first 10 characters)
+      const datePart = dateValue.substring(0, 10);
+      // Validate it's in YYYY-MM-DD format
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        return datePart;  // Return as plain string, no conversion
+      }
+    }
+  } catch (error) {
+    logger.warn(`Failed to parse date: ${dateValue}`, error);
+  }
+  
+  return null;
+}
+
 // Helper function for PDF generation (unchanged)
 async function generatePDF(recordId, excelFilePath) {
   try {
@@ -236,9 +258,12 @@ class FAASController {
         market_values_json,
         assessments_json,
         ctc_no,
-        ctc_issued_on,
+        ctc_issued_on: ctc_issued_on_raw,
         ctc_issued_at
       } = req.body;
+
+      // Parse date to prevent timezone shifts
+      const ctc_issued_on = parseDate(ctc_issued_on_raw);
 
       const userId = req.user.id;
 
@@ -377,7 +402,7 @@ class FAASController {
         market_values_json ? (typeof market_values_json === 'string' ? market_values_json : JSON.stringify(market_values_json)) : null,
         assessments_json ? (typeof assessments_json === 'string' ? assessments_json : JSON.stringify(assessments_json)) : null,
         ctc_no || null,
-        ctc_issued_on || null,
+        parseDate(ctc_issued_on),
         ctc_issued_at || null,
 
         userId,
@@ -508,9 +533,12 @@ class FAASController {
         market_values_json,
         assessments_json,
         ctc_no,
-        ctc_issued_on,
+        ctc_issued_on: ctc_issued_on_raw,
         ctc_issued_at
       } = req.body;
+
+      // Parse date to prevent timezone shifts
+      const ctc_issued_on = parseDate(ctc_issued_on_raw);
 
       const userId = req.user.id;
 
@@ -1117,9 +1145,12 @@ class FAASController {
         market_values_json,
         assessments_json,
         ctc_no,
-        ctc_issued_on,
+        ctc_issued_on: ctc_issued_on_raw,
         ctc_issued_at
       } = req.body;
+
+      // Parse date to prevent timezone shifts
+      const ctc_issued_on = parseDate(ctc_issued_on_raw);
 
       const userId = req.user.id;
 
@@ -1632,8 +1663,11 @@ class FAASController {
         previous_td_no2, previous_owner2, previous_av_land2, previous_av_improvements2,
         memoranda_code, memoranda_paragraph, rw_row,
         land_appraisals_json, improvements_json, market_values_json, assessments_json,
-        ctc_no, ctc_issued_on, ctc_issued_at
+        ctc_no, ctc_issued_on: ctc_issued_on_raw, ctc_issued_at
       } = req.body;
+
+      // Parse date to prevent timezone shifts
+      const ctc_issued_on = parseDate(ctc_issued_on_raw);
 
       const userId = req.user.id;
       const pool = getConnection();
