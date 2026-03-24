@@ -92,6 +92,7 @@ interface ApprovalRecord {
   linked_entries_count?: number;
   pending_linked_count?: number;
   rejected_linked_count?: number;
+  transaction_no?: number;
 }
 
 // Extracts the subpath for the API route, e.g. FAAS/PDFs/filename.pdf or UNIRRIG/PDFs/filename.pdf
@@ -662,6 +663,16 @@ const RecordList = ({
                         )}
                       </div>
 
+
+                      {/* Trans No. Column */}
+                      <div className="flex-shrink-0 w-12 flex items-start justify-center pt-2 font-bold text-slate-900 text-xs">
+                         {record.transaction_no}
+                      </div>
+
+
+
+
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="font-bold text-slate-900 truncate uppercase text-[15px] flex-1 min-w-0" title={record.owner_name}>{record.owner_name}</span>
@@ -680,6 +691,8 @@ const RecordList = ({
                             </Badge>
                           )}
                         </div>
+
+
 
                         <div className="flex flex-wrap gap-1 mb-2">
                           {Number(record.pending_linked_count) > 0 && record.status !== 'for_approval' && (
@@ -723,7 +736,7 @@ const RecordList = ({
                     {isExpanded && (
                       <div className="bg-slate-50/50 border-t border-slate-100 divide-y divide-slate-100/50">
                         {linkedEntries.length > 0 ? (
-                          linkedEntries.map((subRecord) => (
+                          linkedEntries.map((subRecord, subIndex) => (
                             <div
                               key={subRecord.id}
                               onClick={() => handleSelectRecord(subRecord as unknown as ApprovalRecord)}
@@ -732,26 +745,33 @@ const RecordList = ({
                                 selectedRecord?.id === subRecord.id ? "bg-blue-50/50 border-l-blue-400 shadow-sm" : "hover:bg-slate-100/50"
                               )}
                             >
-                              <div className="flex-1 min-w-0 mr-1">
-                                <div className="flex items-center justify-between gap-2 mb-0.5">
-                                  <span className="font-bold text-slate-800 text-[12px] truncate uppercase flex-1 min-w-0" title={subRecord.owner_name}>{subRecord.owner_name}</span>
-                                  <div className="flex-shrink-0">
-                                    {getStatusBadge(subRecord.status, true)}
+                                  <div className="flex items-center gap-2 w-full">
+                                    <div className="flex-shrink-0 w-12 flex items-center justify-center font-bold text-slate-500 text-[10px]">
+                                      {record.transaction_no}.{subIndex + 1}
+                                    </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                                      <span className="font-bold text-slate-800 text-[12px] truncate uppercase flex-1 min-w-0" title={subRecord.owner_name}>{subRecord.owner_name}</span>
+                                      <div className="flex-shrink-0">
+                                        {getStatusBadge(subRecord.status, true)}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[10px] font-semibold text-blue-600">
+                                      <span className="text-slate-500 font-medium whitespace-nowrap">PIN:</span>
+                                      <span className="truncate">{subRecord.pin || "N/A"}</span>
+                                    </div>
+                                    <div className="text-[9px] text-slate-500 mt-1 flex items-center gap-1.5">
+                                      <span className="flex items-center gap-1 whitespace-nowrap">
+                                        <Clock className="w-2.5 h-2.5" />
+                                        {formatDate(subRecord.updated_at || subRecord.created_at)}
+                                      </span>
+                                      <span>•</span>
+                                      <span>{subRecord.updater_name ? 'Updated by' : 'By'} {subRecord.updater_name || subRecord.encoder_name}</span>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1 text-[10px] font-semibold text-blue-600">
-                                  <span className="text-slate-500 font-medium whitespace-nowrap">PIN:</span>
-                                  <span className="truncate">{subRecord.pin || "N/A"}</span>
-                                </div>
-                                <div className="text-[9px] text-slate-500 mt-1 flex items-center gap-1.5">
-                                  <span className="flex items-center gap-1 whitespace-nowrap">
-                                    <Clock className="w-2.5 h-2.5" />
-                                    {formatDate(subRecord.updated_at || subRecord.created_at)}
-                                  </span>
-                                  <span>•</span>
-                                  <span>{subRecord.updater_name ? 'Updated by' : 'By'} {subRecord.updater_name || subRecord.encoder_name}</span>
-                                </div>
-                              </div>
+
                               <div className="flex items-center self-center">
                                 <ChevronRight className={cn(
                                   "w-3.5 h-3.5 transition-colors",
