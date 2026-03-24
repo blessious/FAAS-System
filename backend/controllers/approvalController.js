@@ -1,4 +1,4 @@
-﻿const { getConnection } = require('../utils/database');
+const { getConnection } = require('../utils/database');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
@@ -95,11 +95,17 @@ class ApprovalController {
           uu.profile_picture as updater_profile_picture,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0) as linked_entries_count,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'for_approval') as pending_linked_count,
-          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'rejected') as rejected_linked_count
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'rejected') as rejected_linked_count,
+          rn.transaction_no
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
         LEFT JOIN users uu ON f.updated_by = uu.id
+        LEFT JOIN (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC, id ASC) AS transaction_no
+          FROM faas_records
+          WHERE hidden = 0 AND parent_id IS NULL
+        ) rn ON rn.id = f.id
         WHERE f.parent_id IS NULL 
           AND f.hidden = 0
           AND (
@@ -323,11 +329,17 @@ class ApprovalController {
           ue.profile_picture as encoder_profile_picture,
           ua.full_name as approver_name,
           uu.full_name as updater_name,
-          uu.profile_picture as updater_profile_picture
+          uu.profile_picture as updater_profile_picture,
+          rn.transaction_no
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
         LEFT JOIN users uu ON f.updated_by = uu.id
+        LEFT JOIN (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC, id ASC) AS transaction_no
+          FROM faas_records
+          WHERE hidden = 0 AND parent_id IS NULL
+        ) rn ON rn.id = f.id
         WHERE f.status IN ('approved', 'rejected')
           AND f.hidden = 0
         ORDER BY f.approval_date DESC
@@ -359,11 +371,17 @@ class ApprovalController {
           uu.profile_picture as updater_profile_picture,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0) as linked_entries_count,
           (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'for_approval') as pending_linked_count,
-          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'rejected') as rejected_linked_count
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0 AND status = 'rejected') as rejected_linked_count,
+          rn.transaction_no
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
         LEFT JOIN users uu ON f.updated_by = uu.id
+        LEFT JOIN (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC, id ASC) AS transaction_no
+          FROM faas_records
+          WHERE hidden = 0 AND parent_id IS NULL
+        ) rn ON rn.id = f.id
         WHERE f.parent_id IS NULL
           AND f.hidden = 0
           AND (

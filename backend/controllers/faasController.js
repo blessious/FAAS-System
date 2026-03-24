@@ -1,4 +1,4 @@
-﻿const { getConnection } = require('../utils/database');
+const { getConnection } = require('../utils/database');
 const logger = require('../utils/logger');
 const printController = require('./printController');
 const path = require('path');
@@ -1021,7 +1021,6 @@ class FAASController {
         success: true,
         data: records
       });
-
     } catch (error) {
       logger.error('Get my FAAS records error:', error);
       res.status(500).json({
@@ -1034,22 +1033,36 @@ class FAASController {
     try {
       const pool = getConnection();
 
+      // Sub-query approach: get global transaction_no from all root records (not just drafts)
       const [records] = await pool.execute(
-        `SELECT 
-          f.*, f.updated_at,
+        `SELECT
+          f.*,
+          f.updated_at,
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
           ua.full_name as approver_name,
           uu.full_name as updater_name,
-          uu.profile_picture as updater_profile_picture
+          uu.profile_picture as updater_profile_picture,
+          rn.transaction_no,
+          (SELECT COUNT(*) FROM faas_records WHERE parent_id = f.id AND hidden = 0) as linked_entries_count
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id
         LEFT JOIN users ua ON f.approver_id = ua.id
         LEFT JOIN users uu ON f.updated_by = uu.id
-        WHERE f.status = 'draft' 
+        LEFT JOIN (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC, id ASC) AS transaction_no
+          FROM faas_records
+          WHERE hidden = 0 AND parent_id IS NULL
+        ) rn ON rn.id = f.id
+        WHERE f.parent_id IS NULL
           AND f.hidden = 0
-        ORDER BY f.created_at DESC`,
-        [] // âœ… No user filter
+          AND (
+            f.status = 'draft'
+            OR EXISTS (SELECT 1 FROM faas_records WHERE parent_id = f.id AND status = 'draft' AND hidden = 0)
+          )
+        ORDER BY f.created_at ASC`,
+
+        [] // ✅ No user filter
       );
 
       res.json({

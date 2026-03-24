@@ -21,6 +21,8 @@ interface DraftRecord {
   encoder_profile_picture?: string;
   updater_name?: string;
   updater_profile_picture?: string;
+  transaction_no?: number;
+  linked_entries_count?: number;
 }
 
 export default function Drafts() {

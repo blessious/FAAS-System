@@ -1,4 +1,4 @@
-﻿const { getConnection } = require('../utils/database');
+const { getConnection } = require('../utils/database');
 const logger = require('../utils/logger');
 
 class DashboardController {
@@ -129,7 +129,8 @@ class DashboardController {
           ue.full_name as encoder_name,
           ue.profile_picture as encoder_profile_picture,
           uu.full_name as updater_name,
-          uu.profile_picture as updater_profile_picture
+          uu.profile_picture as updater_profile_picture,
+          ROW_NUMBER() OVER (ORDER BY f.created_at ASC, f.id ASC) AS transaction_no
         FROM faas_records f
         LEFT JOIN users ue ON f.encoder_id = ue.id 
         LEFT JOIN users uu ON f.updated_by = uu.id
@@ -138,6 +139,7 @@ class DashboardController {
         LIMIT ? OFFSET ?`,
         queryParams
       );
+
 
       // Return paginated response
       res.json({

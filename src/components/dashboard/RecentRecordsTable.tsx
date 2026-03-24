@@ -51,6 +51,7 @@ interface FAASRecord {
   updater_name?: string;
   updater_profile_picture?: string;
   linked_entries_count?: number;
+  transaction_no?: number;
 }
 
 interface RecentRecordsTableProps {
@@ -242,7 +243,7 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "", startI
         <Table>
           <TableHeader className="bg-gradient-to-r from-slate-50 to-blue-50/30">
               <TableRow className="border-b-2 border-blue-200 hover:bg-transparent text-[10px]">
-                <TableHead className="h-14 w-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200 text-center">No.</TableHead>
+                <TableHead className="h-14 w-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200 text-center">Trans. No.</TableHead>
                 <TableHead className="h-14 px-6 text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 border-r border-blue-200">
                 <div className="flex items-center gap-2">
                     <FileText className="w-3.5 h-3.5 text-blue-400" />
@@ -330,7 +331,7 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "", startI
                       onDoubleClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-center gap-1 select-none min-h-[40px]">
-                        <span className="inline-block align-middle leading-none">{startIndex + index + 1}</span>
+                        <span className="inline-block align-middle leading-none">{record.transaction_no}</span>
                         {(record.linked_entries_count || 0) > 0 && (
                           <span className="inline-flex align-middle ml-1">
                             {loadingLinked.has(record.id) ? (
@@ -554,7 +555,7 @@ export function RecentRecordsTable({ records, onDelete, searchQuery = "", startI
                           onDoubleClick={() => handleView(subRecord)}
                         >
                           <TableCell className="w-14 px-0 border-r border-slate-100 text-center text-xs text-slate-400 font-bold align-middle" style={{ verticalAlign: 'middle' }}>
-                            {`${startIndex + index + 1}.${subIndex + 1}`}
+                            {`${record.transaction_no}.${subIndex + 1}`}
                           </TableCell>
                           <TableCell className="px-6 py-2 relative overflow-visible" colSpan={1} style={{ paddingLeft: 0 }}>
                             <div className="relative flex items-center" style={{ minHeight: '40px' }}>
