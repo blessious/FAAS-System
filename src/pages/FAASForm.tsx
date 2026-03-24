@@ -874,9 +874,8 @@ export default function FAASForm() {
             ? "Your FAAS record has been saved as a draft."
             : "Your changes have been saved.",
         });
-        if (savedId && savedId !== id) {
-          navigate(`/faas/${savedId}`, { state: { mode: 'view' } });
-        }
+        // Always redirect to dashboard after save
+        navigate("/dashboard");
       }
     } catch (error: any) {
       showErrorToast(error, "Save Failed");
