@@ -150,3 +150,23 @@ FAAS SYSTEM/
 ├── src/                # Shared components & utilities
 └── [config files]      # Vite, ESLint, Tailwind config
 ```
+
+---
+
+## 📸 System Screenshots
+
+### 1. Login Page
+Secure authentication interface with role-based access
+![Login Page](login-page.png)
+
+### 2. Dashboard Overview
+Real-time statistics and monitoring of FAAS records with activity tracking
+![Dashboard Overview](dashboard-overview.png)
+
+### 3. FAAS Record Form
+Comprehensive form with multiple sections for property assessment data entry
+![FAAS Form](faas-form.png)
+
+### 4. User Management
+Administrative interface for creating and managing system users with role assignment
+![User Management](user-management.png)
