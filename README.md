@@ -1,12 +1,45 @@
 # LGU Real Property FAAS System
 
-A comprehensive system for managing Real Property Field Appraisal and Assessment Sheets (FAAS), including automated Excel generation and approval workflows.
+**A full-stack real property assessment management system** for Local Government Units (LGUs) to streamline Field Appraisal and Assessment Sheet (FAAS) processing with role-based workflows, automated document generation, and real-time analytics.
 
-## 🚀 Features
-- **FAAS Management**: Create, edit, and track FAAS records.
-- **Approval Workflow**: Multi-role system (Encoder/Approver) for record validation.
-- **Excel & PDF Generation**: Automated generation of official documents using Python.
-- **Dashboard**: Real-time stats and recent activity tracking.
+Built to digitize and modernize property assessment workflows, reducing manual paperwork and enabling efficient approval chains for government property valuation.
+
+## 🚀 Key Features
+
+- **FAAS Record Management**
+  - Create, edit, and track property assessment records with full audit trails
+  - Advanced search and filtering capabilities for efficient data retrieval
+  - Bulk operations support for handling large datasets
+
+- **Multi-Tier Approval Workflow**
+  - **Encoder Role**: Initial data entry and preliminary validation
+  - **Approver Role**: Final review and record authorization
+  - Status tracking with timestamps and user attribution for compliance
+  - Notification system for pending approvals
+
+- **Automated Document Generation**
+  - Python-powered Excel export with formatted layouts and formulas
+  - PDF generation with official assessment document formatting
+  - Batch processing for multiple records with progress tracking
+
+- **Dashboard & Analytics**
+  - Real-time statistics on pending, approved, and rejected records
+  - Recent activity timeline for transparency
+  - Performance metrics for monitoring workflow efficiency
+
+- **User Management**
+  - Role-based access control (RBAC) with permission enforcement
+  - User profile management with secure authentication
+
+## 📊 Tech Stack
+
+| Layer | Technologies |
+|-------|---------------|
+| **Frontend** | React 18, TypeScript, Tailwind CSS, Vite |
+| **Backend** | Node.js, Express.js |
+| **Database** | MySQL 8.0+ |
+| **Document Generation** | Python 3.10+, OpenPyXL, ReportLab |
+| **Build Tools** | Vite, Bun |
 
 ---
 
@@ -83,14 +116,37 @@ Access the system at: `http://localhost:5173`
 
 ---
 
-## 📤 Preparing for GitHub
-Before pushing your code to GitHub, follow these tips:
-1.  **Fresh SQL Dump**: Export your latest database to `realproperty_db.sql` to include any new users or records you've created.
-2.  **Check .gitignore**: Ensure that `node_modules`, `.env`, and `uploads/` are NOT being uploaded.
-3.  **Clean Uploads**: Don't upload test images or generated spreadsheets to GitHub.
+## 👤 Default Test Accounts
+
+| Role | Username | Password |
+|------|----------|----------|
+| Encoder | `encoder1` | `encoder123` |
+| Approver | `approver1` | `approver123` |
 
 ---
 
-## 👤 Default Accounts (for testing)
-- **Role**: Encoder | **Username**: `encoder1` | **Password**: `encoder123`
-- **Role**: Approver | **Username**: `approver1` | **Password**: `approver123`
+## 🎯 Architecture Highlights
+
+- **Separation of Concerns**: Frontend (React/TypeScript) decoupled from backend API with environment-based configuration
+- **Role-Based Access Control**: Middleware-enforced permission system ensuring data security
+- **Scalable Document Generation**: Python microservice handles resource-intensive PDF/Excel operations asynchronously
+- **Responsive Design**: Tailwind CSS for professional, mobile-friendly UI
+- **Database Design**: Normalized schema with proper indexing for performance on large datasets
+
+---
+
+## 📁 Project Structure
+
+```
+FAAS SYSTEM/
+├── frontend/           # React TypeScript application
+├── backend/            # Node.js Express server
+│   ├── controllers/    # Request handlers
+│   ├── routes/         # API endpoints
+│   ├── middleware/     # Auth, validation, error handling
+│   ├── services/       # Business logic
+│   ├── utils/          # Helpers (database, email, Excel)
+│   └── python/         # Document generation scripts
+├── src/                # Shared components & utilities
+└── [config files]      # Vite, ESLint, Tailwind config
+```
