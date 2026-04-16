@@ -50,6 +50,20 @@ const parseCommaValue = (value: string) => {
   return value.replace(/,/g, "");
 };
 
+// Helper to build download URL with token as query parameter (fallback support)
+const getDownloadUrl = (relativeUrl: string): string => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+  const token = localStorage.getItem('token');
+  const fullUrl = `${baseUrl}${relativeUrl}`;
+  
+  // Add token as query parameter for fallback authentication
+  if (token) {
+    const separator = relativeUrl.includes('?') ? '&' : '?';
+    return `${fullUrl}${separator}token=${encodeURIComponent(token)}`;
+  }
+  return fullUrl;
+};
+
 // Define interfaces for each row type
 interface LandAppraisalRow {
   classification: string;
@@ -1351,7 +1365,7 @@ export default function FAASForm() {
                           size="sm"
                           variant="outline"
                           className="rounded-lg border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white h-9 gap-1.5 font-bold transition-all"
-                          onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${generatedFiles.faas.pdfUrl}`, '_blank')}
+                          onClick={() => window.open(getDownloadUrl(generatedFiles.faas.pdfUrl), '_blank')}
                         >
                           <Eye className="h-3.5 w-3.5" />
                           Preview PDF
@@ -1361,7 +1375,7 @@ export default function FAASForm() {
                         size="sm"
                         variant="outline"
                         className="rounded-lg border-slate-200 hover:bg-slate-100 h-9 gap-1.5 font-bold transition-all"
-                        onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${generatedFiles.faas.downloadUrl}`, '_blank')}
+                        onClick={() => window.open(getDownloadUrl(generatedFiles.faas.downloadUrl), '_blank')}
                       >
                         <Download className="h-3.5 w-3.5" />
                         Download
@@ -1388,7 +1402,7 @@ export default function FAASForm() {
                           size="sm"
                           variant="outline"
                           className="rounded-lg border-orange-200 text-orange-600 hover:bg-orange-600 hover:text-white h-9 gap-1.5 font-bold transition-all"
-                          onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${generatedFiles.unirrig.pdfUrl}`, '_blank')}
+                          onClick={() => window.open(getDownloadUrl(generatedFiles.unirrig.pdfUrl), '_blank')}
                         >
                           <Eye className="h-3.5 w-3.5" />
                           Preview PDF
@@ -1398,7 +1412,7 @@ export default function FAASForm() {
                         size="sm"
                         variant="outline"
                         className="rounded-lg border-slate-200 hover:bg-slate-100 h-9 gap-1.5 font-bold transition-all"
-                        onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${generatedFiles.unirrig.downloadUrl}`, '_blank')}
+                        onClick={() => window.open(getDownloadUrl(generatedFiles.unirrig.downloadUrl), '_blank')}
                       >
                         <Download className="h-3.5 w-3.5" />
                         Download

@@ -5,6 +5,29 @@ const { getConnection } = require('../utils/database');
 const fs = require('fs');
 const { notifyAll } = require('../utils/notifications');
 
+const GENERATED_ROOT = path.resolve(__dirname, '../python/generated');
+
+const buildDownloadUrlFromFilePath = (filePath) => {
+  if (!filePath) {
+    return null;
+  }
+
+  const normalizedRelativePath = path.relative(GENERATED_ROOT, filePath).replace(/\\/g, '/');
+  const fileName = path.basename(filePath);
+
+  // If path is outside generated root, fallback to basename route.
+  if (!normalizedRelativePath || normalizedRelativePath.startsWith('..')) {
+    return `/api/print/download/${fileName}`;
+  }
+
+  const topLevelFolder = normalizedRelativePath.split('/')[0];
+  if (!topLevelFolder || topLevelFolder === fileName) {
+    return `/api/print/download/${fileName}`;
+  }
+
+  return `/api/print/download/${topLevelFolder}/${fileName}`;
+};
+
 class PrintController {
   // Serve PDF files from any subfolder under generated
   async servePdfFile(req, res) {
@@ -493,13 +516,13 @@ class PrintController {
                 faas: jsonData.faas ? {
                   filePath: faasPath,
                   fileName: jsonData.faas.file_name,
-                  downloadUrl: `/api/print/download/${jsonData.faas.file_name}`,
+                  downloadUrl: `/api/print/download/FAAS/${jsonData.faas.file_name}`,
                   pdfUrl: faasPdfPath ? `/api/print/files/pdf/FAAS/generated-pdf/${path.basename(faasPdfPath)}` : null
                 } : null,
                 unirrig: jsonData.unirrig ? {
                   filePath: unirrigPath,
                   fileName: jsonData.unirrig.file_name,
-                  downloadUrl: `/api/print/download/${jsonData.unirrig.file_name}`,
+                  downloadUrl: `/api/print/download/UNIRRIG/${jsonData.unirrig.file_name}`,
                   pdfUrl: unirrigPdfPath ? `/api/print/files/pdf/UNIRRIG/generated-pdf/${path.basename(unirrigPdfPath)}` : null
                 } : null,
                 recordId: recordId,
@@ -608,7 +631,7 @@ class PrintController {
             data: {
               filePath: jsonData.file_path,
               fileName: jsonData.file_name || path.basename(jsonData.file_path),
-              downloadUrl: `/api/print/download/${path.basename(jsonData.file_path)}`,
+              downloadUrl: buildDownloadUrlFromFilePath(jsonData.file_path),
               recordId: recordId,
               arfNo: record.arf_no
             }
@@ -642,6 +665,11 @@ class PrintController {
       const filename = decodeURIComponent(rawParam);
 
       const generatedDir = path.resolve(__dirname, '../python/generated');
+      const isInsideGeneratedDir = (targetPath) => {
+        const normalizedTarget = path.resolve(targetPath);
+        return normalizedTarget === generatedDir || normalizedTarget.startsWith(`${generatedDir}${path.sep}`);
+      };
+
       let filePath;
 
       if (folder && paramFilename) {
@@ -650,27 +678,68 @@ class PrintController {
         filePath = path.resolve(generatedDir, filename);
       }
 
+      // Security: block traversal before any disk operations
+      if (!isInsideGeneratedDir(filePath)) {
+        return res.status(403).json({ success: false, error: 'Invalid file path' });
+      }
+
       logger.debug('ðŸ“¥ DOWNLOAD DEBUG:');
       logger.debug(`- Folder: ${folder}, ParamFilename: ${paramFilename}`);
       logger.debug(`- Raw param: ${rawParam}`);
       logger.debug(`- Final FilePath: ${filePath}`);
 
       if (!fs.existsSync(filePath)) {
-        logger.error('âŒ File not found:', filePath);
-        // List directory to help debug
-        const subDir = filename.includes('/') ? path.dirname(filename) : '';
-        const searchDir = path.join(generatedDir, subDir);
-        if (fs.existsSync(searchDir)) {
-          logger.debug(`- Directory ${searchDir} exists. Contents:`, fs.readdirSync(searchDir));
-        } else {
-          logger.debug(`- Directory ${searchDir} does NOT exist.`);
+        // Fallback for legacy URLs that only include basename but file lives in nested subfolders
+        const requestedBaseName = path.basename(paramFilename || filename || '');
+        const searchRoot = folder
+          ? path.resolve(generatedDir, folder)
+          : generatedDir;
+
+        if (requestedBaseName && isInsideGeneratedDir(searchRoot) && fs.existsSync(searchRoot)) {
+          const stack = [searchRoot];
+          let foundPath = null;
+
+          while (stack.length > 0 && !foundPath) {
+            const currentDir = stack.pop();
+            const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+            for (const entry of entries) {
+              const fullPath = path.join(currentDir, entry.name);
+              if (entry.isDirectory()) {
+                stack.push(fullPath);
+                continue;
+              }
+
+              if (entry.isFile() && entry.name === requestedBaseName) {
+                foundPath = fullPath;
+                break;
+              }
+            }
+          }
+
+          if (foundPath) {
+            filePath = foundPath;
+            logger.debug(`- Fallback matched nested file: ${filePath}`);
+          }
         }
 
-        return res.status(404).json({ success: false, error: 'File not found' });
+        if (!fs.existsSync(filePath)) {
+          logger.error('âŒ File not found:', filePath);
+          // List directory to help debug
+          const subDir = filename.includes('/') ? path.dirname(filename) : '';
+          const searchDir = path.join(generatedDir, subDir);
+          if (fs.existsSync(searchDir)) {
+            logger.debug(`- Directory ${searchDir} exists. Contents:`, fs.readdirSync(searchDir));
+          } else {
+            logger.debug(`- Directory ${searchDir} does NOT exist.`);
+          }
+
+          return res.status(404).json({ success: false, error: 'File not found' });
+        }
       }
 
       // Security: ensure filePath is within generatedDir
-      if (!filePath.startsWith(generatedDir)) {
+      if (!isInsideGeneratedDir(filePath)) {
         return res.status(403).json({ success: false, error: 'Invalid file path' });
       }
 
@@ -731,7 +800,7 @@ class PrintController {
           type: 'excel',
           path: record.excel_file_path,
           name: path.basename(record.excel_file_path),
-          downloadUrl: `/api/print/download/${path.basename(record.excel_file_path)}`
+          downloadUrl: buildDownloadUrlFromFilePath(record.excel_file_path)
         });
       }
 
