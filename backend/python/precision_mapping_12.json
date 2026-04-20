@@ -21,9 +21,9 @@
     },
     "Sheet1!H11": {
         "x": 12,
-        "y": 23.2,
+        "y": 23.9,
         "label": "Owner Address (H11)",
-        "text": "SARIAYA, QUEZON CALABARZON"
+        "text": "1247 STA. CLARA SUBD., SAMPALOC 2,"
     },
     "Sheet1!H13": {
         "x": 12,
@@ -554,5 +554,17 @@
         "x": 8.5,
         "y": 13.35,
         "label": "Land 4: Kind"
+    },
+    "Sheet1!H11_line1776653829598": {
+        "x": 12,
+        "y": 23.55,
+        "label": "Owner Address (H11) (Next Line)",
+        "text": "SARIAYA, QUEZON CALABARZON"
+    },
+    "Sheet1!H11_line1776653832822": {
+        "x": 12,
+        "y": 23.2,
+        "label": "Owner Address (H11) (Next Line)",
+        "text": ""
     }
 }
