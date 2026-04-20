@@ -30,6 +30,9 @@ uploads/
 backend/uploads/
 backend/python/generated/
 
+# Database & Utility Scripts
+sql-dump.bat
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
