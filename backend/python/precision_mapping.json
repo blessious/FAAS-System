@@ -237,7 +237,12 @@
     "Sheet1!B64": {
         "x": 2.9,
         "y": 3.1,
-        "label": "Memoranda Paragraph (B64)"
+        "label": "Memoranda Paragraph (B64)",
+        "fontSize": 9.5,
+        "wrap": true,
+        "maxWidthCm": 15.8,
+        "lineHeightCm": 0.35,
+        "maxLines": 3
     },
     "Sheet1!E29": {
         "x": 8.8,

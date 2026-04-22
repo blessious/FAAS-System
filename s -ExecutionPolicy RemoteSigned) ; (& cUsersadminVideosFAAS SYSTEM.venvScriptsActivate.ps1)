@@ -1,0 +1,294 @@
+[33mcommit 872d73e9aa46d9233e5285ebee56b04307bb7960[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Apr 22 17:41:27 2026 +0800
+
+    Add Note
+
+[33mcommit 7eea881590eec3b319649b7dd59e34c0cf092558[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Apr 22 17:31:26 2026 +0800
+
+    Added LAND, IMPROVEMENTS, TOTAL
+
+[33mcommit cdada5bac520a1058720f715c09ef724ec4006af[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Apr 22 16:39:05 2026 +0800
+
+    Fix  Assessor's Lot No. and Block No
+
+[33mcommit 923a142d4fcf8a74d4289c217c8a4fb49f5adaa6[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Apr 22 16:15:12 2026 +0800
+
+    Fix 1st and 2nd line Gap
+
+[33mcommit 4f1f50f6968b3b99b6e15f5317e65efdbcbc8e7b[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Apr 22 16:13:05 2026 +0800
+
+    Fix Field Multiple Line
+
+[33mcommit e87506d9a2e2023f26fb24634f27e646ba7020e2[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Apr 22 15:57:27 2026 +0800
+
+    Remove Sariaya
+
+[33mcommit dc2d83b2376dbef3f63b8ed6f6a2c104f8cfdb18[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Apr 22 11:39:38 2026 +0800
+
+    Added Feature: Delete Entry 2 (Previous T.D. No. 2) & Make the Owner Cell Wider
+
+[33mcommit e43a2f3b4cccb319a281e09c3b3328dfcc4aa08c[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Apr 20 13:03:53 2026 +0800
+
+    Di ko alam, basta sa Calibration field
+
+[33mcommit b20a1b1a315e6e892a4d2e1a4f714670672f2366[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Apr 20 09:47:04 2026 +0800
+
+    SQL Dump gitignore
+
+[33mcommit 935ecb6f6685c77f8235b583a95e103c5c23f12e[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Thu Apr 16 10:21:08 2026 +0800
+
+    Fix: Excel download authentication and file path resolution
+
+[33mcommit 75007b8626e88e15d8820f6033d9d6fb0e1adaf9[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Apr 8 14:19:43 2026 +0800
+
+    SQL Export
+
+[33mcommit b616b825d596b2098a7339f24a0f96ef767fc51b[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Apr 6 11:57:44 2026 +0800
+
+    With Screenshots
+
+[33mcommit 86eb9c335557c005d6b8c7a9cb8ed7379fd65c59[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Apr 6 10:30:22 2026 +0800
+
+    Readme Revised
+
+[33mcommit f243c4f68462f6731bb3a613dd389d5659897af3[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Mar 24 16:24:08 2026 +0800
+
+    Added Trans No. in Approvals
+
+[33mcommit b1b6a164e41b2c7692eee421f8e6613439e17117[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Mar 24 15:59:24 2026 +0800
+
+    Added Trasaction No.
+
+[33mcommit 1b1119773d5f23f2f95f07f235bfa0d58fd10f1f[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Mar 24 10:20:47 2026 +0800
+
+    After Save Draft, it will redirect to Dashboard Page
+
+[33mcommit 941b94d08457339039c9fdda95a0a68e8fad32ae[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Mar 24 10:14:04 2026 +0800
+
+    Fixed: Issued On not saving. Saving but -1 day
+
+[33mcommit c59d3e1c9370516bc21d879a38034d068da374c2[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Mar 23 14:41:35 2026 +0800
+
+    Fix next pagination No. Column continues
+
+[33mcommit c4f1840389487b5b23484b3b49ddcb723ac41e56[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Mar 17 10:52:28 2026 +0800
+
+    Adjusted Coordinate K52
+
+[33mcommit 54032b237ee5bbe28b965ddc552d856edf6cd8a3[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Mar 17 10:46:48 2026 +0800
+
+    Added adjustment Value in TDC File.
+
+[33mcommit 2922a2d2bdd2f48ad22335324f78f4f8bfd22e14[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Mar 13 14:12:49 2026 +0800
+
+    Added: When record is edited. The order No. not changing
+
+[33mcommit 1332203cb68f91c11f6d928f1ac1e3f179ae32d5[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Mar 13 11:35:33 2026 +0800
+
+    Added No. Column
+
+[33mcommit 97a0510d771a8a4d54095c142b600ab0e7a8019f[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Mar 13 11:19:52 2026 +0800
+
+    Remove Duplicate X button in Search Bar
+
+[33mcommit 99febb3fd857fecc9bc707f3ebe2fc36aa59ab9b[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Mar 13 11:16:21 2026 +0800
+
+    Searchable SubRecord
+
+[33mcommit a6845814c1cbbe42d3f765d198783c789c7b4d73[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Mar 13 11:00:47 2026 +0800
+
+    Sort by PIN
+
+[33mcommit 77d4a9495383b56fc4bc92b32b9938161d7c8b42[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Thu Mar 12 08:45:45 2026 +0800
+
+    Add clear Chat History
+
+[33mcommit aaddc549bb47ff13c957c27a99e578d2c4e5b531[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Mar 11 15:26:00 2026 +0800
+
+    For Beta Test
+
+[33mcommit eb45a19057364f063cc21b3075f90f3ee98104e5[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Mar 11 10:24:54 2026 +0800
+
+    To Demo again. 2nd page Done
+
+[33mcommit 28245b31694351e574f1d22ed90ab33df14e223f[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Mar 10 16:53:57 2026 +0800
+
+    2nd page dont (ilalim na lang) Tried Github Copilot Student Plan
+
+[33mcommit d344c85a9026701ccbc7c632407afa95e34ff3ca[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Mar 9 16:55:28 2026 +0800
+
+    Added Notif Bell, Group Chat, 2nd Page TDC not done yet
+
+[33mcommit ee4f5fbf9b3f04e9f2a715d472db0afb78c003c0[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Mar 6 15:58:42 2026 +0800
+
+    Edited for Simulation (With Preview FAAS & TDC
+
+[33mcommit b20bab2e40d9cf8ce7a67f573d14e638c78ffd00[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Mar 6 12:20:42 2026 +0800
+
+    With Multiple Line Calibration in Tax Dec
+
+[33mcommit 61147ba53865fdd9a6d32c59187363103ab674ff[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Mar 6 12:18:17 2026 +0800
+
+    With Tax Dec Background in PDF
+
+[33mcommit 9ba96aae02c00f2ad9402022b7cef8e356137246[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Thu Mar 5 16:57:12 2026 +0800
+
+    With Precise PDF Generator and Calibration Modal
+
+[33mcommit a6b4ea73efafef5dcf8bfc73f64beef6925c5e3f[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Mar 3 16:55:16 2026 +0800
+
+    Shooting na lang
+
+[33mcommit 62e3cf662bbae7ffafd4864aa0ba320e7c8c0131[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Mar 2 16:51:18 2026 +0800
+
+    Feb 2, 2026
+
+[33mcommit 5f237ec06e665c4067ddebead205f9d0c77d99ce[m
+Merge: f34d4ca 35ebdb6
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Feb 27 16:59:17 2026 +0800
+
+    Merge branch 'main' of https://github.com/blessious/FAAS-System
+
+[33mcommit 35ebdb672c355445b7b0bb469c3741ca5e5024f7[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Feb 27 16:57:21 2026 +0800
+
+    Add files via upload
+
+[33mcommit f34d4cab353f65a8bbe2dcf4407fd203b8505c43[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Feb 27 16:57:02 2026 +0800
+
+    Template Save
+
+[33mcommit 7815e8392a70c56b9968d781b66df338920ba471[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Feb 27 16:53:57 2026 +0800
+
+    02-27-26 TDC Back page TCT
+
+[33mcommit 06716cc04e56ac4643c6dd618c2b92cf160bfa77[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Wed Feb 25 13:53:40 2026 +0800
+
+    Demo Assessor (2-25-26) with OJT
+
+[33mcommit 43cafd4e03a774042c106fe6743793bf5296722d[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Feb 24 15:36:11 2026 +0800
+
+    Edited Font
+
+[33mcommit 3a61879609a5f17292b8cabcea675522337d1372[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Tue Feb 24 14:41:41 2026 +0800
+
+    02-24-26 Next: Subrecord
+
+[33mcommit 526c38496bfc590ddad72bdf88fbdd7a99c1d422[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Feb 23 16:00:10 2026 +0800
+
+    02-23-26 Tax Dec Finalization
+
+[33mcommit 7fc97d0d73c47960d2afeca2a1dd5416f3fe52d8[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Mon Feb 23 09:35:06 2026 +0800
+
+    removed unncessary backup file
+
+[33mcommit 539d15aad10eefeead13d80692475f0d6e6b563c[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Feb 20 16:53:27 2026 +0800
+
+    Edit Format in FAAS & UNIRRIG Excel
+
+[33mcommit af3cf7425d1eefe379c03ea4f0d21e785801a645[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Feb 20 14:03:52 2026 +0800
+
+    removed unnecessary backup file
+
+[33mcommit 32608a5c27b32abd53b46a49447eb127cef0ba50[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Fri Feb 20 14:01:52 2026 +0800
+
+    Updated excel formulas Python)
+
+[33mcommit c9116a8b51a7af305fc5890e817d425cd3af1352[m
+Author: blessious <landoyblessious@gmail.com>
+Date:   Thu Feb 19 15:59:45 2026 +0800
+
+    Initial commit - FAAS System

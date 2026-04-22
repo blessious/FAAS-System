@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import argparse
+import re
 from reportlab.lib.units import cm, inch
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -57,7 +58,16 @@ TEMPLATE_MAPPING = {
     'Sheet1!H58': {'x': 13.7, 'y': 5.2,   'label': 'Land II: Class'},
     'Sheet1!H59': {'x': 13.7, 'y': 4.5,   'label': 'Land II: UV'},
     'Sheet1!J58': {'x': 17.6, 'y': 5.1,   'label': 'Land II: MV'},
-    'Sheet1!B64': {'x': 2.9, 'y': 3.1, 'label': 'Memoranda Paragraph (B64)'},
+    'Sheet1!B64': {
+        'x': 2.9,
+        'y': 3.1,
+        'label': 'Memoranda Paragraph (B64)',
+        'fontSize': 9.5,
+        'wrap': True,
+        'maxWidthCm': 15.8,
+        'lineHeightCm': 0.35,
+        'maxLines': 3
+    },
     # Additional table rows (R2-R4)
     'Sheet1!E29': {'x': 8.8, 'y': 16.35, 'label': 'Table R2 Class'},
     'Sheet1!G29': {'x': 11.5,'y': 16.35, 'label': 'Table R2 Area'},
@@ -149,6 +159,82 @@ class PrecisionPDFGenerator:
                 pdfmetrics.registerFont(TTFont(name, font_path))
                 self.font_name = name
             except: pass
+
+    def _split_long_word(self, word, font_size, max_width):
+        parts = []
+        chunk = ""
+        for ch in word:
+            candidate = chunk + ch
+            if chunk and pdfmetrics.stringWidth(candidate, self.font_name, font_size) > max_width:
+                parts.append(chunk)
+                chunk = ch
+            else:
+                chunk = candidate
+        if chunk:
+            parts.append(chunk)
+        return parts
+
+    def _wrap_text_lines(self, text, font_size, max_width):
+        text = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
+        paragraphs = text.split("\n")
+        lines = []
+
+        for para in paragraphs:
+            if para == "":
+                lines.append("")
+                continue
+
+            leading_ws_match = re.match(r"^\s+", para)
+            leading_ws = leading_ws_match.group(0) if leading_ws_match else ""
+            content = para[len(leading_ws):]
+            tokens = re.findall(r"\s+|\S+", content)
+
+            current = leading_ws
+            for token in tokens:
+                if token.isspace():
+                    candidate = current + token
+                    if pdfmetrics.stringWidth(candidate, self.font_name, font_size) <= max_width:
+                        current = candidate
+                    else:
+                        if current.rstrip():
+                            lines.append(current.rstrip())
+                        current = ""
+                    continue
+
+                if pdfmetrics.stringWidth(token, self.font_name, font_size) > max_width:
+                    if current.rstrip():
+                        lines.append(current.rstrip())
+                        current = ""
+                    long_parts = self._split_long_word(token, font_size, max_width)
+                    for part in long_parts[:-1]:
+                        lines.append(part)
+                    current = long_parts[-1] if long_parts else ""
+                    continue
+
+                candidate = current + token
+                if pdfmetrics.stringWidth(candidate, self.font_name, font_size) <= max_width:
+                    current = candidate
+                else:
+                    if current.rstrip():
+                        lines.append(current.rstrip())
+                    current = token
+
+            if current:
+                lines.append(current.rstrip())
+
+        return lines
+
+    def _clamp_lines_with_ellipsis(self, lines, max_lines, font_size, max_width):
+        if len(lines) <= max_lines:
+            return lines
+
+        out = lines[:max_lines]
+        base = out[-1].rstrip()
+        ellipsis = "..."
+        while base and pdfmetrics.stringWidth(base + ellipsis, self.font_name, font_size) > max_width:
+            base = base[:-1]
+        out[-1] = (base.rstrip() + ellipsis) if base else ellipsis
+        return out
 
     def generate(self, excel_path, output_path=None):
         if not os.path.exists(excel_path):
@@ -425,6 +511,46 @@ class PrecisionPDFGenerator:
                     # J36: use the workbook value (no special rendering here)
                     
                     x, y = coord['x'] * cm, coord['y'] * cm
+
+                    # Long Note handling for Sheet1 B64: wrap into bounded width/lines.
+                    if addr == 'B64' or coord.get('wrap'):
+                        fs = coord.get('fontSize', 10.5)
+                        max_width_cm = float(coord.get('maxWidthCm', 15.8))
+                        max_lines = int(coord.get('maxLines', 3))
+                        line_height_cm = float(coord.get('lineHeightCm', 0.35))
+
+                        display_max_width = max_width_cm * cm
+                        unscaled_max_width = display_max_width / 0.75
+
+                        note_text = str(text)
+                        if addr == 'B64':
+                            # If user entered "title.Transfer", keep readability as "title. Transfer".
+                            note_text = re.sub(r"(?<=[.!?;:])(?=[A-Za-z0-9])", " ", note_text)
+
+                        wrapped_lines = self._wrap_text_lines(note_text, fs, unscaled_max_width)
+                        wrapped_lines = self._clamp_lines_with_ellipsis(wrapped_lines, max_lines, fs, unscaled_max_width)
+
+                        if wrapped_lines:
+                            c.saveState()
+                            c.translate(x, y)
+                            c.scale(0.75, 1.0)
+
+                            t = c.beginText(0, 0)
+                            t.setFont(self.font_name, fs)
+                            t.setFillColorRGB(0, 0, 0)
+                            t.setTextRenderMode(2)
+                            t.setLeading(line_height_cm * cm)
+                            c.setLineWidth(0.5)
+                            c.setStrokeColorRGB(0, 0, 0)
+
+                            for line in wrapped_lines:
+                                t.textLine(line)
+
+                            c.drawText(t)
+                            c.restoreState()
+
+                        fields_processed += 1
+                        continue
 
                     c.saveState()
                     # Apply transformation to the canvas

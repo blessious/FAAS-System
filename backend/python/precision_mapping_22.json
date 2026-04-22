@@ -11,9 +11,10 @@
     },
     "Sheet1!B11": {
         "x": 4.2,
-        "y": 24.6,
+        "y": 24.25,
         "label": "Owner Name (B11)",
-        "text": "EDEN M. MASANGKAY, ELMAR O. MAYORGA"
+        "text": "EDEN M. MASANGKAY, ELMAR O. MAYORGA, EDUARDO O. MAYORGA, JR., ",
+        "fontSize": 10.5
     },
     "Sheet1!B13": {
         "x": 4.2,
@@ -312,7 +313,7 @@
     },
     "Sheet2!L36": {
         "x": 14.1,
-        "y": 14.2,
+        "y": 13.4,
         "label": "Total Land MV (L36)"
     },
     "Sheet2!L37": {
@@ -322,7 +323,7 @@
     },
     "Sheet2!L38": {
         "x": 14.1,
-        "y": 13.4,
+        "y": 14.2,
         "label": "L38"
     },
     "Sheet2!L39": {
@@ -331,7 +332,7 @@
         "label": "Owner/Administrator (L39)"
     },
     "Sheet2!E42": {
-        "x": 8.9,
+        "x": 9.1,
         "y": 11.55,
         "label": "Sworn Day (E42)"
     },
@@ -342,17 +343,17 @@
     },
     "Sheet2!I42": {
         "x": 16.2,
-        "y": 11.55,
+        "y": 11.45,
         "label": "Sworn Year (I42)"
     },
     "Sheet2!G43": {
-        "x": 11.3,
-        "y": 11.15,
+        "x": 11.6,
+        "y": 11.1,
         "label": "CTC No (G43)"
     },
     "Sheet2!J43": {
-        "x": 15.9,
-        "y": 11.2,
+        "x": 16.1,
+        "y": 11.1,
         "label": "CTC Month (J43)"
     },
     "Sheet2!B44": {
@@ -361,7 +362,7 @@
         "label": "CTC Year (B44)"
     },
     "Sheet2!D44": {
-        "x": 3.6,
+        "x": 3.8,
         "y": 10.8,
         "label": "CTC Issued At (D44)"
     },
@@ -555,25 +556,19 @@
         "y": 13.35,
         "label": "Land 4: Kind"
     },
-    "Sheet1!B11_line1776844913547": {
-        "x": 4.2,
-        "y": 24.25,
-        "label": "Owner Name (B11) (Next Line)",
-        "text": "EDUARDO O. MAYORGA, JR., CARMELITA M. MAGO"
-    },
-    "Sheet1!B11_line1776844928879": {
+    "Sheet1!B11_line1776846710018": {
         "x": 4.2,
         "y": 23.9,
         "label": "Owner Name (B11) (Next Line)",
-        "text": "MILLER O. MAYORGA, ARVIN O. MAYORGA"
+        "text": "CARMELITA M. MAGO, MILLER O. MAYORGA, ARVIN O. MAYORGA, "
     },
-    "Sheet1!B11_line1776844934667": {
+    "Sheet1!B11_line1776846726282": {
         "x": 4.2,
         "y": 23.55,
         "label": "Owner Name (B11) (Next Line)",
-        "text": "AILYN DELA ROSA, LEONILA O. MOTOL"
+        "text": "AILYN DELA ROSA, LEONILA O. MOTOL,"
     },
-    "Sheet1!B11_line1776844940845": {
+    "Sheet1!B11_line1776846769777": {
         "x": 4.2,
         "y": 23.2,
         "label": "Owner Name (B11) (Next Line)",
