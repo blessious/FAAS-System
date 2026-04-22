@@ -57,6 +57,7 @@ TEMPLATE_MAPPING = {
     'Sheet1!H58': {'x': 13.7, 'y': 5.2,   'label': 'Land II: Class'},
     'Sheet1!H59': {'x': 13.7, 'y': 4.5,   'label': 'Land II: UV'},
     'Sheet1!J58': {'x': 17.6, 'y': 5.1,   'label': 'Land II: MV'},
+    'Sheet1!B64': {'x': 2.9, 'y': 3.1, 'label': 'Memoranda Paragraph (B64)'},
     # Additional table rows (R2-R4)
     'Sheet1!E29': {'x': 8.8, 'y': 16.35, 'label': 'Table R2 Class'},
     'Sheet1!G29': {'x': 11.5,'y': 16.35, 'label': 'Table R2 Area'},
