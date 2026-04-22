@@ -221,9 +221,24 @@ class PrecisionPDFGenerator:
                                 num_val = float(val)
                                 text = f"{num_val * 100:.0f}%" if num_val <= 1.0 else f"{num_val:.0f}%"
                             except: pass
-                        # 🚀 No decimal places for plant Area (I42) and K19/K20
-                        elif addr in ['I42', 'K19', 'K20']:
+                        # 🚀 No decimal places for plant Area (I42)
+                        elif addr == 'I42':
                             try: text = f"{int(float(val))}"
+                            except: pass
+                        # Preserve leading zeros for Block/Lot numbers from PIN segments.
+                        elif addr in ['K19', 'K20']:
+                            try:
+                                pin_raw = wb[sn]['J3'].value
+                                pin_text = str(pin_raw).strip() if pin_raw is not None else ""
+                                pin_parts = [p.strip() for p in pin_text.split('-')] if pin_text else []
+
+                                if len(pin_parts) >= 5:
+                                    text = pin_parts[4] if addr == 'K19' else pin_parts[3]
+                                else:
+                                    if isinstance(val, (int, float)):
+                                        text = str(int(float(val))) if float(val).is_integer() else str(val)
+                                    else:
+                                        text = str(val)
                             except: pass
                         # 🚀 2 decimal places for Currency/Calculated MV (I, J, K, L, M columns and G54-G58, H58)
                         elif addr and (any(col in addr for col in ['I', 'J', 'K', 'L', 'M']) or addr in ['G54', 'G55', 'G56', 'G57', 'G58', 'H58', 'H71']):
