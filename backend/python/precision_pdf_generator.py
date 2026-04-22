@@ -73,9 +73,9 @@ TEMPLATE_MAPPING = {
     'Sheet1!H31': {'x': 13.5,'y': 15.5,  'label': 'Table R4 Sub'},
     'Sheet1!I31': {'x': 15.5,'y': 15.5,  'label': 'Table R4 Unit'},
     'Sheet1!J31': {'x': 17.6,'y': 15.5,  'label': 'Table R4 Market'},
-    'Sheet2!L36': {'x': 14.1, 'y': 14.1, 'label': 'Total Land MV'},
+    'Sheet2!L36': {'x': 14.1, 'y': 14.7, 'label': 'Total Land MV'},
     'Sheet2!L37': {'x': 14.1, 'y': 14.3, 'label': 'Total Impr MV'},
-    'Sheet2!L38': {'x': 14.1, 'y': 14.7, 'label': 'L38'},
+    'Sheet2!L38': {'x': 14.1, 'y': 14.1, 'label': 'L38'},
     'Sheet2!E42': {'x': 9.2,  'y': 11.4, 'label': 'Sworn Day'},
     'Sheet2!G42': {'x': 11.9, 'y': 11.4, 'label': 'Sworn Month'},
     'Sheet2!I42': {'x': 16.2, 'y': 11.4, 'label': 'Sworn Year'},
@@ -438,14 +438,11 @@ class PrecisionPDFGenerator:
                     t.setTextRenderMode(2) # Fill + Stroke
                     c.setLineWidth(0.5)
                     c.setStrokeColorRGB(0, 0, 0)
-                    
-                    if "Total" in str(coord.get('label','')):
-                        # Skip Total fields - they are computed and drawn via special hooks above
-                        c.restoreState()
-                        continue
-                    else:
-                        t.textOut(text)
-                        c.drawText(t)
+
+                    # Computed fields are skipped earlier via explicit addr checks.
+                    # Render remaining mapped values normally, including Sheet2 totals.
+                    t.textOut(text)
+                    c.drawText(t)
                         
                     c.restoreState()
                     fields_processed += 1
