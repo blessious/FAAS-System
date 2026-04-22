@@ -214,7 +214,19 @@ class FAASExcelGenerator:
             if not record:
                 return None, "FAAS record not found"
 
-            template_path = os.path.join(self.template_dir, 'FAAS_Template.xlsx')
+            # Check if Entry 2 has any values
+            pt2 = record.get('previous_td_no2')
+            po2 = record.get('previous_owner2')
+            has_entry_2 = bool(
+                (pt2 and str(pt2).strip()) or
+                (po2 and str(po2).strip()) or
+                self.safe_float(record.get('previous_av_land2', 0)) > 0 or
+                self.safe_float(record.get('previous_av_improvements2', 0)) > 0
+            )
+
+            template_name = 'FAAS_Template.xlsx' if has_entry_2 else 'FAAS_Template_WithoutEntry2.xlsx'
+            template_path = os.path.join(self.template_dir, template_name)
+            
             if not os.path.exists(template_path):
                 return None, f"Template not found at {template_path}"
 
