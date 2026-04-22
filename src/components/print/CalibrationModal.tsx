@@ -394,21 +394,62 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
 
         const baseKey = key.split('_line')[0];
         const newMapping = { ...mapping };
+        const removedY = newMapping[key]?.y;
         delete newMapping[key];
 
-        // Shift remaining lines in the group back DOWN (-0.35cm)
+        // Collapse the gap by moving only the lines above the removed line down.
         const shiftAmount = 0.35;
 
         const groupLines = Object.keys(newMapping).filter(k => k === baseKey || k.startsWith(`${baseKey}_line`));
         groupLines.forEach(k => {
-            newMapping[k] = {
-                ...newMapping[k],
-                y: parseFloat((newMapping[k].y - shiftAmount).toFixed(2))
-            };
+            if (removedY !== undefined && newMapping[k].y > removedY) {
+                newMapping[k] = {
+                    ...newMapping[k],
+                    y: parseFloat((newMapping[k].y - shiftAmount).toFixed(2))
+                };
+            }
         });
 
         setMapping(newMapping);
         setSelectedField(baseKey);
+    };
+
+    const pruneEmptyDerivedLines = (current: CalibrationMapping): CalibrationMapping => {
+        const shiftAmount = 0.35;
+        const next: CalibrationMapping = { ...current };
+        const baseKeys = Object.keys(next).filter(k => !k.includes("_line"));
+
+        baseKeys.forEach((baseKey) => {
+            let changed = true;
+            while (changed) {
+                changed = false;
+                const derivedKeys = Object.keys(next).filter(k => k.startsWith(`${baseKey}_line`));
+
+                const emptyDerivedKey = derivedKeys.find((k) => {
+                    const txt = next[k]?.text;
+                    return typeof txt !== "string" || txt.trim() === "";
+                });
+
+                if (!emptyDerivedKey) continue;
+
+                const removedY = next[emptyDerivedKey].y;
+                delete next[emptyDerivedKey];
+
+                const groupKeys = Object.keys(next).filter(k => k === baseKey || k.startsWith(`${baseKey}_line`));
+                groupKeys.forEach((k) => {
+                    if (next[k].y > removedY) {
+                        next[k] = {
+                            ...next[k],
+                            y: parseFloat((next[k].y - shiftAmount).toFixed(2))
+                        };
+                    }
+                });
+
+                changed = true;
+            }
+        });
+
+        return next;
     };
 
     const editFirstLine = () => {
@@ -524,8 +565,10 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         if (!mapping) return;
         try {
             setSaving(true);
+            const cleanedMapping = pruneEmptyDerivedLines(mapping);
+            setMapping(cleanedMapping);
             // Save specifically for this record
-            await printAPI.updateCalibration(mapping, recordId);
+            await printAPI.updateCalibration(cleanedMapping, recordId);
             toast({
                 title: "Calibration Applied",
                 description: "Record-specific coordinates updated.",
@@ -548,8 +591,10 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         if (!mapping) return;
         try {
             setSaving(true);
+            const cleanedMapping = pruneEmptyDerivedLines(mapping);
+            setMapping(cleanedMapping);
             // Save as global master template (this also deletes ALL record-specific files on the backend)
-            await printAPI.updateCalibration(mapping);
+            await printAPI.updateCalibration(cleanedMapping);
 
             toast({
                 title: "Template Saved",

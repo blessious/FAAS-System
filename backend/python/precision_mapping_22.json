@@ -11,7 +11,7 @@
     },
     "Sheet1!B11": {
         "x": 4.2,
-        "y": 25.3,
+        "y": 24.6,
         "label": "Owner Name (B11)",
         "text": "EDEN M. MASANGKAY, ELMAR O. MAYORGA"
     },
@@ -555,40 +555,28 @@
         "y": 13.35,
         "label": "Land 4: Kind"
     },
-    "Sheet1!B11_line1776844910803": {
-        "x": 4.2,
-        "y": 24.95,
-        "label": "Owner Name (B11) (Next Line)",
-        "text": ""
-    },
     "Sheet1!B11_line1776844913547": {
         "x": 4.2,
-        "y": 24.6,
+        "y": 24.25,
         "label": "Owner Name (B11) (Next Line)",
         "text": "EDUARDO O. MAYORGA, JR., CARMELITA M. MAGO"
     },
     "Sheet1!B11_line1776844928879": {
         "x": 4.2,
-        "y": 24.25,
+        "y": 23.9,
         "label": "Owner Name (B11) (Next Line)",
         "text": "MILLER O. MAYORGA, ARVIN O. MAYORGA"
     },
     "Sheet1!B11_line1776844934667": {
         "x": 4.2,
-        "y": 23.9,
+        "y": 23.55,
         "label": "Owner Name (B11) (Next Line)",
         "text": "AILYN DELA ROSA, LEONILA O. MOTOL"
     },
     "Sheet1!B11_line1776844940845": {
         "x": 4.2,
-        "y": 23.55,
-        "label": "Owner Name (B11) (Next Line)",
-        "text": "AND EVELINA O. OLPOT"
-    },
-    "Sheet1!B11_line1776844942787": {
-        "x": 4.2,
         "y": 23.2,
         "label": "Owner Name (B11) (Next Line)",
-        "text": ""
+        "text": "AND EVELINA O. OLPOT"
     }
 }
