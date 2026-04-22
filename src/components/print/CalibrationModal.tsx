@@ -336,6 +336,19 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         return "";
     };
 
+    const getDisplayValue = (id: string, label: string) => {
+        if (!mapping || !mapping[id]) {
+            return String(getActualValue(id, label) ?? "").trim();
+        }
+
+        const customText = mapping[id].text;
+        if (typeof customText === "string") {
+            return customText.trim();
+        }
+
+        return String(getActualValue(id, label) ?? "").trim();
+    };
+
     const handleAddLine = () => {
         if (!mapping || !selectedField) return;
 
@@ -394,8 +407,29 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
             };
         });
 
-        console.log(`Remove Line: Shifted group back down.`);
         setMapping(newMapping);
+        setSelectedField(baseKey);
+    };
+
+    const editFirstLine = () => {
+        if (!mapping || !selectedField.includes("_line")) return;
+
+        const baseKey = selectedField.split('_line')[0];
+        if (!mapping[baseKey]) return;
+
+        const next = { ...mapping };
+        const baseItem = { ...next[baseKey] };
+
+        // Ensure the first line has an editable value snapshot instead of only a read-time fallback.
+        if (baseItem.text === undefined) {
+            const original = String(getActualValue(baseKey, baseItem.label) ?? "").trim();
+            if (original) {
+                baseItem.text = original;
+                next[baseKey] = baseItem;
+                setMapping(next);
+            }
+        }
+
         setSelectedField(baseKey);
     };
 
@@ -574,7 +608,7 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                                                     {mapping[selectedField].x.toFixed(1)}cm × {mapping[selectedField].y.toFixed(1)}cm
                                                 </div>
                                                 <div className="text-xs text-slate-700 font-medium truncate w-full block">
-                                                    {String(getActualValue(selectedField, mapping[selectedField]?.label) || "").trim() || "NO DATA"}
+                                                    {getDisplayValue(selectedField, mapping[selectedField]?.label) || "NO DATA"}
                                                 </div>
                                             </>
                                         )}
@@ -651,7 +685,7 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                                             const label = item.label || key;
                                             const cellRef = key.includes('!') ? key.split('!')[1] : key;
                                             const lc = label.toLowerCase();
-                                            const rawValue = String(getActualValue(key, label) ?? "").trim();
+                                            const rawValue = getDisplayValue(key, label);
                                             const hasValue = rawValue.length > 0;
                                             const actualVal = rawValue.toLowerCase();
                                             if (hideNoData && !hasValue) return;
@@ -754,7 +788,7 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                                                         .map(([key, item]) => {
                                                         const displayLabel = (item.label || key).split('(')[0].trim();
                                                         const cellRef = key.includes('!') ? key.split('!')[1] : key;
-                                                        const value = String(getActualValue(key, item.label) ?? "").trim();
+                                                        const value = getDisplayValue(key, item.label);
                                                         const displayValue = value || "NO DATA";
                                                         return (
                                                             <SelectItem key={key} value={key} className="cursor-pointer focus:bg-emerald-50">
@@ -820,6 +854,16 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
+                                                            onClick={editFirstLine}
+                                                            className="h-5 text-blue-600 hover:text-blue-700 text-[9px] font-bold p-0 px-2"
+                                                        >
+                                                            EDIT FIRST LINE
+                                                        </Button>
+                                                    )}
+                                                    {selectedField.includes("_line") && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
                                                             onClick={() => removeLine(selectedField)}
                                                             className="h-5 text-rose-500 hover:text-rose-600 text-[9px] font-bold p-0 px-2"
                                                         >
@@ -842,6 +886,11 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                                             >
                                                 + ADD ANOTHER LINE & SHIFT CURRENT UP
                                             </Button>
+                                            {selectedField.includes("_line") && (
+                                                <p className="text-[10px] text-slate-500 italic px-1">
+                                                    Tip: Click EDIT FIRST LINE to trim the original value after splitting long text.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 

@@ -224,14 +224,6 @@ class PrintController {
         mergedMapping = { ...mergedMapping, ...specificData };
       }
 
-      // Dynamic identity/address fields must come from Excel values, not hardcoded mapping text.
-      const dynamicTextKeys = ['Sheet1!B11', 'Sheet1!H11', 'Sheet1!B13', 'Sheet1!H13', 'Sheet2!L39'];
-      for (const key of dynamicTextKeys) {
-        if (mergedMapping[key] && Object.prototype.hasOwnProperty.call(mergedMapping[key], 'text')) {
-          delete mergedMapping[key].text;
-        }
-      }
-
       // Write merged mapping to OS temp dir to avoid triggering nodemon restart
       const os = require('os');
       const mergedPath = path.resolve(os.tmpdir(), `precision_mapping_merged_${recordId}.json`);
