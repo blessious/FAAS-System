@@ -563,10 +563,10 @@ export default function PrintPreview() {
                                       />
                                     ) : null}
                                     <AvatarFallback className="bg-slate-100 text-[8px] font-bold text-slate-600">
-                                      {record.encoder_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                      {(record.encoder_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
-                                  {record.encoder_name}
+                                  {record.encoder_name || 'Unknown Encoder'}
                                 </span>
                                 <span className="text-xs text-slate-400">•</span>
                                 <span className="text-xs text-slate-400 flex items-center gap-1">
@@ -644,7 +644,7 @@ export default function PrintPreview() {
                         {selectedRecord.pin || "No PIN"}
                       </CardTitle>
                       <p className="text-xs text-slate-500 mt-0.5 truncate">
-                        Approved by {selectedRecord.approver_name} • {formatDate(selectedRecord.approved_at)}
+                        Approved by {selectedRecord.approver_name || 'Unknown Approver'} • {formatDate(selectedRecord.approved_at)}
                       </p>
                     </div>
                   </div>
@@ -697,7 +697,9 @@ export default function PrintPreview() {
                         className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-lg shadow-emerald-500/30 rounded-lg h-9"
                       >
                         <Printer className="w-4 h-4" />
-                        <span className="hidden xl:inline">Print {showPlain ? "Plain" : ""}</span>
+                        <span className="hidden xl:inline">
+                          Print {showPrecision ? "Blank" : showPlain ? "Plain" : "Original"}
+                        </span>
                       </Button>
 
                       {activeTab === 'unirrig' && (
@@ -705,11 +707,11 @@ export default function PrintPreview() {
                           size="sm"
                           variant={showPlain ? "secondary" : "outline"}
                           onClick={() => {
-                            if (!selectedRecord?.unirrig_plain_pdf_path) {
-                              handleGeneratePlain();
-                            } else {
-                              setShowPlain(!showPlain);
+                            if (showPlain) {
+                              setShowPlain(false);
                               setShowPrecision(false);
+                            } else {
+                              handleGeneratePlain();
                             }
                           }}
                           disabled={generatingPlain || generatingPrecision}
@@ -731,11 +733,11 @@ export default function PrintPreview() {
                             size="sm"
                             variant={showPrecision ? "secondary" : "outline"}
                             onClick={() => {
-                              if (!selectedRecord?.unirrig_precision_pdf_path) {
+                                if (showPrecision) {
+                                  setShowPrecision(false);
+                                  setShowPlain(false);
+                                } else {
                                 handleGeneratePrecision();
-                              } else {
-                                setShowPrecision(!showPrecision);
-                                setShowPlain(false);
                               }
                             }}
                             disabled={generatingPrecision || generatingPlain}
@@ -800,7 +802,7 @@ export default function PrintPreview() {
                           <ChevronRight className="w-3 h-3" />
                         </a>
                       </div>
-                      <div className="bg-slate-50 relative h-[1355px]">
+                      <div className="bg-slate-50 relative h-[70vh] min-h-[520px] lg:h-[calc(100vh-280px)]">
                         {previewLoading && (
                           <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
                             <div className="flex flex-col items-center">

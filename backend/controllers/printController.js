@@ -173,17 +173,43 @@ class PrintController {
       if (!recordId) return res.status(400).json({ success: false, error: 'Record ID is required' });
 
       const pool = getConnection();
-      const [records] = await pool.execute(
-        'SELECT unirrig_excel_file_path FROM faas_records WHERE id = ?',
-        [recordId]
-      );
-
-      if (!records || records.length === 0 || !records[0].unirrig_excel_file_path) {
-        return res.status(404).json({ success: false, error: 'Excel file path not found in database' });
-      }
-
-      const excelPath = records[0].unirrig_excel_file_path;
       const pythonDir = path.resolve(__dirname, '../python');
+
+      // Always regenerate UNIRRIG Excel for this record to avoid stale cached data
+      // (e.g. old owner names/addresses from previously generated files).
+      const regenerateCommand = `cd "${pythonDir}" && python excel_generator.py --record-id ${recordId} --type unirrig`;
+      const excelPath = await new Promise((resolve, reject) => {
+        exec(regenerateCommand, { cwd: pythonDir }, async (regenError, regenStdout, regenStderr) => {
+          if (regenError) {
+            return reject(new Error(regenStderr || regenError.message));
+          }
+
+          try {
+            let jsonData = null;
+            const lines = String(regenStdout || '').split('\n');
+            for (const line of lines) {
+              const trimmedLine = line.trim();
+              if (trimmedLine.startsWith('{') && trimmedLine.endsWith('}')) {
+                jsonData = JSON.parse(trimmedLine);
+                break;
+              }
+            }
+
+            if (!jsonData?.success || !jsonData?.file_path) {
+              return reject(new Error('Failed to regenerate UNIRRIG Excel for precision print'));
+            }
+
+            await pool.execute(
+              'UPDATE faas_records SET unirrig_excel_file_path = ? WHERE id = ?',
+              [jsonData.file_path, recordId]
+            );
+
+            resolve(jsonData.file_path);
+          } catch (parseError) {
+            reject(parseError);
+          }
+        });
+      });
 
       // Merge template + record-specific mapping (same logic as getCalibration)
       const templateMappingPath = path.resolve(pythonDir, 'precision_mapping.json');
@@ -196,6 +222,14 @@ class PrintController {
       if (fs.existsSync(specificMappingPath)) {
         const specificData = JSON.parse(fs.readFileSync(specificMappingPath, 'utf8'));
         mergedMapping = { ...mergedMapping, ...specificData };
+      }
+
+      // Dynamic identity/address fields must come from Excel values, not hardcoded mapping text.
+      const dynamicTextKeys = ['Sheet1!B11', 'Sheet1!H11', 'Sheet1!B13', 'Sheet1!H13', 'Sheet2!L39'];
+      for (const key of dynamicTextKeys) {
+        if (mergedMapping[key] && Object.prototype.hasOwnProperty.call(mergedMapping[key], 'text')) {
+          delete mergedMapping[key].text;
+        }
       }
 
       // Write merged mapping to OS temp dir to avoid triggering nodemon restart
