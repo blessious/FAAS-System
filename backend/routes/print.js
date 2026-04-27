@@ -29,5 +29,10 @@ router.get('/released-history', printController.getReleasedRecords);
 // Calibration routes
 router.get('/calibration', printController.getCalibration);
 router.post('/calibration', printController.updateCalibration);
+router.get('/calibration/presets', printController.listCalibrationPresets.bind(printController));
+router.get('/calibration/preset/:name', printController.getCalibrationPreset.bind(printController));
+router.post('/calibration/preset', printController.saveCalibrationPreset.bind(printController));
+router.put('/calibration/preset/rename', printController.renameCalibrationPreset.bind(printController));
+router.delete('/calibration/preset/:name', printController.deleteCalibrationPreset.bind(printController));
 
 module.exports = router;

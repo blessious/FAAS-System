@@ -6,6 +6,21 @@ const fs = require('fs');
 const { notifyAll } = require('../utils/notifications');
 
 const GENERATED_ROOT = path.resolve(__dirname, '../python/generated');
+const TEMPLATE_MAPPING_FILE = 'precision_mapping.json';
+const LOCAL_TEMPLATE_MAPPING_FILE = 'precision_mapping.local.json';
+
+const readJsonIfExists = (filePath) => {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    logger.error(`Failed to parse JSON file: ${filePath}`, error);
+    return null;
+  }
+};
 
 const buildDownloadUrlFromFilePath = (filePath) => {
   if (!filePath) {
@@ -212,15 +227,17 @@ class PrintController {
       });
 
       // Merge template + record-specific mapping (same logic as getCalibration)
-      const templateMappingPath = path.resolve(pythonDir, 'precision_mapping.json');
+      const templateMappingPath = path.resolve(pythonDir, LOCAL_TEMPLATE_MAPPING_FILE);
+      const fallbackTemplateMappingPath = path.resolve(pythonDir, TEMPLATE_MAPPING_FILE);
       const specificMappingPath = path.resolve(pythonDir, `precision_mapping_${recordId}.json`);
 
       let mergedMapping = {};
-      if (fs.existsSync(templateMappingPath)) {
-        mergedMapping = JSON.parse(fs.readFileSync(templateMappingPath, 'utf8'));
+      const templateMapping = readJsonIfExists(templateMappingPath) || readJsonIfExists(fallbackTemplateMappingPath);
+      if (templateMapping) {
+        mergedMapping = templateMapping;
       }
-      if (fs.existsSync(specificMappingPath)) {
-        const specificData = JSON.parse(fs.readFileSync(specificMappingPath, 'utf8'));
+      const specificData = readJsonIfExists(specificMappingPath);
+      if (specificData) {
         mergedMapping = { ...mergedMapping, ...specificData };
       }
 
@@ -282,19 +299,19 @@ class PrintController {
 
       // 1. Always start with the Master Template
       let fullMapping = {};
-      const configPath = path.resolve(pythonDir, 'precision_mapping.json');
-      if (fs.existsSync(configPath)) {
-        fullMapping = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const localTemplatePath = path.resolve(pythonDir, LOCAL_TEMPLATE_MAPPING_FILE);
+      const templatePath = path.resolve(pythonDir, TEMPLATE_MAPPING_FILE);
+      const baseTemplate = readJsonIfExists(localTemplatePath) || readJsonIfExists(templatePath);
+      if (baseTemplate) {
+        fullMapping = baseTemplate;
       }
 
       // 2. Overwrite with record-specific data if it exists
       if (recordId) {
         const specificPath = path.resolve(pythonDir, `precision_mapping_${recordId}.json`);
-        if (fs.existsSync(specificPath)) {
-          const specificData = JSON.parse(fs.readFileSync(specificPath, 'utf8'));
-          // Merge specific values into the master map
-          fullMapping = { ...fullMapping, ...specificData };
-        }
+        const specificData = readJsonIfExists(specificPath);
+        // Merge specific values into the master map
+        if (specificData) fullMapping = { ...fullMapping, ...specificData };
       }
 
       res.json(fullMapping);
@@ -310,7 +327,7 @@ class PrintController {
       if (!mapping) return res.status(400).json({ success: false, error: 'Mapping data required' });
 
       const pythonDir = path.resolve(__dirname, '../python');
-      const filename = recordId ? `precision_mapping_${recordId}.json` : 'precision_mapping.json';
+      const filename = recordId ? `precision_mapping_${recordId}.json` : LOCAL_TEMPLATE_MAPPING_FILE;
       const configPath = path.resolve(pythonDir, filename);
 
       fs.writeFileSync(configPath, JSON.stringify(mapping, null, 4));
@@ -351,6 +368,182 @@ class PrintController {
     } catch (error) {
       logger.error('Error updating calibration:', error);
       res.status(500).json({ success: false, error: 'Failed to update calibration' });
+    }
+  }
+
+  async ensureCalibrationPresetsTable() {
+    const pool = getConnection();
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS calibration_presets (
+        id INT NOT NULL AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        mapping_data LONGTEXT NOT NULL,
+        created_by INT NULL,
+        created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uniq_calibration_preset_name (name),
+        KEY idx_calibration_presets_created_by (created_by),
+        CONSTRAINT fk_calibration_presets_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
+  }
+
+  async listCalibrationPresets(req, res) {
+    try {
+      await this.ensureCalibrationPresetsTable();
+      const pool = getConnection();
+      const [rows] = await pool.execute(
+        `SELECT id, name, created_by, created_at, updated_at
+         FROM calibration_presets
+         ORDER BY name ASC`
+      );
+
+      res.json({ success: true, presets: rows });
+    } catch (error) {
+      logger.error('Error listing calibration presets:', error);
+      res.status(500).json({ success: false, error: 'Failed to load calibration presets' });
+    }
+  }
+
+  async getCalibrationPreset(req, res) {
+    try {
+      await this.ensureCalibrationPresetsTable();
+      const presetName = String(req.params.name || '').trim();
+      if (!presetName) {
+        return res.status(400).json({ success: false, error: 'Preset name is required' });
+      }
+
+      const pool = getConnection();
+      const [rows] = await pool.execute(
+        `SELECT id, name, mapping_data, created_by, created_at, updated_at
+         FROM calibration_presets
+         WHERE name = ?
+         LIMIT 1`,
+        [presetName]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Preset not found' });
+      }
+
+      const row = rows[0];
+      let mapping = {};
+      try {
+        mapping = JSON.parse(row.mapping_data || '{}');
+      } catch (parseError) {
+        logger.error(`Invalid preset mapping JSON for preset: ${row.name}`, parseError);
+        return res.status(500).json({ success: false, error: 'Preset data is corrupted' });
+      }
+
+      res.json({
+        success: true,
+        preset: {
+          id: row.id,
+          name: row.name,
+          mapping,
+          createdBy: row.created_by,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        }
+      });
+    } catch (error) {
+      logger.error('Error loading calibration preset:', error);
+      res.status(500).json({ success: false, error: 'Failed to load calibration preset' });
+    }
+  }
+
+  async saveCalibrationPreset(req, res) {
+    try {
+      await this.ensureCalibrationPresetsTable();
+      const presetName = String(req.body?.name || '').trim();
+      const mapping = req.body?.mapping;
+
+      if (!presetName) {
+        return res.status(400).json({ success: false, error: 'Preset name is required' });
+      }
+      if (presetName.length > 100) {
+        return res.status(400).json({ success: false, error: 'Preset name must be 100 characters or fewer' });
+      }
+      if (!mapping || typeof mapping !== 'object') {
+        return res.status(400).json({ success: false, error: 'Valid mapping data is required' });
+      }
+
+      const pool = getConnection();
+      const userId = req.user?.id || null;
+
+      await pool.execute(
+        `INSERT INTO calibration_presets (name, mapping_data, created_by)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           mapping_data = VALUES(mapping_data),
+           created_by = VALUES(created_by),
+           updated_at = CURRENT_TIMESTAMP`,
+        [presetName, JSON.stringify(mapping), userId]
+      );
+
+      res.json({ success: true, message: `Preset "${presetName}" saved.` });
+    } catch (error) {
+      logger.error('Error saving calibration preset:', error);
+      res.status(500).json({ success: false, error: 'Failed to save calibration preset' });
+    }
+  }
+
+  async deleteCalibrationPreset(req, res) {
+    try {
+      await this.ensureCalibrationPresetsTable();
+      const presetName = String(req.params.name || '').trim();
+      if (!presetName) {
+        return res.status(400).json({ success: false, error: 'Preset name is required' });
+      }
+
+      const pool = getConnection();
+      const [result] = await pool.execute('DELETE FROM calibration_presets WHERE name = ?', [presetName]);
+
+      if (!result.affectedRows) {
+        return res.status(404).json({ success: false, error: 'Preset not found' });
+      }
+
+      res.json({ success: true, message: `Preset "${presetName}" deleted.` });
+    } catch (error) {
+      logger.error('Error deleting calibration preset:', error);
+      res.status(500).json({ success: false, error: 'Failed to delete calibration preset' });
+    }
+  }
+
+  async renameCalibrationPreset(req, res) {
+    try {
+      await this.ensureCalibrationPresetsTable();
+      const oldName = String(req.body?.oldName || '').trim();
+      const newName = String(req.body?.newName || '').trim();
+
+      if (!oldName || !newName) {
+        return res.status(400).json({ success: false, error: 'Old and new preset names are required' });
+      }
+      if (newName.length > 100) {
+        return res.status(400).json({ success: false, error: 'Preset name must be 100 characters or fewer' });
+      }
+      if (oldName === newName) {
+        return res.json({ success: true, message: 'Preset name unchanged.' });
+      }
+
+      const pool = getConnection();
+      const [result] = await pool.execute(
+        'UPDATE calibration_presets SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ?',
+        [newName, oldName]
+      );
+
+      if (!result.affectedRows) {
+        return res.status(404).json({ success: false, error: 'Preset not found' });
+      }
+
+      res.json({ success: true, message: `Preset renamed to "${newName}".` });
+    } catch (error) {
+      if (error && error.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ success: false, error: 'A preset with this name already exists' });
+      }
+      logger.error('Error renaming calibration preset:', error);
+      res.status(500).json({ success: false, error: 'Failed to rename calibration preset' });
     }
   }
 

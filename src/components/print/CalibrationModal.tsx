@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Save, RotateCcw, Loader2, Gauge, LayoutTemplate, Search, X } from "lucide-react";
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Save, RotateCcw, Loader2, Gauge, LayoutTemplate, Search, X, Trash2, Pencil } from "lucide-react";
 import { printAPI } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,14 @@ interface MappingItem {
 
 interface CalibrationMapping {
     [key: string]: MappingItem;
+}
+
+interface CalibrationPreset {
+    id: number;
+    name: string;
+    created_by?: number | null;
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface CalibrationModalProps {
@@ -38,6 +46,8 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
     const [step, setStep] = useState<number>(0.1); // Precision step in cm
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [hideNoData, setHideNoData] = useState<boolean>(true);
+    const [presets, setPresets] = useState<CalibrationPreset[]>([]);
+    const [selectedPresetName, setSelectedPresetName] = useState<string>("");
     const searchInputRef = useRef<HTMLInputElement | null>(null);
 
     // Helper to get actual value from recordData based on mapping label
@@ -503,8 +513,18 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
     useEffect(() => {
         if (open) {
             fetchMapping();
+            fetchPresets();
         }
     }, [open, recordId]);
+
+    const fetchPresets = async () => {
+        try {
+            const data = await printAPI.listCalibrationPresets();
+            setPresets(Array.isArray(data?.presets) ? data.presets : []);
+        } catch (error) {
+            console.error("Failed to fetch presets:", error);
+        }
+    };
 
     const fetchMapping = async () => {
         try {
@@ -587,27 +607,163 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
         }
     };
 
-    const handleSaveAsTemplate = async () => {
+    const handleSaveAsPreset = async () => {
+        if (!mapping) return;
+
+        const suggestedName = selectedPresetName || "";
+        const entered = window.prompt("Enter preset name", suggestedName);
+        const presetName = (entered || "").trim();
+        if (!presetName) return;
+
+        try {
+            setSaving(true);
+            const cleanedMapping = pruneEmptyDerivedLines(mapping);
+            setMapping(cleanedMapping);
+            await printAPI.saveCalibrationPreset(presetName, cleanedMapping);
+            await fetchPresets();
+            setSelectedPresetName(presetName);
+
+            toast({
+                title: "Preset Saved",
+                description: `Template preset \"${presetName}\" is ready to use.`,
+            });
+        } catch (error) {
+            console.error("Failed to save preset:", error);
+            toast({
+                title: "Error",
+                description: "Failed to save preset",
+                variant: "destructive",
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleLoadPreset = async () => {
+        if (!selectedPresetName) {
+            toast({
+                title: "Select Preset",
+                description: "Choose a preset to load first.",
+            });
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const data = await printAPI.getCalibrationPreset(selectedPresetName);
+            const presetMapping = data?.preset?.mapping;
+            if (!presetMapping || typeof presetMapping !== 'object') {
+                throw new Error('Invalid preset mapping');
+            }
+            const mergedMapping = { ...(mapping || {}), ...presetMapping };
+            setMapping(mergedMapping);
+            const firstKey = Object.keys(mergedMapping)[0];
+            if (firstKey) setSelectedField(firstKey);
+
+            toast({
+                title: "Preset Loaded",
+                description: `Loaded \"${selectedPresetName}\". Click Apply to save for this record.`,
+            });
+        } catch (error) {
+            console.error("Failed to load preset:", error);
+            toast({
+                title: "Error",
+                description: "Failed to load preset",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeletePreset = async () => {
+        if (!selectedPresetName) {
+            toast({
+                title: "Select Preset",
+                description: "Choose a preset to delete first.",
+            });
+            return;
+        }
+
+        const confirmed = window.confirm(`Delete preset \"${selectedPresetName}\"?`);
+        if (!confirmed) return;
+
+        try {
+            setSaving(true);
+            await printAPI.deleteCalibrationPreset(selectedPresetName);
+            setSelectedPresetName("");
+            await fetchPresets();
+            toast({
+                title: "Preset Deleted",
+                description: "Preset removed successfully.",
+            });
+        } catch (error) {
+            console.error("Failed to delete preset:", error);
+            toast({
+                title: "Error",
+                description: "Failed to delete preset",
+                variant: "destructive",
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleRenamePreset = async () => {
+        if (!selectedPresetName) {
+            toast({
+                title: "Select Preset",
+                description: "Choose a preset to rename first.",
+            });
+            return;
+        }
+
+        const entered = window.prompt("Enter new preset name", selectedPresetName);
+        const newName = (entered || "").trim();
+        if (!newName || newName === selectedPresetName) return;
+
+        try {
+            setSaving(true);
+            await printAPI.renameCalibrationPreset(selectedPresetName, newName);
+            setSelectedPresetName(newName);
+            await fetchPresets();
+            toast({
+                title: "Preset Renamed",
+                description: `Preset renamed to \"${newName}\".`,
+            });
+        } catch (error: any) {
+            console.error("Failed to rename preset:", error);
+            const message = error?.response?.data?.error || "Failed to rename preset";
+            toast({
+                title: "Error",
+                description: message,
+                variant: "destructive",
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSaveAsGlobalTemplate = async () => {
         if (!mapping) return;
         try {
             setSaving(true);
             const cleanedMapping = pruneEmptyDerivedLines(mapping);
             setMapping(cleanedMapping);
-            // Save as global master template (this also deletes ALL record-specific files on the backend)
             await printAPI.updateCalibration(cleanedMapping);
 
             toast({
-                title: "Template Saved",
-                description: "Coordinates saved as global default. All record-specific overrides have been cleared.",
+                title: "Global Template Saved",
+                description: "Saved as server local template and cleared record-specific overrides.",
             });
 
             onCalibrated();
             onOpenChange(false);
         } catch (error) {
-            console.error("Failed to save template:", error);
+            console.error("Failed to save global template:", error);
             toast({
                 title: "Error",
-                description: "Failed to save template settings",
+                description: "Failed to save global template",
                 variant: "destructive",
             });
         } finally {
@@ -1050,28 +1206,84 @@ export function CalibrationModal({ open, onOpenChange, onCalibrated, recordId, r
                 </div>
 
 
-                <DialogFooter className="flex flex-row items-center justify-between gap-2 p-4 bg-slate-50 border-t border-slate-100">
-                    <Button variant="ghost" onClick={handleReset} className="px-2 sm:px-3 gap-1 text-slate-400 hover:text-slate-600 font-bold text-[10px] uppercase tracking-wider h-9">
-                        <RotateCcw className="w-3 h-3" />
-                        <span className="hidden xs:inline">Reset</span>
-                    </Button>
-                    <div className="flex items-center gap-2">
+                <DialogFooter className="flex flex-col gap-3 p-4 bg-slate-50 border-t border-slate-100">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Button variant="ghost" onClick={handleReset} className="px-2 sm:px-3 gap-1 text-slate-400 hover:text-slate-600 font-bold text-[10px] uppercase tracking-wider h-9 flex-shrink-0">
+                            <RotateCcw className="w-3 h-3" />
+                            <span className="hidden xs:inline">Reset</span>
+                        </Button>
+                        <Select value={selectedPresetName} onValueChange={setSelectedPresetName}>
+                            <SelectTrigger className="h-9 min-w-[140px] lg:min-w-[180px] border-slate-300 bg-white text-[10px] font-bold uppercase tracking-wider flex-shrink-0">
+                                <SelectValue placeholder="Select Preset" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {presets.length === 0 ? (
+                                    <SelectItem value="__no_presets__" disabled>
+                                        No presets yet
+                                    </SelectItem>
+                                ) : (
+                                    presets.map((preset) => (
+                                        <SelectItem key={preset.id} value={preset.name}>
+                                            {preset.name}
+                                        </SelectItem>
+                                    ))
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
                         <Button
                             variant="outline"
-                            onClick={handleSaveAsTemplate}
-                            disabled={saving}
-                            className="border-amber-200 text-amber-700 hover:bg-amber-50 gap-1.5 px-3 font-bold uppercase tracking-wider text-[10px] h-9"
+                            onClick={handleLoadPreset}
+                            disabled={saving || loading || !selectedPresetName}
+                            className="border-blue-200 text-blue-700 hover:bg-blue-50 gap-1.5 px-2 sm:px-3 font-bold uppercase tracking-wider text-[10px] h-9 flex-shrink-0"
                         >
-                            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <LayoutTemplate className="w-3.5 h-3.5" />}
-                            <span>Template</span>
+                            <span className="hidden sm:inline">Load</span>
+                            <span className="sm:hidden">L</span>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={handleRenamePreset}
+                            disabled={saving || loading || !selectedPresetName}
+                            className="border-violet-200 text-violet-700 hover:bg-violet-50 gap-1 px-2 sm:px-3 font-bold uppercase tracking-wider text-[10px] h-9 flex-shrink-0"
+                        >
+                            <Pencil className="w-3 h-3" />
+                            <span className="hidden sm:inline">Rename</span>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={handleDeletePreset}
+                            disabled={saving || loading || !selectedPresetName}
+                            className="border-rose-200 text-rose-700 hover:bg-rose-50 gap-1 px-2 sm:px-3 font-bold uppercase tracking-wider text-[10px] h-9 flex-shrink-0"
+                        >
+                            <Trash2 className="w-3 h-3" />
+                            <span className="hidden sm:inline">Delete</span>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={handleSaveAsPreset}
+                            disabled={saving}
+                            className="border-amber-200 text-amber-700 hover:bg-amber-50 gap-1 px-2 sm:px-3 font-bold uppercase tracking-wider text-[10px] h-9 flex-shrink-0"
+                        >
+                            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <LayoutTemplate className="w-3 h-3" />}
+                            <span className="hidden sm:inline">Template</span>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={handleSaveAsGlobalTemplate}
+                            disabled={saving}
+                            className="border-orange-200 text-orange-700 hover:bg-orange-50 gap-1 px-2 sm:px-3 font-bold uppercase tracking-wider text-[10px] h-9 flex-shrink-0"
+                        >
+                            <span className="hidden sm:inline">Global</span>
+                            <span className="sm:hidden">G</span>
                         </Button>
                         <Button
                             onClick={handleSave}
                             disabled={saving}
-                            className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 px-4 shadow-lg shadow-emerald-500/20 font-bold uppercase tracking-wider text-[10px] h-9"
+                            className="bg-emerald-600 hover:bg-emerald-700 gap-1 px-3 sm:px-4 shadow-lg shadow-emerald-500/20 font-bold uppercase tracking-wider text-[10px] h-9 flex-shrink-0 ml-auto"
                         >
-                            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                            Apply
+                            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                            <span className="hidden sm:inline">Apply</span>
                         </Button>
                     </div>
                 </DialogFooter>

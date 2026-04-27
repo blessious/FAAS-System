@@ -218,6 +218,21 @@ export const printAPI = {
 
   updateCalibration: (mapping: any, recordId?: string | number): Promise<any> =>
     api.post('/print/calibration', { mapping, recordId }),
+
+  listCalibrationPresets: (): Promise<any> =>
+    api.get('/print/calibration/presets'),
+
+  getCalibrationPreset: (name: string): Promise<any> =>
+    api.get(`/print/calibration/preset/${encodeURIComponent(name)}`),
+
+  saveCalibrationPreset: (name: string, mapping: any): Promise<any> =>
+    api.post('/print/calibration/preset', { name, mapping }),
+
+  renameCalibrationPreset: (oldName: string, newName: string): Promise<any> =>
+    api.put('/print/calibration/preset/rename', { oldName, newName }),
+
+  deleteCalibrationPreset: (name: string): Promise<any> =>
+    api.delete(`/print/calibration/preset/${encodeURIComponent(name)}`),
 };
 
 export const dashboardAPI = {

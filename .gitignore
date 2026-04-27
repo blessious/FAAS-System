@@ -29,6 +29,8 @@ obj
 uploads/
 backend/uploads/
 backend/python/generated/
+backend/python/precision_mapping.local.json
+backend/python/precision_mapping_*.json
 
 # Database & Utility Scripts
 sql-dump.bat
