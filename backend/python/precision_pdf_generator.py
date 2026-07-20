@@ -8,6 +8,7 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from openpyxl import load_workbook
+from rounding_utils import round_to_multiple
 
 # 🎯 MASTER TEMPLATE - Default coordinates (CM from Bottom-Left)
 TEMPLATE_MAPPING = {
@@ -484,8 +485,8 @@ class PrecisionPDFGenerator:
                         if k52_val and g52_val:
                             try:
                                 k53_total = float(k52_val) * float(g52_val)
-                                # Round to nearest 10
-                                k53_total = round(k53_total / 10) * 10
+                                # Round to nearest 10; exact midpoints always round up.
+                                k53_total = round_to_multiple(k53_total, 10)
                             except: pass
                         
                         if k53_total > 0:

@@ -4,6 +4,7 @@ import mysql.connector
 from datetime import datetime
 from openpyxl import load_workbook
 import json
+from rounding_utils import round_to_multiple
 
 def _parse_env_file(file_path):
     try:
@@ -126,9 +127,7 @@ class FAASExcelGenerator:
         return None
 
     def mround(self, number, multiple):
-        if not number or not multiple:
-            return 0
-        return round(number / multiple) * multiple
+        return round_to_multiple(number, multiple)
 
     def calculate_improvement_unit_value(self, product_class):
         if not product_class:

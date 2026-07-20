@@ -30,6 +30,11 @@ uploads/
 backend/uploads/
 backend/python/generated/
 
+# Runtime precision-calibration profiles (server/user data)
+backend/python/precision_mapping.local.json
+backend/python/precision_mapping_[0-9]*.json
+backend/python/precision_mapping_merged_*.json
+
 # Database & Utility Scripts
 sql-dump.bat
 
