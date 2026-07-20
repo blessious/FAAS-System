@@ -5,6 +5,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const printController = require('./printController');
 const { createNotification } = require('../utils/notifications');
+const { buildPythonCommand } = require('../utils/python');
 
 // Helper function for PDF generation
 async function generatePDF(recordId, excelFilePath) {
@@ -27,7 +28,11 @@ async function generatePDF(recordId, excelFilePath) {
     const absoluteExcelPath = path.resolve(excelFilePath);
     const absolutePdfPath = path.resolve(pdfPath);
 
-    const command = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${absoluteExcelPath}" --pdf-path "${absolutePdfPath}"`;
+    const command = buildPythonCommand(
+      pythonDir,
+      'pdf_converter.py',
+      `--excel-path "${absoluteExcelPath}" --pdf-path "${absolutePdfPath}"`
+    );
 
     logger.debug(`ðŸ“„ PDF Conversion Command: ${command}`);
 

@@ -4,6 +4,7 @@ const path = require('path');
 const { getConnection } = require('../utils/database');
 const fs = require('fs');
 const { notifyAll } = require('../utils/notifications');
+const { buildPythonCommand } = require('../utils/python');
 
 const GENERATED_ROOT = path.resolve(__dirname, '../python/generated');
 
@@ -96,7 +97,11 @@ class PrintController {
       const pythonScript = path.join(pythonDir, 'excel_generator.py');
 
       // Command for plain UNIRRIG
-      const command = `cd "${pythonDir}" && python excel_generator.py --record-id ${recordId} --type unirrig --plain`;
+      const command = buildPythonCommand(
+        pythonDir,
+        'excel_generator.py',
+        `--record-id ${recordId} --type unirrig --plain`
+      );
       logger.debug(`ðŸš€ Plain Command: ${command}`);
 
       exec(command, { cwd: pythonDir }, async (error, stdout, stderr) => {
@@ -126,7 +131,11 @@ class PrintController {
 
             if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
-            const pdfCommand = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${excelPath}" --pdf-path "${pdfPath}"`;
+            const pdfCommand = buildPythonCommand(
+              pythonDir,
+              'pdf_converter.py',
+              `--excel-path "${excelPath}" --pdf-path "${pdfPath}"`
+            );
             logger.debug(`ðŸ“„ Plain PDF Command: ${pdfCommand}`);
 
             exec(pdfCommand, { cwd: pythonDir }, async (pdfError, pdfStdout, pdfStderr) => {
@@ -177,7 +186,11 @@ class PrintController {
 
       // Always regenerate UNIRRIG Excel for this record to avoid stale cached data
       // (e.g. old owner names/addresses from previously generated files).
-      const regenerateCommand = `cd "${pythonDir}" && python excel_generator.py --record-id ${recordId} --type unirrig`;
+      const regenerateCommand = buildPythonCommand(
+        pythonDir,
+        'excel_generator.py',
+        `--record-id ${recordId} --type unirrig`
+      );
       const excelPath = await new Promise((resolve, reject) => {
         exec(regenerateCommand, { cwd: pythonDir }, async (regenError, regenStdout, regenStderr) => {
           if (regenError) {
@@ -229,7 +242,11 @@ class PrintController {
       const mergedPath = path.resolve(os.tmpdir(), `precision_mapping_merged_${recordId}.json`);
       fs.writeFileSync(mergedPath, JSON.stringify(mergedMapping, null, 4));
 
-      let command = `python precision_pdf_generator.py --excel-path "${excelPath}" --mapping-file "${mergedPath}"`;
+      let command = buildPythonCommand(
+        pythonDir,
+        'precision_pdf_generator.py',
+        `--excel-path "${excelPath}" --mapping-file "${mergedPath}"`
+      );
 
       logger.debug(`ðŸš€ Precision Print Command: ${command}`);
 
@@ -464,7 +481,11 @@ class PrintController {
         fs.mkdirSync(generatedDir, { recursive: true });
       }
 
-      const command = `cd "${pythonDir}" && python excel_generator.py --record-id ${recordId} --type both`;
+      const command = buildPythonCommand(
+        pythonDir,
+        'excel_generator.py',
+        `--record-id ${recordId} --type both`
+      );
       logger.debug(`ðŸš€ Command: ${command}`);
 
       exec(command, { cwd: pythonDir }, async (error, stdout, stderr) => {
@@ -509,7 +530,11 @@ class PrintController {
               const pdfFilename = path.basename(excelPath).replace('.xlsx', '.pdf');
               const pdfPath = path.join(pdfDir, pdfFilename);
 
-              const pdfCommand = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${excelPath}" --pdf-path "${pdfPath}"`;
+              const pdfCommand = buildPythonCommand(
+                pythonDir,
+                'pdf_converter.py',
+                `--excel-path "${excelPath}" --pdf-path "${pdfPath}"`
+              );
               logger.debug(`ðŸ“„ Generating PDF Preview [${type}]: ${pdfCommand}`);
 
               return new Promise((resolve) => {

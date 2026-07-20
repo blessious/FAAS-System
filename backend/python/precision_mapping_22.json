@@ -10,7 +10,7 @@
         "label": "Memoranda Code (A7)"
     },
     "Sheet1!B11": {
-        "x": 4.2,
+        "x": 2,
         "y": 24.25,
         "label": "Owner Name (B11)",
         "text": "EDEN M. MASANGKAY, ELMAR O. MAYORGA, EDUARDO O. MAYORGA, JR., ",
@@ -73,17 +73,17 @@
     },
     "Sheet1!B22": {
         "x": 3.9,
-        "y": 19.3,
+        "y": 19.45,
         "label": "East Boundary (B22)"
     },
     "Sheet1!I21": {
-        "x": 12.1,
+        "x": 12.6,
         "y": 19.85,
         "label": "South Boundary (I21)"
     },
     "Sheet1!I22": {
-        "x": 12.1,
-        "y": 19.3,
+        "x": 12.6,
+        "y": 19.45,
         "label": "West Boundary (I22)"
     },
     "Sheet1!E28": {
@@ -236,6 +236,16 @@
         "y": 5.1,
         "label": "Land II: MV"
     },
+    "Sheet1!B64": {
+        "x": 2.9,
+        "y": 3.1,
+        "label": "Memoranda Paragraph (B64)",
+        "fontSize": 9.5,
+        "wrap": true,
+        "maxWidthCm": 15.8,
+        "lineHeightCm": 0.35,
+        "maxLines": 3
+    },
     "Sheet1!E29": {
         "x": 8.8,
         "y": 16.45,
@@ -313,7 +323,7 @@
     },
     "Sheet2!L36": {
         "x": 14.1,
-        "y": 13.4,
+        "y": 14.2,
         "label": "Total Land MV (L36)"
     },
     "Sheet2!L37": {
@@ -323,7 +333,7 @@
     },
     "Sheet2!L38": {
         "x": 14.1,
-        "y": 14.2,
+        "y": 13.4,
         "label": "L38"
     },
     "Sheet2!L39": {
@@ -493,21 +503,21 @@
     },
     "Sheet2!G70": {
         "x": 9.2,
-        "y": 1.2,
+        "y": 1.3,
         "label": "Prev Owner (G70)"
     },
     "Sheet2!E71": {
         "x": 8.2,
-        "y": 0.8,
+        "y": 0.95,
         "label": "Prev Land AV (E71)"
     },
     "Sheet2!H71": {
         "x": 13.5,
-        "y": 0.9,
+        "y": 0.95,
         "label": "Prev Impr AV (H71)"
     },
     "Sheet2!L71": {
-        "x": 16,
+        "x": 22,
         "y": 0.9,
         "label": "Total Prev AV (L71)"
     },
@@ -547,7 +557,7 @@
         "label": "J47"
     },
     "Sheet2!A61": {
-        "x": 2.8,
+        "x": 3.3,
         "y": 3.7,
         "label": "A61"
     },
@@ -557,19 +567,19 @@
         "label": "Land 4: Kind"
     },
     "Sheet1!B11_line1776846710018": {
-        "x": 4.2,
+        "x": 2,
         "y": 23.9,
         "label": "Owner Name (B11) (Next Line)",
         "text": "CARMELITA M. MAGO, MILLER O. MAYORGA, ARVIN O. MAYORGA, "
     },
     "Sheet1!B11_line1776846726282": {
-        "x": 4.2,
+        "x": 2,
         "y": 23.55,
         "label": "Owner Name (B11) (Next Line)",
         "text": "AILYN DELA ROSA, LEONILA O. MOTOL,"
     },
     "Sheet1!B11_line1776846769777": {
-        "x": 4.2,
+        "x": 3.5,
         "y": 23.2,
         "label": "Owner Name (B11) (Next Line)",
         "text": "AND EVELINA O. OLPOT"

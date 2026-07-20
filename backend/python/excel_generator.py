@@ -3,11 +3,45 @@ import sys
 import mysql.connector
 from datetime import datetime
 from openpyxl import load_workbook
-from dotenv import load_dotenv
 import json
 
-# Load environment variables
-load_dotenv()
+def _parse_env_file(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                key, _, value = line.partition('=')
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+        return True
+    except FileNotFoundError:
+        return False
+
+def _load_environment():
+    # Load environment variables from .env file
+    # Try loading from current directory first, then from parent directory
+    current_dir_env = os.path.join(os.path.dirname(__file__), '.env')
+    parent_dir_env = os.path.join(os.path.dirname(__file__), '..', '.env')
+
+    try:
+        from dotenv import load_dotenv
+        if os.path.exists(current_dir_env):
+            load_dotenv(current_dir_env)
+        elif os.path.exists(parent_dir_env):
+            load_dotenv(parent_dir_env)
+        else:
+            load_dotenv()
+    except Exception:
+        if os.path.exists(current_dir_env):
+            _parse_env_file(current_dir_env)
+        elif os.path.exists(parent_dir_env):
+            _parse_env_file(parent_dir_env)
+
+_load_environment()
 
 class FAASExcelGenerator:
     def __init__(self):

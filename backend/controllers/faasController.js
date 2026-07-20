@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
 const { createNotification, notifyAll, notifyRoles } = require('../utils/notifications');
+const { buildPythonCommand } = require('../utils/python');
 
 // Helper function to parse and format dates for MySQL DATE type
 // Simply extracts YYYY-MM-DD string without timezone conversion
@@ -49,7 +50,11 @@ async function generatePDF(recordId, excelFilePath) {
     const absoluteExcelPath = path.resolve(excelFilePath);
     const absolutePdfPath = path.resolve(pdfPath);
 
-    const command = `cd "${pythonDir}" && python pdf_converter.py --excel-path "${absoluteExcelPath}" --pdf-path "${absolutePdfPath}"`;
+    const command = buildPythonCommand(
+      pythonDir,
+      'pdf_converter.py',
+      `--excel-path "${absoluteExcelPath}" --pdf-path "${absolutePdfPath}"`
+    );
 
     logger.debug(`ðŸ“„ PDF Conversion Command: ${command}`);
 
