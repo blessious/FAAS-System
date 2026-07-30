@@ -400,6 +400,14 @@ class FAASExcelGenerator:
                     calc_av = self.mround(mv_from_g * (assessment_level / 100.0), 10)
                     cell_mapping[f'G{row}'] = calc_av if calc_av != 0 else ""
 
+            # C47 is the total Market Value for all assessment rows, rounded
+            # with the same nearest-10, half-up logic used throughout the system.
+            c47_total = self.mround(
+                sum(self.safe_float(cell_mapping.get(f'C{row}')) for row in range(43, 47)),
+                10
+            )
+            cell_mapping['C47'] = c47_total
+
             for cell, value in cell_mapping.items():
                 if value != '':
                     if isinstance(value, str) and value.lower() == 'none':
