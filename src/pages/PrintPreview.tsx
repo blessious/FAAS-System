@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { printAPI, approvalAPI } from "@/services/api";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { CalibrationModal } from "@/components/print/CalibrationModal";
+import { TdcCalibrationWizard } from "@/components/print/TdcCalibrationWizard";
 
 
 interface ApprovedRecord {
@@ -126,6 +126,8 @@ export default function PrintPreview() {
   const [generatingPrecision, setGeneratingPrecision] = useState(false);
   const [showPrecision, setShowPrecision] = useState(false);
   const [showCalibration, setShowCalibration] = useState(false);
+  const [selectedTdcProfileId, setSelectedTdcProfileId] = useState<string | number | undefined>();
+  const [precisionPdfPath, setPrecisionPdfPath] = useState('');
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -196,7 +198,7 @@ export default function PrintPreview() {
     } else {
       // Use precision if toggled, then plain, then original
       if (showPrecision) {
-        pdfPath = selectedRecord.unirrig_precision_pdf_path || '';
+        pdfPath = precisionPdfPath || selectedRecord.unirrig_precision_pdf_path || '';
       } else if (showPlain) {
         pdfPath = selectedRecord.unirrig_plain_pdf_path || '';
       } else {
@@ -211,7 +213,7 @@ export default function PrintPreview() {
     // Add a timestamp as a cache-buster to force the iframe/browser to reload the PDF
     const timestamp = new Date().getTime();
     return filename ? `${baseUrl}/api/print/files/pdf/${filename}?t=${timestamp}` : '';
-  }, [selectedRecord, activeTab, showPlain, showPrecision]);
+  }, [selectedRecord, activeTab, showPlain, showPrecision, precisionPdfPath]);
 
   const handleGeneratePrecision = async () => {
     if (!selectedRecord) return;
@@ -223,12 +225,14 @@ export default function PrintPreview() {
         description: "Placing text at exact coordinates for both Sheet 1 and Sheet 2...",
       });
 
-      const response = await printAPI.generatePrecisionPrint(selectedRecord.id);
+      const response = await printAPI.generatePrecisionPrint(selectedRecord.id, selectedTdcProfileId);
 
       if (response.success) {
         toast({
           title: "Success",
-          description: "Blank version is ready. Check the alignment on your form.",
+          description: response.data.profile?.verified === false
+            ? "Pre-printed form version is ready. Verify this profile on a test form before production printing."
+            : "Pre-printed form version is ready.",
         });
 
         const updatedRecord = {
@@ -236,6 +240,7 @@ export default function PrintPreview() {
           unirrig_precision_pdf_path: response.data.pdfPath
         };
         setSelectedRecord(updatedRecord);
+        setPrecisionPdfPath(response.data.pdfPath);
         setApprovedRecords(prev => prev.map(r => r.id === selectedRecord.id ? updatedRecord : r));
         setShowPrecision(true);
         setShowPlain(false);
@@ -364,6 +369,7 @@ export default function PrintPreview() {
   // Handle record selection
   const handleSelectRecord = (record: ApprovedRecord) => {
     setSelectedRecord(record);
+    setPrecisionPdfPath('');
     setShowPlain(false);
     setShowPrecision(false);
     setPdfError(false);
@@ -698,7 +704,7 @@ export default function PrintPreview() {
                       >
                         <Printer className="w-4 h-4" />
                         <span className="hidden xl:inline">
-                          Print {showPrecision ? "Blank" : showPlain ? "Plain" : "Original"}
+                          Print {showPrecision ? "Pre-printed Form" : showPlain ? "Plain" : "Original"}
                         </span>
                       </Button>
 
@@ -749,7 +755,7 @@ export default function PrintPreview() {
                             )}
                           >
                             {generatingPrecision ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4 text-emerald-500" />}
-                            <span>{showPrecision ? "Show Original" : "Show Blank"}</span>
+                            <span>{showPrecision ? "Original TDC Layout" : "Pre-printed Form"}</span>
                           </Button>
 
                           <Button
@@ -760,7 +766,7 @@ export default function PrintPreview() {
                             className="gap-2 rounded-lg h-9 border-slate-200 text-slate-600 bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
                           >
                             <Gauge className="w-4 h-4 text-emerald-600" />
-                            <span>Calibrate</span>
+                            <span>Profiles & Calibrate</span>
                           </Button>
                         </div>
                       )}
@@ -893,24 +899,13 @@ export default function PrintPreview() {
           )}
         </div>
       </div>
-      <CalibrationModal
+      <TdcCalibrationWizard
         open={showCalibration}
         onOpenChange={setShowCalibration}
-        recordId={selectedRecord?.id}
-        recordData={selectedRecord}
-        onCalibrated={() => {
-          if (selectedRecord) {
-            // New flow: Clear the path and hide the preview so user must click Shoot again
-            const updatedRecord = { ...selectedRecord, unirrig_precision_pdf_path: undefined };
-            setSelectedRecord(updatedRecord);
-            setApprovedRecords(prev => prev.map(r => r.id === selectedRecord.id ? updatedRecord : r));
-            setShowPrecision(false);
-
-            toast({
-              title: "Calibration Saved",
-              description: "Previous PDF deleted. Click 'Show Blank' to generate the new aligned version.",
-            });
-          }
+        onProfileSelected={(profileId) => {
+          setSelectedTdcProfileId(profileId);
+          setPrecisionPdfPath('');
+          setShowPrecision(false);
         }}
       />
     </div >

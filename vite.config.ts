@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
-    port: 8081,
+    port: 8082,
 
     // Allow access through Apache/Laragon virtual host
     allowedHosts: [
@@ -16,11 +16,6 @@ export default defineConfig(({ mode }) => ({
       "192.168.0.18"
     ],
 
-    hmr: {
-      host: "192.168.0.18",
-      port: 8081,
-      protocol: "ws",
-    },
   },
 
   plugins: [

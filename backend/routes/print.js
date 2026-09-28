@@ -24,7 +24,20 @@ router.get('/files/:recordId', printController.getGeneratedFiles);
 router.get('/approved', printController.getApprovedRecords);
 router.put('/release/:id', printController.releaseRecord);
 router.put('/release/:id/cancel', printController.cancelRelease);
-router.get('/released-history', printController.getReleasedRecords);
+  router.get('/released-history', printController.getReleasedRecords);
+
+// TDC pre-printed form calibration profiles
+router.get('/tdc-profiles', printController.listCalibrationProfiles);
+router.post('/tdc-profiles', printController.createCalibrationProfile);
+router.get('/tdc-profiles/:id', printController.getCalibrationProfile);
+router.put('/tdc-profiles/:id', printController.updateCalibrationProfile);
+router.put('/tdc-profiles/:id/adjustments', printController.updateCalibrationAdjustments);
+router.put('/tdc-profiles/:id/overrides', printController.updateCalibrationOverrides);
+router.get('/tdc-profiles/:id/fields', printController.getCalibrationProfileFields);
+router.put('/tdc-profiles/:id/default', printController.setDefaultCalibrationProfile);
+router.put('/tdc-profiles/:id/publish', printController.publishCalibrationProfile);
+router.delete('/tdc-profiles/:id', printController.archiveCalibrationProfile);
+router.post('/calibration-test', printController.generateCalibrationTest);
 
 // Calibration routes
 router.get('/calibration', printController.getCalibration);

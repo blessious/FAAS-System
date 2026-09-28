@@ -592,5 +592,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument('--excel-path', required=True)
     p.add_argument('--mapping-file')
+    p.add_argument('--output-path')
     a = p.parse_args()
-    print(json.dumps(PrecisionPDFGenerator(a.mapping_file).generate(a.excel_path)))
+    print(json.dumps(PrecisionPDFGenerator(a.mapping_file).generate(a.excel_path, a.output_path)))

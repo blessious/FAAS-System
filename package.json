@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "migrate:tdc-calibration": "npm --prefix backend run migrate:tdc-calibration",
+    "test:tdc-calibration": "npm --prefix backend run test:tdc-calibration"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

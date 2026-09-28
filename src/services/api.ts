@@ -192,8 +192,8 @@ export const printAPI = {
   generatePlainPrint: (recordId: string | number): Promise<any> =>
     api.post('/print/generate-plain', { recordId }),
 
-  generatePrecisionPrint: (recordId: string | number): Promise<any> =>
-    api.post('/print/generate-precision', { recordId }),
+  generatePrecisionPrint: (recordId: string | number, profileId?: string | number): Promise<any> =>
+    api.post('/print/generate-precision', { recordId, profileId }),
 
   getGeneratedFiles: (recordId: string | number): Promise<any> =>
     api.get(`/print/files/${recordId}`),
@@ -218,6 +218,22 @@ export const printAPI = {
 
   updateCalibration: (mapping: any, recordId?: string | number): Promise<any> =>
     api.post('/print/calibration', { mapping, recordId }),
+
+  listTdcProfiles: (): Promise<any[]> => api.get('/print/tdc-profiles'),
+  createTdcProfile: (data: { name: string; printerName: string; paperBatch: string; formRevision?: string; makeDefault?: boolean }): Promise<any> =>
+    api.post('/print/tdc-profiles', data),
+  getTdcProfile: (id: string | number): Promise<any> => api.get(`/print/tdc-profiles/${id}`),
+  updateTdcProfile: (id: string | number, data: any): Promise<any> => api.put(`/print/tdc-profiles/${id}`, data),
+  updateTdcAdjustments: (id: string | number, adjustments: any[]): Promise<any> =>
+    api.put(`/print/tdc-profiles/${id}/adjustments`, { adjustments }),
+  updateTdcOverrides: (id: string | number, overrides: any[]): Promise<any> =>
+    api.put(`/print/tdc-profiles/${id}/overrides`, { overrides }),
+  getTdcProfileFields: (id: string | number): Promise<any[]> => api.get(`/print/tdc-profiles/${id}/fields`),
+  setDefaultTdcProfile: (id: string | number): Promise<any> => api.put(`/print/tdc-profiles/${id}/default`),
+  publishTdcProfile: (id: string | number, published: boolean): Promise<any> => api.put(`/print/tdc-profiles/${id}/publish`, { published }),
+  archiveTdcProfile: (id: string | number): Promise<any> => api.delete(`/print/tdc-profiles/${id}`),
+  generateTdcCalibrationTest: (profileId: string | number, adjustments: any[]): Promise<any> =>
+    api.post('/print/calibration-test', { profileId, adjustments }),
 };
 
 export const dashboardAPI = {

@@ -29,6 +29,7 @@ obj
 uploads/
 backend/uploads/
 backend/python/generated/
+backend/python/__pycache__/
 
 # Runtime precision-calibration profiles (server/user data)
 backend/python/precision_mapping.local.json

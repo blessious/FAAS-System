@@ -8,7 +8,9 @@
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup-python": "cd python && pip install -r requirements.txt",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "migrate:tdc-calibration": "node migrate_tdc_calibration_profiles.js",
+    "test:tdc-calibration": "node --test tests/tdcCalibrationService.test.js"
   },
   "keywords": [
     "lgu",
